@@ -10,7 +10,10 @@ import shutil
 import subprocess
 import sys
 import threading
-from tkinter import filedialog, messagebox
+import webbrowser
+from tkinter import filedialog
+
+import tkinter.font as tkfont
 
 import customtkinter as ctk
 from PIL import Image
@@ -124,15 +127,43 @@ BG_MAIN = "#000000"        # fond uni noir
 BG_CARD = "#0F161C"
 BG_ENTRY = "#1A2530"
 BG_HEADER = "#14202B"
-CYAN = "#00F0FF"
+CYAN = "#00B8C5"
 CYAN_DARK = "#00A8B8"
 CYAN_HOVER = "#2A5A66"
-TEXT_WHITE = "#FFFFFF"
+CYAN_CLAIR = "#C1FEFF"     # survol : le texte et le cadre s'éclairent
+LINK_COLOR = "#7FE0E8"     # liens cliquables (comme dans mes autres applis)
+TEXT_WHITE = "#DBDBDB"
 TEXT_GREY = "#8A9AA9"
+TEXT_DIM = "#5A6A78"       # signature au repos
+
+# Lien de soutien (fenêtre ouverte en cliquant sur la signature)
+KO_FI_URL = "https://ko-fi.com/ritchy_lab"
 
 # Largeur unique de tous les boutons (homogènes)
 BTN_W = 170
 BTN_H = 34
+
+# ------------------------------------------------------------------
+# Typographie
+# ------------------------------------------------------------------
+TYPO_LISTE = 16          # les lignes de la liste (nom du fichier + phrase)
+HAUTEUR_LIGNE = 38       # hauteur de ces cases (à agrandir avec la police)
+
+# Le logo a plus de poids visuel à gauche (les barres de voix) qu'à droite
+# (les ondes fines) : centré au pixel près, le sous-titre paraît décalé vers
+# la droite. On le décale donc légèrement vers la gauche, pour qu'il tombe
+# sous le monogramme. Mettre 0 pour un centrage strictement mathématique.
+DECALAGE_SOUS_TITRE = 8  # en pixels, vers la gauche
+
+
+def largeur_juste(valeurs, taille_police=13, marge=44):
+    """Largeur d'un menu déroulant ajustée à son texte le plus long.
+
+    La marge couvre la place de la flèche et les espaces intérieurs : sans
+    elle, la flèche laisserait un grand vide après les noms les plus courts.
+    """
+    police = tkfont.Font(family="SF Pro Display", size=taille_police)
+    return max(police.measure(str(v)) for v in valeurs) + marge
 
 
 # ------------------------------------------------------------------
@@ -190,7 +221,7 @@ class SegmentedProgressBar(ctk.CTkFrame):
             x1 = x0 + seg_w
             y0 = 4
             y1 = h - 4
-            color = CYAN if i < filled else "#1E2A33"
+            color = LINK_COLOR if i < filled else "#1E2A33"
             self._round_rect(c, x0, y0, x1, y1, radius, color)
 
         pct = int(round(self.progress * 100))
@@ -212,6 +243,39 @@ class SegmentedProgressBar(ctk.CTkFrame):
 
 
 # ------------------------------------------------------------------
+# Menu déroulant des voix
+# ------------------------------------------------------------------
+class MenuVoix(ctk.CTkComboBox):
+    """Menu déroulant dont le filet reste complet.
+
+    customtkinter repeint le bord DROIT du menu avec la couleur du bloc de la
+    flèche : au repos, mais aussi à chaque passage de la souris (sa méthode
+    _on_leave s'en occupe sans condition). Comme ce bloc doit rester sombre
+    pour ne plus voir de cyan derrière la flèche, le filet disparaîtrait à
+    droite. On le rétablit donc après chaque repeinture.
+    """
+
+    def _draw(self, no_color_updates=False):
+        super()._draw(no_color_updates)
+        self._retablir_filet()
+
+    def _on_enter(self, event=0):
+        super()._on_enter(event)
+        self._retablir_filet()
+
+    def _on_leave(self, event=0):
+        super()._on_leave(event)
+        self._retablir_filet()
+
+    def _retablir_filet(self):
+        try:
+            self._canvas.itemconfig(
+                "border_parts_right", fill=CYAN, outline=CYAN)
+        except Exception:
+            pass  # si customtkinter change, on garde le menu tel quel
+
+
+# ------------------------------------------------------------------
 # Application
 # ------------------------------------------------------------------
 class VoxPackApp(ctk.CTk):
@@ -227,6 +291,7 @@ class VoxPackApp(ctk.CTk):
         self.output_dir = None
         self.lignes = []
         self._logo_image = None
+        self._soutien = None
 
         # ----- En-tête (logo + sous-titre) -----
         self.header = ctk.CTkFrame(self, fg_color="transparent")
@@ -236,7 +301,7 @@ class VoxPackApp(ctk.CTk):
         self.btn_aide = ctk.CTkButton(
             self.header,
             text="?",
-            font=("SF Pro Display", 14, "bold"),
+            font=("SF Pro Display", 20, "bold"),
             width=30,
             height=30,
             corner_radius=15,
@@ -244,9 +309,10 @@ class VoxPackApp(ctk.CTk):
             border_color=CYAN,
             border_width=1,
             text_color=CYAN,
-            hover_color=CYAN_HOVER,
+            hover=False,          # au survol, le fond ne change pas (voir _survol)
             command=self._ouvrir_aide,
         )
+        self._survol(self.btn_aide)
         self.btn_aide.place(relx=1.0, rely=0.0, anchor="ne", x=-15, y=30)
 
         # Logo
@@ -282,9 +348,12 @@ class VoxPackApp(ctk.CTk):
             self.header,
             text="Fait parler ta radio",
             font=("SF Pro Display", 16),
-            text_color=CYAN,
+            text_color=LINK_COLOR,
         )
-        self.lbl_sub.pack(anchor="center", pady=(0, 10))
+        # padx retire la place à droite : le texte se décale vers la gauche
+        self.lbl_sub.pack(anchor="center",
+                          padx=(0, DECALAGE_SOUS_TITRE * 2),
+                          pady=(0, 10))
 
         # ----- Ligne unique : Voix + 3 boutons (centrée) -----
         row_all = ctk.CTkFrame(self, fg_color="transparent")
@@ -293,21 +362,26 @@ class VoxPackApp(ctk.CTk):
         inner_row = ctk.CTkFrame(row_all, fg_color="transparent")
         inner_row.pack(anchor="center")
 
-        self.combo_voice = ctk.CTkComboBox(
+        self.combo_voice = MenuVoix(
             inner_row,
             values=list(VOICES.keys()),
-            width=260,
+            # largeur calculée sur le nom le plus long : la flèche reste
+            # collée au texte au lieu de laisser un grand vide
+            width=largeur_juste(VOICES.keys()),
             font=("SF Pro Display", 13),
             dropdown_font=("SF Pro Display", 13),
+            # Les coins arrondis se fondent dans le fond noir de la fenêtre :
+            # sans cela, customtkinter laisse apparaître un rectangle sombre.
+            bg_color=BG_MAIN,
             fg_color=BG_CARD,
             border_color=CYAN,
             border_width=1,
-            button_color=CYAN_DARK,
-            button_hover_color=CYAN,
+            button_color=BG_CARD,          # pas de bloc cyan derrière la flèche
+            hover=False,                   # le fond ne change pas au survol
             text_color=TEXT_WHITE,
-            dropdown_fg_color=BG_CARD,
+            dropdown_fg_color="#000000",   # liste ouverte : fond noir
             dropdown_text_color=TEXT_WHITE,
-            dropdown_hover_color=CYAN_HOVER,
+            dropdown_hover_color="#1A2530",
             corner_radius=17,
             height=BTN_H,
             state="readonly",
@@ -330,11 +404,11 @@ class VoxPackApp(ctk.CTk):
         ctk.CTkLabel(row_head, text="", width=40).grid(row=0, column=0, padx=4, pady=8)
         ctk.CTkLabel(
             row_head, text="Nom du fichier WAV (Max 8 car.)",
-            font=("SF Pro Display", 14, "normal"), text_color=TEXT_WHITE,
+            font=("SF Pro Display", 18, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=1, sticky="w", padx=8, pady=8)
         ctk.CTkLabel(
             row_head, text="Phrase à prononcer par la radiocommande",
-            font=("SF Pro Display", 14, "normal"), text_color=TEXT_WHITE,
+            font=("SF Pro Display", 18, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=2, sticky="w", padx=8, pady=8)
 
         # ----- Zone liste défilante -----
@@ -349,6 +423,13 @@ class VoxPackApp(ctk.CTk):
         self.frame_table.grid_columnconfigure(0, weight=0, minsize=40)
         self.frame_table.grid_columnconfigure(1, weight=1, uniform="col")
         self.frame_table.grid_columnconfigure(2, weight=1, uniform="col")
+
+        # customtkinter ne fait défiler la liste que si le widget rapporté par
+        # l'événement en fait partie. Sur macOS, cette identification n'est pas
+        # fiable : après un clic, la molette se bloque. On reprend donc la
+        # molette nous-mêmes, en regardant simplement où se trouve le curseur.
+        self.frame_table._parent_canvas.unbind_all("<MouseWheel>")
+        self.bind_all("<MouseWheel>", self._molette_liste, add="+")
 
         # ----- Bas : progression + boutons -----
         self.bottom = ctk.CTkFrame(self, fg_color="transparent")
@@ -383,16 +464,20 @@ class VoxPackApp(ctk.CTk):
         )
         self.btn_letsgo.pack(side="left", padx=14)
 
-        # ----- Signature ancrée sur le bloc du bas -----
+        # ----- Signature (cliquable : ouvre la fenêtre de soutien) -----
         self.signature = ctk.CTkLabel(
             self.bottom,
-            text="made by ritchy\n2026",
+            text="ritchy-lab",
             font=("SF Pro Display", 11),
-            text_color="#5A6A78",
+            text_color=TEXT_DIM,
             fg_color="transparent",
-            justify="right",
         )
         self.signature.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-10)
+        self.signature.bind("<Button-1>", lambda e: self._ouvrir_soutien())
+        self.signature.bind(
+            "<Enter>", lambda e: self.signature.configure(text_color=CYAN))
+        self.signature.bind(
+            "<Leave>", lambda e: self.signature.configure(text_color=TEXT_DIM))
 
         # ----- Chargement -----
         reprendre_ancienne_liste()
@@ -401,12 +486,14 @@ class VoxPackApp(ctk.CTk):
     # ------------------------------------------------------------------
     # Style bouton commun
     # ------------------------------------------------------------------
-    def _btn(self, parent, text, command, small=False):
+    def _btn(self, parent, text, command, small=False, largeur=None):
         if small:
             w, h, f = 80, 30, 12
         else:
             w, h, f = BTN_W, BTN_H, 13
-        return ctk.CTkButton(
+        if largeur:
+            w = largeur
+        bouton = ctk.CTkButton(
             parent,
             text=text,
             command=command,
@@ -415,11 +502,153 @@ class VoxPackApp(ctk.CTk):
             border_color=CYAN,
             border_width=1,
             corner_radius=h // 2,
-            text_color=TEXT_WHITE,
-            hover_color=CYAN_HOVER,
+            text_color=CYAN,
+            # hover=False : au survol, le fond du bouton ne change pas.
+            hover=False,
             height=h,
             width=w,
         )
+        self._survol(bouton)
+        return bouton
+
+    def _survol(self, bouton):
+        """Au survol : seul le texte et le cadre s'éclairent, pas le fond."""
+        bouton.bind("<Enter>", lambda e: bouton.configure(
+            text_color=CYAN_CLAIR, border_color=CYAN_CLAIR))
+        bouton.bind("<Leave>", lambda e: bouton.configure(
+            text_color=CYAN, border_color=CYAN))
+
+    def _ouvrir_lien(self, url):
+        """Ouvre une adresse dans le navigateur."""
+        webbrowser.open(url)
+
+    # ------------------------------------------------------------------
+    # Mini fenêtre de soutien (clic sur la signature)
+    # ------------------------------------------------------------------
+    def _ouvrir_soutien(self):
+        if self._soutien is not None and self._soutien.winfo_exists():
+            self._soutien.lift()
+            self._soutien.focus_force()
+            return
+
+        popup = ctk.CTkToplevel(self)
+        self._soutien = popup
+        popup.title("Soutenir le projet")
+        popup.resizable(False, False)
+        popup.transient(self)
+        popup.configure(fg_color=BG_MAIN)
+        popup.bind("<Escape>", lambda e: popup.destroy())
+
+        largeur = 380
+        ctk.CTkLabel(
+            popup, text="Mon application te sert ou te plaît ?",
+            font=("SF Pro Display", 16), text_color=TEXT_WHITE,
+            wraplength=largeur - 50, justify="center",
+        ).pack(padx=25, pady=(26, 6))
+
+        cafe = ctk.CTkLabel(
+            popup, text="Paye-moi un café  ☕",
+            font=("SF Pro Display", 16), text_color=LINK_COLOR,
+        )
+        cafe.pack()
+        cafe.bind("<Button-1>", lambda e: self._ouvrir_lien(KO_FI_URL))
+
+        boutons = ctk.CTkFrame(popup, fg_color="transparent")
+        boutons.pack(pady=(24, 26))
+        self._btn(
+            boutons, "Oui",
+            lambda: (self._ouvrir_lien(KO_FI_URL), popup.destroy()),
+            largeur=96,
+        ).pack(side="left", padx=7)
+        self._btn(boutons, "Une prochaine fois", popup.destroy,
+                  small=True, largeur=170).pack(side="left", padx=7)
+
+        popup.update_idletasks()
+        hauteur = popup.winfo_reqheight()
+        self.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - largeur) // 2
+        y = self.winfo_y() + (self.winfo_height() - hauteur) // 2
+        popup.geometry(f"{largeur}x{hauteur}+{max(x, 0)}+{max(y, 0)}")
+        popup.after(150, lambda: self._saisir_popup(popup))
+
+    def _saisir_popup(self, popup):
+        try:
+            popup.grab_set()
+        except Exception:
+            pass
+
+    # ------------------------------------------------------------------
+    # Petites fenêtres de message
+    # ------------------------------------------------------------------
+    # macOS impose ses boîtes grises, avec l'icône de Python : hors sujet dans
+    # une application soignée. On dessine donc les nôtres, aux couleurs de
+    # Vox-Pack. La pastille est dessinée : aucune image à embarquer.
+    ICONES = {
+        "info":      ("i", CYAN),
+        "succes":    ("✓", CYAN),
+        "attention": ("!", "#FFB347"),
+        "erreur":    ("×", "#FF6B6B"),
+    }
+
+    def _message(self, texte, icone="info", boutons=None,
+                 titre="Vox-Pack", largeur=430):
+        """Affiche un message. `boutons` : liste de (libellé, action)."""
+        popup = ctk.CTkToplevel(self)
+        popup.title(titre)
+        popup.resizable(False, False)
+        popup.transient(self)
+        popup.configure(fg_color=BG_MAIN)
+        popup.bind("<Escape>", lambda e: popup.destroy())
+
+        symbole, couleur = self.ICONES.get(icone, self.ICONES["info"])
+
+        pastille = ctk.CTkCanvas(popup, width=58, height=58,
+                                 bg=BG_MAIN, highlightthickness=0)
+        pastille.create_oval(4, 4, 54, 54, outline=couleur, width=2)
+        pastille.create_text(29, 29, text=symbole, fill=couleur,
+                             font=("SF Pro Display", 26, "bold"))
+        pastille.pack(pady=(26, 8))
+
+        ctk.CTkLabel(
+            popup, text=texte,
+            font=("SF Pro Display", 14), text_color=TEXT_WHITE,
+            wraplength=largeur - 60, justify="center",
+        ).pack(padx=30)
+
+        rangee = ctk.CTkFrame(popup, fg_color="transparent")
+        rangee.pack(pady=(22, 24))
+
+        for libelle, action in (boutons or [("Compris", None)]):
+
+            def cliquer(a=action):
+                popup.destroy()
+                if a:
+                    a()
+
+            self._btn(rangee, libelle, cliquer, largeur=150).pack(
+                side="left", padx=6)
+
+        popup.update_idletasks()
+        hauteur = popup.winfo_reqheight()
+        self.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - largeur) // 2
+        y = self.winfo_y() + (self.winfo_height() - hauteur) // 2
+        popup.geometry(f"{largeur}x{hauteur}+{max(x, 0)}+{max(y, 0)}")
+        popup.lift()
+        popup.focus_force()
+        popup.after(150, lambda: self._saisir_popup(popup))
+
+    def _ouvrir_dossier(self, chemin):
+        """Ouvre un dossier dans le gestionnaire de fichiers du système."""
+        try:
+            if sys.platform == "darwin":
+                subprocess.run(["open", chemin], check=False)
+            elif sys.platform.startswith("win"):
+                os.startfile(chemin)
+            else:
+                subprocess.run(["xdg-open", chemin], check=False)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Fenêtre d'aide
@@ -477,13 +706,18 @@ class VoxPackApp(ctk.CTk):
             ("space", ""),
             ("title2", "♻️  Liste par défaut"),
             ("bullet", "Si vous supprimez TOUTE la liste, elle sera reconstruite"),
-            ("bullet", "automatiquement au prochain démarrage (45 lignes)."),
+            ("bullet", "automatiquement au prochain démarrage (44 lignes)."),
             ("bullet", "Si vous gardez au moins 1 ligne, vous repartez de cette"),
             ("bullet", "base pour créer votre liste personnalisée."),
             ("space", ""),
             ("title2", "🎵  Format des fichiers"),
             ("text", "Les WAV générés sont au format EdgeTX :"),
             ("code", "16 bits, 32 kHz, mono."),
+            ("space", ""),
+            ("sep", ""),
+            ("title2", "☕  Soutenir le projet"),
+            ("text", "Mon application te sert ou te plaît ?"),
+            ("lien", "Paye-moi un café  ·  ko-fi.com/ritchy_lab"),
             ("space", ""),
             ("sep", ""),
             ("italic", "Créé avec un brainstorming avec une IA"),
@@ -528,6 +762,18 @@ class VoxPackApp(ctk.CTk):
                     font=("SF Pro Display", 12, "italic"),
                     text_color=TEXT_GREY, anchor="center", justify="center",
                 ).pack(fill="x", pady=(6, 0))
+            elif kind == "lien":
+                lien = ctk.CTkLabel(
+                    frame, text=txt,
+                    font=("SF Pro Display", 13),
+                    text_color=LINK_COLOR, anchor="center",
+                )
+                lien.pack(fill="x")
+                lien.bind("<Button-1>", lambda e: self._ouvrir_lien(KO_FI_URL))
+                lien.bind(
+                    "<Enter>", lambda e, w=lien: w.configure(text_color=CYAN))
+                lien.bind(
+                    "<Leave>", lambda e, w=lien: w.configure(text_color=LINK_COLOR))
             elif kind == "sep":
                 ctk.CTkFrame(frame, height=1, fg_color="#2A3A48").pack(fill="x", pady=8)
             else:
@@ -537,24 +783,34 @@ class VoxPackApp(ctk.CTk):
                     text_color=TEXT_WHITE, anchor="w", justify="left",
                 ).pack(fill="x")
 
-        ctk.CTkButton(
-            popup,
-            text="Fermer",
-            font=("SF Pro Display", 13, "bold"),
-            width=140,
-            height=36,
-            corner_radius=18,
-            fg_color="transparent",
-            border_color=CYAN,
-            border_width=1,
-            text_color=TEXT_WHITE,
-            hover_color=CYAN_HOVER,
-            command=popup.destroy,
-        ).pack(pady=(0, 15))
+        fermer = self._btn(popup, "Fermer", popup.destroy, largeur=140)
+        fermer.configure(height=36, corner_radius=18)
+        fermer.pack(pady=(0, 15))
 
     # ------------------------------------------------------------------
     # Gestion liste
     # ------------------------------------------------------------------
+    def _curseur_dans_la_liste(self):
+        """Le curseur de la souris est-il au-dessus de la liste ?"""
+        try:
+            curseur = self.winfo_containing(*self.winfo_pointerxy())
+        except Exception:
+            return False
+        while curseur is not None:
+            if curseur is self.frame_table or curseur is self.frame_table._parent_canvas:
+                return True
+            curseur = getattr(curseur, "master", None)
+        return False
+
+    def _molette_liste(self, event):
+        """Fait défiler la liste à la molette, où que soit le curseur dedans."""
+        if not self._curseur_dans_la_liste():
+            return
+        canvas = self.frame_table._parent_canvas
+        if canvas.yview() == (0.0, 1.0):      # tout tient à l'écran
+            return
+        canvas.yview("scroll", -event.delta, "units")
+
     def charger_liste(self):
         for ligne in self.lignes:
             ligne["frame"].destroy()
@@ -595,26 +851,26 @@ class VoxPackApp(ctk.CTk):
 
         entry_nom = ctk.CTkEntry(
             frame,
-            font=("SF Pro Display", 13),
+            font=("SF Pro Display", TYPO_LISTE),
             fg_color=BG_ENTRY,
             border_color="#2A3A48",
             border_width=1,
             text_color=TEXT_WHITE,
             corner_radius=8,
-            height=32,
+            height=HAUTEUR_LIGNE,
         )
         entry_nom.insert(0, nom)
         entry_nom.grid(row=0, column=1, sticky="ew", padx=6, pady=4)
 
         entry_txt = ctk.CTkEntry(
             frame,
-            font=("SF Pro Display", 13),
+            font=("SF Pro Display", TYPO_LISTE),
             fg_color=BG_ENTRY,
             border_color="#2A3A48",
             border_width=1,
             text_color=TEXT_WHITE,
             corner_radius=8,
-            height=32,
+            height=HAUTEUR_LIGNE,
         )
         entry_txt.insert(0, texte)
         entry_txt.grid(row=0, column=2, sticky="ew", padx=6, pady=4)
@@ -636,20 +892,25 @@ class VoxPackApp(ctk.CTk):
     def supprimer_selection(self):
         cochees = [l for l in self.lignes if l["var_check"].get()]
         if not cochees:
-            messagebox.showwarning("Vox-Pack", "Cochez au moins une ligne à supprimer.")
+            self._message("Cochez au moins une ligne à supprimer.",
+                          icone="attention")
             return
 
         if len(cochees) == len(self.lignes):
-            reponse = messagebox.askyesno(
-                "Vox-Pack",
+            self._message(
                 "Vous allez supprimer TOUTE la liste.\n\n"
                 "Elle sera reconstruite automatiquement "
                 "au prochain démarrage de l'application.\n\n"
-                "Voulez-vous continuer ?"
+                "Voulez-vous continuer ?",
+                icone="attention",
+                boutons=[("Supprimer", lambda: self._supprimer_lignes(cochees)),
+                         ("Annuler", None)],
             )
-            if not reponse:
-                return
+            return
 
+        self._supprimer_lignes(cochees)
+
+    def _supprimer_lignes(self, cochees):
         for ligne in cochees:
             ligne["frame"].destroy()
             self.lignes.remove(ligne)
@@ -686,7 +947,7 @@ class VoxPackApp(ctk.CTk):
     def ecouter_selection(self):
         cochees = [l for l in self.lignes if l["var_check"].get()]
         if not cochees:
-            messagebox.showwarning("Vox-Pack", "Cochez une ligne à écouter.")
+            self._message("Cochez une ligne à écouter.", icone="attention")
             return
         texte = cochees[0]["entry_txt"].get().strip()
         if not texte:
@@ -705,7 +966,8 @@ class VoxPackApp(ctk.CTk):
             await communicate.save(temp)
             subprocess.run(["/usr/bin/afplay", temp])
         except Exception as e:
-            self.after(0, lambda err=e: messagebox.showerror("Vox-Pack", f"Aperçu impossible : {err}"))
+            self.after(0, lambda err=e: self._message(
+                f"L'aperçu n'a pas pu être joué.\n\n{err}", icone="erreur"))
         finally:
             if os.path.exists(temp):
                 os.remove(temp)
@@ -716,7 +978,8 @@ class VoxPackApp(ctk.CTk):
     def start_generation(self):
         cochees = [l for l in self.lignes if l["var_check"].get()]
         if not cochees:
-            messagebox.showwarning("Vox-Pack", "Cochez au moins une ligne.")
+            self._message("Cochez au moins une ligne à générer.",
+                          icone="attention")
             return
 
         taches = []
@@ -726,7 +989,8 @@ class VoxPackApp(ctk.CTk):
             if nom and texte:
                 taches.append((nom, texte))
         if not taches:
-            messagebox.showwarning("Vox-Pack", "Aucune ligne valide à générer.")
+            self._message("Aucune ligne valide à générer : il faut un nom de "
+                          "fichier ET une phrase.", icone="attention")
             return
 
         dossier = filedialog.askdirectory(title="Dossier de destination des WAV")
@@ -787,13 +1051,19 @@ class VoxPackApp(ctk.CTk):
         self.after(0, lambda: self.progress.reset())
 
         if erreur:
-            self.after(0, lambda m=erreur: messagebox.showerror("Vox-Pack", m))
+            self.after(0, lambda m=erreur: self._message(
+                f"La génération s'est arrêtée.\n\n{m}\n\n"
+                "Vérifie ta connexion Internet : les voix sont fabriquées "
+                "par le service en ligne de Microsoft.",
+                icone="erreur"))
         else:
             out = self.output_dir
-            self.after(0, lambda: messagebox.showinfo(
-                "Vox-Pack",
-                f"Génération terminée !\n\nVos voix sont prêtes dans :\n{out}"
-            ))
+            self.after(0, lambda: self._message(
+                f"Vos voix sont prêtes.\n\n{out}",
+                icone="succes",
+                boutons=[("Ouvrir le dossier",
+                          lambda: self._ouvrir_dossier(out)),
+                         ("Fermer", None)]))
 
 
 if __name__ == "__main__":
