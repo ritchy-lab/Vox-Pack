@@ -144,10 +144,13 @@ BTN_W = 170
 BTN_H = 34
 
 # ------------------------------------------------------------------
-# Typographie
+# Typographie — aucun gras dans la fenêtre principale : les tailles et les
+# contrastes suffisent, et le rendu est plus léger.
 # ------------------------------------------------------------------
-TYPO_LISTE = 16          # les lignes de la liste (nom du fichier + phrase)
-HAUTEUR_LIGNE = 38       # hauteur de ces cases (à agrandir avec la police)
+TYPO_LISTE = 17          # les lignes de la liste (nom du fichier + phrase)
+HAUTEUR_LIGNE = 40       # hauteur de ces cases (à agrandir avec la police)
+TYPO_BOUTON = 14         # texte des boutons
+TYPO_PETIT_BOUTON = 13   # petits boutons (Tout / Rien)
 
 # Le logo a plus de poids visuel à gauche (les barres de voix) qu'à droite
 # (les ondes fines) : centré au pixel près, le sous-titre paraît décalé vers
@@ -229,7 +232,7 @@ class SegmentedProgressBar(ctk.CTkFrame):
             w - 6, h // 2,
             text=f"{pct}%",
             fill=TEXT_WHITE,
-            font=("SF Pro Display", 12, "bold"),
+            font=("SF Pro Display", 13),
             anchor="e",
         )
 
@@ -311,7 +314,7 @@ class VoxPackApp(ctk.CTk):
         self.btn_aide = ctk.CTkButton(
             self.header,
             text="?",
-            font=("SF Pro Display", 20, "bold"),
+            font=("SF Pro Display", 20),
             width=30,
             height=30,
             corner_radius=15,
@@ -342,14 +345,14 @@ class VoxPackApp(ctk.CTk):
                 ctk.CTkLabel(
                     self.header,
                     text="Vox-Pack",
-                    font=("SF Pro Display", 32, "bold"),
+                    font=("SF Pro Display", 32),
                     text_color=CYAN,
                 ).pack(anchor="center")
         else:
             ctk.CTkLabel(
                 self.header,
                 text="Vox-Pack",
-                font=("SF Pro Display", 32, "bold"),
+                font=("SF Pro Display", 32),
                 text_color=CYAN,
             ).pack(anchor="center")
 
@@ -462,7 +465,7 @@ class VoxPackApp(ctk.CTk):
         self.btn_letsgo = ctk.CTkButton(
             row_gen,
             text="Let's Go",
-            font=("SF Pro Display", 15, "bold"),
+            font=("SF Pro Display", 16),
             width=180,
             height=44,
             corner_radius=22,
@@ -478,7 +481,7 @@ class VoxPackApp(ctk.CTk):
         self.signature = ctk.CTkLabel(
             self.bottom,
             text="ritchy-lab",
-            font=("SF Pro Display", 11),
+            font=("SF Pro Display", 12),
             text_color=TEXT_DIM,
             fg_color="transparent",
         )
@@ -498,16 +501,16 @@ class VoxPackApp(ctk.CTk):
     # ------------------------------------------------------------------
     def _btn(self, parent, text, command, small=False, largeur=None):
         if small:
-            w, h, f = 80, 30, 12
+            w, h, f = 80, 30, TYPO_PETIT_BOUTON
         else:
-            w, h, f = BTN_W, BTN_H, 13
+            w, h, f = BTN_W, BTN_H, TYPO_BOUTON
         if largeur:
             w = largeur
         bouton = ctk.CTkButton(
             parent,
             text=text,
             command=command,
-            font=("SF Pro Display", f, "bold"),
+            font=("SF Pro Display", f),     # pas de gras, comme partout
             fg_color="transparent",
             border_color=CYAN,
             border_width=1,
@@ -686,7 +689,22 @@ class VoxPackApp(ctk.CTk):
         )
         frame.pack(fill="both", expand=True, padx=15, pady=(15, 8))
 
+        # Le logo en haut de l'aide
+        self._logo_aide = None
+        if os.path.exists(LOGO_PATH):
+            try:
+                img = Image.open(LOGO_PATH)
+                ratio = img.height / img.width
+                largeur_logo = 300
+                self._logo_aide = ctk.CTkImage(
+                    light_image=img, dark_image=img,
+                    size=(largeur_logo, int(largeur_logo * ratio)),
+                )
+            except Exception:
+                self._logo_aide = None
+
         contenu = [
+            ("logo", ""),
             ("title", "Comment utiliser l'application"),
             ("space", ""),
             ("text", "1. Choisir une voix dans le menu déroulant."),
@@ -725,8 +743,7 @@ class VoxPackApp(ctk.CTk):
             ("code", "16 bits, 32 kHz, mono."),
             ("space", ""),
             ("sep", ""),
-            ("title2", "☕  Soutenir le projet"),
-            ("text", "Mon application te sert ou te plaît ?"),
+            ("grand", "☕  Mon application te sert ou te plaît ?"),
             ("lien", "Paye-moi un café  ·  ko-fi.com/ritchy_lab"),
             ("space", ""),
             ("sep", ""),
@@ -734,48 +751,60 @@ class VoxPackApp(ctk.CTk):
         ]
 
         for kind, txt in contenu:
-            if kind == "space":
+            if kind == "logo":
+                if self._logo_aide is not None:
+                    ctk.CTkLabel(
+                        frame, image=self._logo_aide, text=""
+                    ).pack(pady=(4, 8))
+            elif kind == "space":
                 ctk.CTkLabel(frame, text="", height=6).pack()
             elif kind == "title":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 15, "bold"),
+                    font=("SF Pro Display", 18),
                     text_color=CYAN, anchor="w", justify="left",
                 ).pack(fill="x", pady=(4, 2))
             elif kind == "title2":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 14, "bold"),
+                    font=("SF Pro Display", 16),
                     text_color=CYAN, anchor="w", justify="left",
                 ).pack(fill="x", pady=(6, 2))
+            elif kind == "grand":
+                ctk.CTkLabel(
+                    frame, text=txt,
+                    font=("SF Pro Display", 19),
+                    text_color=CYAN, anchor="center", justify="center",
+                    wraplength=470,
+                ).pack(fill="x", pady=(2, 6))
             elif kind == "bullet":
                 ctk.CTkLabel(
                     frame, text="    " + txt,
-                    font=("SF Pro Display", 13),
+                    font=("SF Pro Display", 14),
                     text_color=TEXT_WHITE, anchor="w", justify="left",
                 ).pack(fill="x")
             elif kind == "warning":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 13, "bold"),
+                    font=("SF Pro Display", 14),
                     text_color="#FF6B6B", anchor="w", justify="left",
                 ).pack(fill="x")
             elif kind == "code":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("Menlo", 12),
+                    font=("Menlo", 13),
                     text_color="#7FE0E8", anchor="w", justify="left",
                 ).pack(fill="x", padx=(20, 0))
             elif kind == "italic":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 12, "italic"),
+                    font=("SF Pro Display", 13, "italic"),
                     text_color=TEXT_GREY, anchor="center", justify="center",
                 ).pack(fill="x", pady=(6, 0))
             elif kind == "lien":
                 lien = ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 13),
+                    font=("SF Pro Display", 17),
                     text_color=LINK_COLOR, anchor="center",
                 )
                 lien.pack(fill="x")
