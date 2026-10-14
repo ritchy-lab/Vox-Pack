@@ -246,18 +246,28 @@ class SegmentedProgressBar(ctk.CTkFrame):
 # Menu déroulant des voix
 # ------------------------------------------------------------------
 class MenuVoix(ctk.CTkComboBox):
-    """Menu déroulant dont le filet reste complet.
+    """Menu déroulant des voix, au filet complet et à la flèche bien à l'aise.
 
     customtkinter repeint le bord DROIT du menu avec la couleur du bloc de la
     flèche : au repos, mais aussi à chaque passage de la souris (sa méthode
     _on_leave s'en occupe sans condition). Comme ce bloc doit rester sombre
     pour ne plus voir de cyan derrière la flèche, le filet disparaîtrait à
     droite. On le rétablit donc après chaque repeinture.
+
+    La flèche, elle, est collée au bord : on l'écarte vers la gauche.
     """
+
+    MARGE_FLECHE = 6      # écart entre la flèche et le bord droit, en pixels
 
     def _draw(self, no_color_updates=False):
         super()._draw(no_color_updates)
         self._retablir_filet()
+        # Le dessin replace la flèche à sa position d'origine : le décalage
+        # appliqué ici ne s'accumule donc jamais.
+        try:
+            self._canvas.move("dropdown_arrow", -self.MARGE_FLECHE, 0)
+        except Exception:
+            pass
 
     def _on_enter(self, event=0):
         super()._on_enter(event)
