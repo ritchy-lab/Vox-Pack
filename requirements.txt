@@ -1,0 +1,21 @@
+# ============================================================
+# Vox-Pack — bibliothèques nécessaires
+# ============================================================
+# Installation :
+#   python3.11 -m venv venv
+#   venv/bin/python -m pip install -r requirements.txt
+# ============================================================
+
+# Synthèse vocale (service en ligne de Microsoft Edge).
+# 7.3.1 minimum : les versions précédentes reçoivent une erreur 403
+# depuis le 13 octobre 2026 (Microsoft a durci son contrôle d'accès).
+edge-tts==7.3.1
+
+# Interface graphique
+customtkinter==6.0.0
+
+# Lecture des images (logo)
+Pillow==12.3.0
+
+# --- Uniquement pour fabriquer l'application (./build.sh) ---
+pyinstaller==6.22.3

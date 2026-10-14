@@ -19,8 +19,8 @@ build/
 dist/
 
 # ...sauf la recette de build, qu'on veut garder dans le dépôt
-!VoxPack.spec
-!RadioVox.spec
+!Vox-Pack.spec
+
 
 # Icône macOS (généré à partir de icon.png / logo.png)
 icon.iconset/

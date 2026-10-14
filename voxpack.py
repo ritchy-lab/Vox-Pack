@@ -1,12 +1,14 @@
 # ============================================================
-# RadioVox
-# © 2026 Richard Cogne — Tous droits réservés
+# Vox-Pack
+# © 2026 ritchy-lab — licence MIT (voir le fichier LICENSE)
 # made by ritchy
 # ============================================================
 
 import asyncio
 import os
+import shutil
 import subprocess
+import sys
 import threading
 from tkinter import filedialog, messagebox
 
@@ -20,14 +22,48 @@ import edge_tts
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("dark-blue")
 
-DATA_DIR = os.path.expanduser("~/Documents/VoixEdgeTX")
+# Où l'application range la liste des phrases.
+# L'application s'appelait RadioVox et écrivait dans « VoixEdgeTX » :
+# au premier démarrage, on recopie l'ancienne liste (sans jamais la
+# supprimer) pour que rien ne soit perdu.
+ANCIEN_DIR = os.path.expanduser("~/Documents/VoixEdgeTX")
+DATA_DIR = os.path.expanduser("~/Documents/Vox-Pack")
 CSV_FILE = os.path.join(DATA_DIR, "liste_des_voix.csv")
 VOLUME = "+50%"
 AFCONVERT = "/usr/bin/afconvert"
 
-# Chemin du logo (dans le même dossier que le script)
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-LOGO_PATH = os.path.join(SCRIPT_DIR, "logo.png")
+
+def reprendre_ancienne_liste():
+    """Recopie la liste de l'ancienne version, une seule fois."""
+    ancien_csv = os.path.join(ANCIEN_DIR, "liste_des_voix.csv")
+    if os.path.exists(ancien_csv) and not os.path.exists(CSV_FILE):
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            shutil.copy2(ancien_csv, CSV_FILE)
+        except OSError:
+            pass  # tant pis : on repartira de la liste par défaut
+
+# Chemin du logo. En version compilée, PyInstaller range les fichiers joints
+# (le logo) dans un dossier temporaire : on regarde donc à plusieurs endroits.
+DOSSIER_SCRIPT = os.path.dirname(os.path.abspath(__file__))
+
+
+def trouver_logo():
+    pistes = []
+    if getattr(sys, "frozen", False):
+        pistes.append(getattr(sys, "_MEIPASS", ""))
+        pistes.append(os.path.dirname(os.path.abspath(sys.executable)))
+        pistes.append(os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "..", "Resources"))
+    pistes.append(DOSSIER_SCRIPT)
+    for dossier in pistes:
+        if dossier:
+            chemin = os.path.join(dossier, "logo.png")
+            if os.path.exists(chemin):
+                return chemin
+    return os.path.join(DOSSIER_SCRIPT, "logo.png")
+
+
+LOGO_PATH = trouver_logo()
 
 VOICES = {
     "Denise (Femme - Studio)": "fr-FR-DeniseNeural",
@@ -178,11 +214,11 @@ class SegmentedProgressBar(ctk.CTkFrame):
 # ------------------------------------------------------------------
 # Application
 # ------------------------------------------------------------------
-class RadioVoxApp(ctk.CTk):
+class VoxPackApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("RadioVox")
+        self.title("Vox-Pack")
         self.geometry("1000x740")
         self.minsize(950, 600)
         self.resizable(True, True)
@@ -229,14 +265,14 @@ class RadioVoxApp(ctk.CTk):
             except Exception:
                 ctk.CTkLabel(
                     self.header,
-                    text="RadioVox",
+                    text="Vox-Pack",
                     font=("SF Pro Display", 32, "bold"),
                     text_color=CYAN,
                 ).pack(anchor="center")
         else:
             ctk.CTkLabel(
                 self.header,
-                text="RadioVox",
+                text="Vox-Pack",
                 font=("SF Pro Display", 32, "bold"),
                 text_color=CYAN,
             ).pack(anchor="center")
@@ -359,6 +395,7 @@ class RadioVoxApp(ctk.CTk):
         self.signature.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-10)
 
         # ----- Chargement -----
+        reprendre_ancienne_liste()
         self.charger_liste()
 
     # ------------------------------------------------------------------
@@ -389,7 +426,7 @@ class RadioVoxApp(ctk.CTk):
     # ------------------------------------------------------------------
     def _ouvrir_aide(self):
         popup = ctk.CTkToplevel(self)
-        popup.title("Aide — RadioVox")
+        popup.title("Aide — Vox-Pack")
         popup.resizable(False, False)
         popup.transient(self)
         popup.grab_set()
@@ -436,7 +473,7 @@ class RadioVoxApp(ctk.CTk):
             ("space", ""),
             ("title2", "💾  Sauvegarde automatique"),
             ("text", "Vos modifications sont enregistrées dans :"),
-            ("code", "~/Documents/VoixEdgeTX/liste_des_voix.csv"),
+            ("code", "~/Documents/Vox-Pack/liste_des_voix.csv"),
             ("space", ""),
             ("title2", "♻️  Liste par défaut"),
             ("bullet", "Si vous supprimez TOUTE la liste, elle sera reconstruite"),
@@ -599,12 +636,12 @@ class RadioVoxApp(ctk.CTk):
     def supprimer_selection(self):
         cochees = [l for l in self.lignes if l["var_check"].get()]
         if not cochees:
-            messagebox.showwarning("RadioVox", "Cochez au moins une ligne à supprimer.")
+            messagebox.showwarning("Vox-Pack", "Cochez au moins une ligne à supprimer.")
             return
 
         if len(cochees) == len(self.lignes):
             reponse = messagebox.askyesno(
-                "RadioVox",
+                "Vox-Pack",
                 "Vous allez supprimer TOUTE la liste.\n\n"
                 "Elle sera reconstruite automatiquement "
                 "au prochain démarrage de l'application.\n\n"
@@ -649,7 +686,7 @@ class RadioVoxApp(ctk.CTk):
     def ecouter_selection(self):
         cochees = [l for l in self.lignes if l["var_check"].get()]
         if not cochees:
-            messagebox.showwarning("RadioVox", "Cochez une ligne à écouter.")
+            messagebox.showwarning("Vox-Pack", "Cochez une ligne à écouter.")
             return
         texte = cochees[0]["entry_txt"].get().strip()
         if not texte:
@@ -668,7 +705,7 @@ class RadioVoxApp(ctk.CTk):
             await communicate.save(temp)
             subprocess.run(["/usr/bin/afplay", temp])
         except Exception as e:
-            self.after(0, lambda err=e: messagebox.showerror("RadioVox", f"Aperçu impossible : {err}"))
+            self.after(0, lambda err=e: messagebox.showerror("Vox-Pack", f"Aperçu impossible : {err}"))
         finally:
             if os.path.exists(temp):
                 os.remove(temp)
@@ -679,7 +716,7 @@ class RadioVoxApp(ctk.CTk):
     def start_generation(self):
         cochees = [l for l in self.lignes if l["var_check"].get()]
         if not cochees:
-            messagebox.showwarning("RadioVox", "Cochez au moins une ligne.")
+            messagebox.showwarning("Vox-Pack", "Cochez au moins une ligne.")
             return
 
         taches = []
@@ -689,7 +726,7 @@ class RadioVoxApp(ctk.CTk):
             if nom and texte:
                 taches.append((nom, texte))
         if not taches:
-            messagebox.showwarning("RadioVox", "Aucune ligne valide à générer.")
+            messagebox.showwarning("Vox-Pack", "Aucune ligne valide à générer.")
             return
 
         dossier = filedialog.askdirectory(title="Dossier de destination des WAV")
@@ -750,15 +787,15 @@ class RadioVoxApp(ctk.CTk):
         self.after(0, lambda: self.progress.reset())
 
         if erreur:
-            self.after(0, lambda m=erreur: messagebox.showerror("RadioVox", m))
+            self.after(0, lambda m=erreur: messagebox.showerror("Vox-Pack", m))
         else:
             out = self.output_dir
             self.after(0, lambda: messagebox.showinfo(
-                "RadioVox",
+                "Vox-Pack",
                 f"Génération terminée !\n\nVos voix sont prêtes dans :\n{out}"
             ))
 
 
 if __name__ == "__main__":
-    app = RadioVoxApp()
+    app = VoxPackApp()
     app.mainloop()
