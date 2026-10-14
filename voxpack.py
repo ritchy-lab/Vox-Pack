@@ -281,7 +281,7 @@ class VoxPackApp(ctk.CTk):
         self.lbl_sub = ctk.CTkLabel(
             self.header,
             text="Fait parler ta radio",
-            font=("SF Pro Display", 15),
+            font=("SF Pro Display", 16),
             text_color=CYAN,
         )
         self.lbl_sub.pack(anchor="center", pady=(0, 10))
@@ -330,11 +330,11 @@ class VoxPackApp(ctk.CTk):
         ctk.CTkLabel(row_head, text="", width=40).grid(row=0, column=0, padx=4, pady=8)
         ctk.CTkLabel(
             row_head, text="Nom du fichier WAV (Max 8 car.)",
-            font=("SF Pro Display", 13, "bold"), text_color=TEXT_WHITE,
+            font=("SF Pro Display", 14, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=1, sticky="w", padx=8, pady=8)
         ctk.CTkLabel(
             row_head, text="Phrase à prononcer par la radiocommande",
-            font=("SF Pro Display", 13, "bold"), text_color=TEXT_WHITE,
+            font=("SF Pro Display", 14, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=2, sticky="w", padx=8, pady=8)
 
         # ----- Zone liste défilante -----
