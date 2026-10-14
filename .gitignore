@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+._*
+*.textClipping
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Environnement virtuel (recréé avec requirements.txt)
+venv/
+.venv/
+
+# PyInstaller
+build/
+dist/
+
+# ...sauf la recette de build, qu'on veut garder dans le dépôt
+!VoxPack.spec
+!RadioVox.spec
+
+# Icône macOS (généré à partir de icon.png / logo.png)
+icon.iconset/
+
+# Divers
+*.zip
+*.log
