@@ -149,14 +149,50 @@ BTN_H = 34
 # ------------------------------------------------------------------
 TYPO_LISTE = 17          # les lignes de la liste (nom du fichier + phrase)
 HAUTEUR_LIGNE = 40       # hauteur de ces cases (à agrandir avec la police)
-TYPO_BOUTON = 14         # texte des boutons
-TYPO_PETIT_BOUTON = 13   # petits boutons (Tout / Rien)
+TYPO_BOUTON = 16        # texte des boutons
+TYPO_PETIT_BOUTON = 14  # petits boutons (Tout / Rien)
 
 # Le logo a plus de poids visuel à gauche (les barres de voix) qu'à droite
 # (les ondes fines) : centré au pixel près, le sous-titre paraît décalé vers
 # la droite. On le décale donc légèrement vers la gauche, pour qu'il tombe
 # sous le monogramme. Mettre 0 pour un centrage strictement mathématique.
 DECALAGE_SOUS_TITRE = 8  # en pixels, vers la gauche
+
+# Écart entre les lettres du sous-titre, en pixels. Tk ne sait pas espacer les
+# lettres : le sous-titre est donc dessiné lettre par lettre (classe
+# TexteEspace ci-dessous). 0 = écartement naturel de la police, 3 ou 4 = plus
+# aéré, -1 = plus serré.
+ESPACEMENT_SOUS_TITRE = 0
+
+# Police du texte. La première de la liste que le système sait réellement
+# utiliser est retenue au démarrage. Attention : « SF Pro Display » n'existe
+# pas — sous ce nom, Tk prenait en silence la police système de macOS (et
+# aurait pris n'importe quoi sous Windows).
+POLICES_PREFEREES = [
+    ".AppleSystemUIFont",   # police système de macOS (San Francisco)
+    "Segoe UI",             # police système de Windows
+    "Avenir Next",          # macOS
+    "Helvetica Neue",
+    "Arial",                # présente partout
+]
+FONT_MAIN = "Arial"         # valeur de départ, remplacée par choisir_police()
+
+
+def choisir_police(candidats=None):
+    """Retient la première police de la liste que le système sait utiliser.
+
+    Tk ne refuse pas un nom de police inconnu : il en rend une autre sans rien
+    dire. On vérifie donc ce qu'on obtient réellement.
+    """
+    global FONT_MAIN
+    for nom in (candidats or POLICES_PREFEREES):
+        try:
+            if tkfont.Font(family=nom).actual("family") == nom:
+                FONT_MAIN = nom
+                break
+        except Exception:
+            continue
+    return FONT_MAIN
 
 
 def largeur_juste(valeurs, taille_police=13, marge=44):
@@ -165,7 +201,7 @@ def largeur_juste(valeurs, taille_police=13, marge=44):
     La marge couvre la place de la flèche et les espaces intérieurs : sans
     elle, la flèche laisserait un grand vide après les noms les plus courts.
     """
-    police = tkfont.Font(family="SF Pro Display", size=taille_police)
+    police = tkfont.Font(family=FONT_MAIN, size=taille_police)
     return max(police.measure(str(v)) for v in valeurs) + marge
 
 
@@ -232,7 +268,7 @@ class SegmentedProgressBar(ctk.CTkFrame):
             w - 6, h // 2,
             text=f"{pct}%",
             fill=TEXT_WHITE,
-            font=("SF Pro Display", 13),
+            font=(FONT_MAIN, 13),
             anchor="e",
         )
 
@@ -289,11 +325,45 @@ class MenuVoix(ctk.CTkComboBox):
 
 
 # ------------------------------------------------------------------
+# Texte à écartement réglable
+# ------------------------------------------------------------------
+class TexteEspace(ctk.CTkCanvas):
+    """Étiquette dont on règle l'écart entre les lettres.
+
+    Tk ne sait pas espacer les lettres d'un texte : on dessine donc chaque
+    lettre l'une après l'autre, à la distance voulue. L'écartement peut être
+    positif (plus aéré) ou négatif (plus serré).
+    """
+
+    def __init__(self, master, texte, taille=16, espacement=0,
+                 couleur=TEXT_WHITE, fond=BG_MAIN, **kwargs):
+        police = tkfont.Font(family=FONT_MAIN, size=taille)
+        mesures = [police.measure(lettre) for lettre in texte]
+        naturel = police.measure(texte)
+        # La somme des lettres est plus large que le texte entier : la police
+        # resserre certaines paires. On répartit cette différence, pour qu'à
+        # écartement 0 le texte occupe exactement sa largeur naturelle.
+        correction = (sum(mesures) - naturel) / max(len(texte) - 1, 1)
+        largeur = int(naturel + espacement * max(len(texte) - 1, 0))
+        hauteur = police.metrics("linespace") + 6
+        super().__init__(master, width=largeur, height=hauteur,
+                         bg=fond, highlightthickness=0, **kwargs)
+        self.police = police
+        x = 0
+        for lettre, mesure in zip(texte, mesures):
+            self.create_text(x, hauteur // 2, text=lettre, anchor="w",
+                             fill=couleur, font=police)
+            x += mesure - correction + espacement
+
+
+# ------------------------------------------------------------------
 # Application
 # ------------------------------------------------------------------
 class VoxPackApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        choisir_police()
 
         self.title("Vox-Pack")
         self.geometry("1000x740")
@@ -314,7 +384,7 @@ class VoxPackApp(ctk.CTk):
         self.btn_aide = ctk.CTkButton(
             self.header,
             text="?",
-            font=("SF Pro Display", 20),
+            font=(FONT_MAIN, 20),
             width=30,
             height=30,
             corner_radius=15,
@@ -345,23 +415,24 @@ class VoxPackApp(ctk.CTk):
                 ctk.CTkLabel(
                     self.header,
                     text="Vox-Pack",
-                    font=("SF Pro Display", 32),
+                    font=(FONT_MAIN, 32),
                     text_color=CYAN,
                 ).pack(anchor="center")
         else:
             ctk.CTkLabel(
                 self.header,
                 text="Vox-Pack",
-                font=("SF Pro Display", 32),
+                font=(FONT_MAIN, 32),
                 text_color=CYAN,
             ).pack(anchor="center")
 
-        # Sous-titre en cyan
-        self.lbl_sub = ctk.CTkLabel(
+        # Sous-titre (écartement réglable par ESPACEMENT_SOUS_TITRE)
+        self.lbl_sub = TexteEspace(
             self.header,
-            text="Fait parler ta radio",
-            font=("SF Pro Display", 16),
-            text_color=LINK_COLOR,
+            "Fait parler ta radio",
+            taille=16,
+            espacement=ESPACEMENT_SOUS_TITRE,
+            couleur=LINK_COLOR,
         )
         # padx retire la place à droite : le texte se décale vers la gauche
         self.lbl_sub.pack(anchor="center",
@@ -381,8 +452,8 @@ class VoxPackApp(ctk.CTk):
             # largeur calculée sur le nom le plus long : la flèche reste
             # collée au texte au lieu de laisser un grand vide
             width=largeur_juste(VOICES.keys()),
-            font=("SF Pro Display", 13),
-            dropdown_font=("SF Pro Display", 13),
+            font=(FONT_MAIN, 13),
+            dropdown_font=(FONT_MAIN, 13),
             # Les coins arrondis se fondent dans le fond noir de la fenêtre :
             # sans cela, customtkinter laisse apparaître un rectangle sombre.
             bg_color=BG_MAIN,
@@ -417,11 +488,11 @@ class VoxPackApp(ctk.CTk):
         ctk.CTkLabel(row_head, text="", width=40).grid(row=0, column=0, padx=4, pady=8)
         ctk.CTkLabel(
             row_head, text="Nom du fichier WAV (Max 8 car.)",
-            font=("SF Pro Display", 18, "normal"), text_color=TEXT_WHITE,
+            font=(FONT_MAIN, 18, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=1, sticky="w", padx=8, pady=8)
         ctk.CTkLabel(
             row_head, text="Phrase à prononcer par la radiocommande",
-            font=("SF Pro Display", 18, "normal"), text_color=TEXT_WHITE,
+            font=(FONT_MAIN, 18, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=2, sticky="w", padx=8, pady=8)
 
         # ----- Zone liste défilante -----
@@ -465,7 +536,7 @@ class VoxPackApp(ctk.CTk):
         self.btn_letsgo = ctk.CTkButton(
             row_gen,
             text="Let's Go",
-            font=("SF Pro Display", 16),
+            font=(FONT_MAIN, 16, "bold"),
             width=180,
             height=44,
             corner_radius=22,
@@ -481,7 +552,7 @@ class VoxPackApp(ctk.CTk):
         self.signature = ctk.CTkLabel(
             self.bottom,
             text="ritchy-lab",
-            font=("SF Pro Display", 12),
+            font=(FONT_MAIN, 12),
             text_color=TEXT_DIM,
             fg_color="transparent",
         )
@@ -510,7 +581,7 @@ class VoxPackApp(ctk.CTk):
             parent,
             text=text,
             command=command,
-            font=("SF Pro Display", f),     # pas de gras, comme partout
+            font=(FONT_MAIN, f),     # pas de gras, comme partout
             fg_color="transparent",
             border_color=CYAN,
             border_width=1,
@@ -555,13 +626,13 @@ class VoxPackApp(ctk.CTk):
         largeur = 380
         ctk.CTkLabel(
             popup, text="Mon application te sert ou te plaît ?",
-            font=("SF Pro Display", 16), text_color=TEXT_WHITE,
+            font=(FONT_MAIN, 16), text_color=TEXT_WHITE,
             wraplength=largeur - 50, justify="center",
         ).pack(padx=25, pady=(26, 6))
 
         cafe = ctk.CTkLabel(
             popup, text="Paye-moi un café  ☕",
-            font=("SF Pro Display", 16), text_color=LINK_COLOR,
+            font=(FONT_MAIN, 16), text_color=LINK_COLOR,
         )
         cafe.pack()
         cafe.bind("<Button-1>", lambda e: self._ouvrir_lien(KO_FI_URL))
@@ -619,12 +690,12 @@ class VoxPackApp(ctk.CTk):
                                  bg=BG_MAIN, highlightthickness=0)
         pastille.create_oval(4, 4, 54, 54, outline=couleur, width=2)
         pastille.create_text(29, 29, text=symbole, fill=couleur,
-                             font=("SF Pro Display", 26, "bold"))
+                             font=(FONT_MAIN, 26, "bold"))
         pastille.pack(pady=(26, 8))
 
         ctk.CTkLabel(
             popup, text=texte,
-            font=("SF Pro Display", 14), text_color=TEXT_WHITE,
+            font=(FONT_MAIN, 14), text_color=TEXT_WHITE,
             wraplength=largeur - 60, justify="center",
         ).pack(padx=30)
 
@@ -761,32 +832,32 @@ class VoxPackApp(ctk.CTk):
             elif kind == "title":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 18),
+                    font=(FONT_MAIN, 18),
                     text_color=CYAN, anchor="w", justify="left",
                 ).pack(fill="x", pady=(4, 2))
             elif kind == "title2":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 16),
+                    font=(FONT_MAIN, 16),
                     text_color=CYAN, anchor="w", justify="left",
                 ).pack(fill="x", pady=(6, 2))
             elif kind == "grand":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 19),
+                    font=(FONT_MAIN, 19),
                     text_color=CYAN, anchor="center", justify="center",
                     wraplength=470,
                 ).pack(fill="x", pady=(2, 6))
             elif kind == "bullet":
                 ctk.CTkLabel(
                     frame, text="    " + txt,
-                    font=("SF Pro Display", 14),
+                    font=(FONT_MAIN, 14),
                     text_color=TEXT_WHITE, anchor="w", justify="left",
                 ).pack(fill="x")
             elif kind == "warning":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 14),
+                    font=(FONT_MAIN, 14),
                     text_color="#FF6B6B", anchor="w", justify="left",
                 ).pack(fill="x")
             elif kind == "code":
@@ -798,13 +869,13 @@ class VoxPackApp(ctk.CTk):
             elif kind == "italic":
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 13, "italic"),
+                    font=(FONT_MAIN, 13, "italic"),
                     text_color=TEXT_GREY, anchor="center", justify="center",
                 ).pack(fill="x", pady=(6, 0))
             elif kind == "lien":
                 lien = ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 17),
+                    font=(FONT_MAIN, 17),
                     text_color=LINK_COLOR, anchor="center",
                 )
                 lien.pack(fill="x")
@@ -818,7 +889,7 @@ class VoxPackApp(ctk.CTk):
             else:
                 ctk.CTkLabel(
                     frame, text=txt,
-                    font=("SF Pro Display", 13),
+                    font=(FONT_MAIN, 13),
                     text_color=TEXT_WHITE, anchor="w", justify="left",
                 ).pack(fill="x")
 
@@ -890,7 +961,7 @@ class VoxPackApp(ctk.CTk):
 
         entry_nom = ctk.CTkEntry(
             frame,
-            font=("SF Pro Display", TYPO_LISTE),
+            font=(FONT_MAIN, TYPO_LISTE),
             fg_color=BG_ENTRY,
             border_color="#2A3A48",
             border_width=1,
@@ -903,7 +974,7 @@ class VoxPackApp(ctk.CTk):
 
         entry_txt = ctk.CTkEntry(
             frame,
-            font=("SF Pro Display", TYPO_LISTE),
+            font=(FONT_MAIN, TYPO_LISTE),
             fg_color=BG_ENTRY,
             border_color="#2A3A48",
             border_width=1,
