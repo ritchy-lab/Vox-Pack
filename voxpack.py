@@ -15,6 +15,7 @@ import string
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from tkinter import filedialog, Menu
 
@@ -38,7 +39,38 @@ ANCIEN_DIR = os.path.expanduser("~/Documents/VoixEdgeTX")
 DATA_DIR = os.path.expanduser("~/Documents/Vox-Pack")
 CSV_FILE = os.path.join(DATA_DIR, "liste_des_voix.csv")
 VOLUME = "+50%"
-AFCONVERT = "/usr/bin/afconvert"
+AFCONVERT = "/usr/bin/afconvert"        # macOS : présent d'origine, très rapide
+AFPLAY = "/usr/bin/afplay"              # macOS : lecture d'un son
+FORMAT_EDGETX = (32000, 1)             # 32 kHz, mono (ce que lit la radio)
+
+
+def convertir_en_wav(source_mp3, destination_wav):
+    """Convertit un MP3 en WAV 16 bits, 32 kHz, mono (le format EdgeTX).
+
+    Sur macOS, on passe par afconvert : il est présent d'origine et très
+    rapide. Ailleurs (Windows), on fait tout en Python avec soundfile et
+    soxr — même résultat, aucun outil externe à installer.
+    """
+    if sys.platform == "darwin" and os.path.exists(AFCONVERT):
+        subprocess.run(
+            [AFCONVERT, "-f", "WAVE", "-d", "LEI16@32000", "-c", "1",
+             source_mp3, destination_wav],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+        )
+        return
+
+    # Import paresseux : sur macOS, soundfile et soxr ne sont même pas
+    # nécessaires, et l'application démarre donc sans eux.
+    import soundfile as sf
+    import soxr
+
+    donnees, taux = sf.read(source_mp3, dtype="float32")
+    if donnees.ndim > 1:                       # au cas où la voix serait stéréo
+        donnees = donnees.mean(axis=1)
+    cible = FORMAT_EDGETX[0]
+    if taux != cible:
+        donnees = soxr.resample(donnees, taux, cible, quality="VHQ")
+    sf.write(destination_wav, donnees, cible, subtype="PCM_16")
 
 
 def chemin_liste(langue):
@@ -49,6 +81,65 @@ def chemin_liste(langue):
     unique — Richard a perdu une liste en essayant l'anglais.
     """
     return os.path.join(DATA_DIR, f"liste_{langue}.csv")
+
+
+# ------------------------------------------------------------------
+# Lecture d'un son
+# ------------------------------------------------------------------
+class LectureAudio:
+    """Joue un fichier sonore, et permet de l'interrompre.
+
+    Même interface qu'un subprocess.Popen — wait() et terminate() — pour que
+    le reste du code n'ait pas à savoir COMMENT on joue le son :
+      * macOS : afplay, présent d'origine ;
+      * ailleurs : soundfile lit le fichier, sounddevice le joue.
+    """
+
+    def __init__(self, chemin):
+        self._processus = None
+        self._sd = None
+        self._arret = threading.Event()
+        if sys.platform == "darwin" and os.path.exists(AFPLAY):
+            self._processus = subprocess.Popen(
+                [AFPLAY, chemin],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        # Import paresseux : sur macOS, ces bibliothèques ne servent à rien.
+        import soundfile as sf
+        import sounddevice as sd
+
+        donnees, taux = sf.read(chemin, dtype="float32")
+        self._sd = sd
+        sd.play(donnees, taux)
+
+    def wait(self):
+        """Attend la fin de la lecture (interruptible par terminate)."""
+        if self._processus is not None:
+            self._processus.wait()
+            return
+        while not self._arret.is_set():
+            flux = self._sd.get_stream()
+            if flux is None or not flux.active:
+                break
+            time.sleep(0.05)
+        try:
+            self._sd.stop()
+        except Exception:
+            pass
+
+    def terminate(self):
+        """Coupe la lecture tout de suite."""
+        self._arret.set()
+        if self._processus is not None:
+            try:
+                self._processus.terminate()
+            except Exception:
+                pass
+            return
+        try:
+            self._sd.stop()
+        except Exception:
+            pass
 
 
 def reprendre_ancienne_liste():
@@ -1503,11 +1594,35 @@ class VoxPackApp(ctk.CTk):
         # chez Microsoft (décalé : la fenêtre s'affiche d'abord).
         self.after(600, self._verifier_voix)
 
+        self._poser_icone()
         self._construire_menu()
 
     # ------------------------------------------------------------------
     # Menu : exporter / importer une liste, et langue de l'interface
     # ------------------------------------------------------------------
+    def _poser_icone(self):
+        """Donne son icône à la fenêtre.
+
+        Sans cela, Windows affiche l'icône de Tk dans la barre des tâches,
+        même quand l'exécutable a la bonne icône. Sur macOS, l'icône vient de
+        l'application elle-même : cet appel n'y change rien.
+        """
+        try:
+            if sys.platform.startswith("win"):
+                ico = trouver_ressource("icon.ico")
+                if os.path.exists(ico):
+                    self.iconbitmap(ico)
+                    return
+            from tkinter import PhotoImage
+
+            png = trouver_ressource("icon.png")
+            if os.path.exists(png):
+                # On garde une référence : sans elle, Tk oublie l'image.
+                self._icone_fenetre = PhotoImage(file=png)
+                self.iconphoto(True, self._icone_fenetre)
+        except Exception:
+            pass  # une icône, ce n'est pas vital
+
     def _construire_menu(self):
         """Menu « Fichier ». Sur macOS il apparaît dans la barre du système,
         sur Windows dans la fenêtre : c'est le même code.
@@ -1515,8 +1630,16 @@ class VoxPackApp(ctk.CTk):
         Il est reconstruit à chaque changement de langue : sur macOS, Tk ne
         sait pas traduire un menu déjà posé.
         """
-        barre = Menu(self)
-        fichier = Menu(barre, tearoff=0)
+        # Windows affiche le menu dans la fenêtre : on le met aux couleurs de
+        # l'application. macOS l'affiche dans la barre du système et ignore
+        # ces réglages — c'est le système qui décide, et c'est très bien.
+        style = {}
+        if not sys.platform == "darwin":
+            style = dict(background=BG_MAIN, foreground=TEXT_WHITE,
+                         activebackground=CYAN, activeforeground=BG_MAIN,
+                         borderwidth=0, relief="flat")
+        barre = Menu(self, **style)
+        fichier = Menu(barre, tearoff=0, **style)
         fichier.add_command(label=t("menu_exporter"),
                             command=self.exporter_liste)
         fichier.add_command(label=t("menu_importer"),
@@ -1524,7 +1647,7 @@ class VoxPackApp(ctk.CTk):
         fichier.add_command(label=t("menu_defaut"),
                             command=self.charger_liste_defaut)
         fichier.add_separator()
-        langue = Menu(fichier, tearoff=0)
+        langue = Menu(fichier, tearoff=0, **style)
         for code in LANGUES:
             langue.add_radiobutton(
                 label=t("langue_" + code),
@@ -2606,7 +2729,7 @@ class VoxPackApp(ctk.CTk):
                                                chemin(rang + 1)))
                 if self._apercu_no != numero:
                     break
-                lecture = subprocess.Popen(["/usr/bin/afplay", chemin(rang)])
+                lecture = LectureAudio(chemin(rang))
                 self._lecture = lecture
                 # On attend la fin de la lecture SANS bloquer la boucle : c'est
                 # ce qui laisse le téléchargement de la suite avancer.
@@ -2708,10 +2831,7 @@ class VoxPackApp(ctk.CTk):
                 await communicate.save(temp_mp3)
                 self._dire(t("etat_generation_wav", fait=fait, total=total,
                              nom=nom))
-                subprocess.run(
-                    [AFCONVERT, "-f", "WAVE", "-d", "LEI16@32000", "-c", "1", temp_mp3, final_wav],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
-                )
+                convertir_en_wav(temp_mp3, final_wav)
             except Exception as e:
                 # On note l'échec et on passe à la ligne suivante : une phrase
                 # qui rate ne doit pas priver l'utilisateur de toutes les autres.

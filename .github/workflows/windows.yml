@@ -1,0 +1,56 @@
+# ============================================================
+# Vox-Pack — fabrication de la version Windows
+# ------------------------------------------------------------
+# À chaque envoi sur la branche main, GitHub compile l'application et dépose
+# le .exe dans les « artefacts » de la page Actions. Il n'y a donc rien à
+# installer sur un PC : on télécharge le fichier déjà fabriqué.
+#
+# Pour récupérer le .exe :
+#   1. onglet « Actions » du dépôt
+#   2. dernière exécution « Fabriquer la version Windows »
+#   3. tout en bas, section « Artifacts » -> Vox-Pack-Windows.zip
+# ============================================================
+name: Fabriquer la version Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # permet aussi de la lancer à la main
+
+jobs:
+  windows:
+    name: Compiler le .exe
+    runs-on: windows-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer les bibliothèques
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Compiler l'application
+        run: python -m PyInstaller Vox-Pack.spec --noconfirm
+
+      - name: Vérifier que le .exe existe
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/Vox-Pack.exe")) {
+            Write-Error "Le .exe n'a pas été fabriqué."
+            exit 1
+          }
+          Get-Item "dist/Vox-Pack.exe" | Format-List Name, Length
+
+      - name: Déposer le .exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vox-Pack-Windows
+          path: dist/Vox-Pack.exe
+          if-no-files-found: error
