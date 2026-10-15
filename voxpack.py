@@ -5,8 +5,11 @@
 # ============================================================
 
 import asyncio
+import csv
+import json
 import os
 import shutil
+import string
 import subprocess
 import sys
 import threading
@@ -195,6 +198,60 @@ def choisir_police(candidats=None):
     return FONT_MAIN
 
 
+# ------------------------------------------------------------------
+# Règles de nommage des fichiers de voix
+# ------------------------------------------------------------------
+# EdgeTX lit le nom du fichier audio sur la carte SD : 8 caractères au
+# maximum (6 sur les versions d'EdgeTX antérieures à la 2.11), sans accent,
+# sans espace, et sans les caractères que le système de fichiers refuse.
+LIMITE_NOM = 8
+CARACTERES_AUTORISES = set(string.ascii_letters + string.digits + "-_")
+ACCENTS = "éèêëàâäîïôöùûüçÉÈÊËÀÂÄÎÏÔÖÙÛÜÇ"
+DANGER = "#FF6B6B"          # texte et bordure d'une case en erreur
+BG_DANGER = "#3A1F22"       # fond d'une case en erreur
+LARGEUR_MESSAGE = 175       # colonne des messages, à droite de chaque ligne
+
+
+def probleme_nom(nom):
+    """Renvoie None si le nom convient, sinon la raison, en clair."""
+    if not nom:
+        return "nom vide"
+    if len(nom) > LIMITE_NOM:
+        return f"{len(nom)} caractères (max {LIMITE_NOM})"
+    if " " in nom or "\t" in nom:
+        return "pas d'espace"
+    mauvais = sorted({c for c in nom if c not in CARACTERES_AUTORISES})
+    if mauvais:
+        if any(c in ACCENTS for c in mauvais):
+            return "pas d'accent"
+        return f"caractère « {mauvais[0]} » interdit"
+    return None
+
+
+# ------------------------------------------------------------------
+# Réglages de l'application (dernier dossier utilisé)
+# ------------------------------------------------------------------
+REGLAGES_FILE = os.path.join(DATA_DIR, "reglages.json")
+
+
+def lire_reglages():
+    try:
+        with open(REGLAGES_FILE, "r", encoding="utf-8") as f:
+            reglages = json.load(f)
+        return reglages if isinstance(reglages, dict) else {}
+    except Exception:
+        return {}
+
+
+def ecrire_reglages(reglages):
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(REGLAGES_FILE, "w", encoding="utf-8") as f:
+            json.dump(reglages, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass  # des réglages, ce n'est pas vital : on n'alerte pas
+
+
 def largeur_juste(valeurs, taille_police=13, marge=44):
     """Largeur d'un menu déroulant ajustée à son texte le plus long.
 
@@ -375,6 +432,8 @@ class VoxPackApp(ctk.CTk):
         self.lignes = []
         self._logo_image = None
         self._soutien = None
+        self._reglages = lire_reglages()
+        self._erreur_sauvegarde = False
 
         # ----- En-tête (logo + sous-titre) -----
         self.header = ctk.CTkFrame(self, fg_color="transparent")
@@ -475,7 +534,11 @@ class VoxPackApp(ctk.CTk):
 
         self._btn(inner_row, "Ajouter", self.ajouter_ligne).pack(side="left", padx=5)
         self._btn(inner_row, "Supprimer", self.supprimer_selection).pack(side="left", padx=5)
-        self._btn(inner_row, "Écouter l'aperçu", self.ecouter_selection).pack(side="left", padx=5)
+        self.btn_apercu = self._btn(inner_row, "Écouter l'aperçu",
+                                    self.ecouter_selection)
+        self.btn_apercu.pack(side="left", padx=5)
+        self._lecture = None
+        self._apercu_no = 0
 
         # ----- En-tête du tableau -----
         row_head = ctk.CTkFrame(self, fg_color=BG_HEADER, corner_radius=10)
@@ -487,13 +550,14 @@ class VoxPackApp(ctk.CTk):
 
         ctk.CTkLabel(row_head, text="", width=40).grid(row=0, column=0, padx=4, pady=8)
         ctk.CTkLabel(
-            row_head, text="Nom du fichier WAV (Max 8 car.)",
+            row_head, text=f"Nom du fichier WAV (Max {LIMITE_NOM} car.)",
             font=(FONT_MAIN, 18, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=1, sticky="w", padx=8, pady=8)
         ctk.CTkLabel(
             row_head, text="Phrase à prononcer par la radiocommande",
             font=(FONT_MAIN, 18, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=2, sticky="w", padx=8, pady=8)
+        row_head.grid_columnconfigure(3, weight=0, minsize=LARGEUR_MESSAGE)
 
         # ----- Zone liste défilante -----
         self.frame_table = ctk.CTkScrollableFrame(
@@ -507,6 +571,7 @@ class VoxPackApp(ctk.CTk):
         self.frame_table.grid_columnconfigure(0, weight=0, minsize=40)
         self.frame_table.grid_columnconfigure(1, weight=1, uniform="col")
         self.frame_table.grid_columnconfigure(2, weight=1, uniform="col")
+        self.frame_table.grid_columnconfigure(3, weight=0, minsize=LARGEUR_MESSAGE)
 
         # customtkinter ne fait défiler la liste que si le widget rapporté par
         # l'événement en fait partie. Sur macOS, cette identification n'est pas
@@ -518,6 +583,13 @@ class VoxPackApp(ctk.CTk):
         # ----- Bas : progression + boutons -----
         self.bottom = ctk.CTkFrame(self, fg_color="transparent")
         self.bottom.pack(fill="x", padx=20, pady=(0, 18))
+
+        # Compteur de génération (« 3 fichiers sur 12 »). Toujours présent,
+        # mais vide : la mise en page ne bouge pas quand il se remplit.
+        self.lbl_compteur = ctk.CTkLabel(
+            self.bottom, text="", font=(FONT_MAIN, 13), text_color=TEXT_GREY,
+        )
+        self.lbl_compteur.pack(fill="x", pady=(0, 4))
 
         self.progress = SegmentedProgressBar(self.bottom, segments=32, height=22)
         self.progress.pack(fill="x", pady=(0, 12))
@@ -928,11 +1000,14 @@ class VoxPackApp(ctk.CTk):
 
         contenu = []
         if os.path.exists(CSV_FILE):
-            with open(CSV_FILE, "r", encoding="utf-8") as f:
-                for line in f:
-                    if "," in line:
-                        nom, texte = line.strip().split(",", 1)
-                        contenu.append((nom, texte))
+            # Lecture par le module csv : il comprend aussi bien les anciens
+            # fichiers (sans guillemets) que les nouveaux.
+            with open(CSV_FILE, "r", encoding="utf-8", newline="") as f:
+                for ligne_lue in csv.reader(f):
+                    if len(ligne_lue) >= 2:
+                        contenu.append((ligne_lue[0].strip(), ligne_lue[1].strip()))
+                    elif len(ligne_lue) == 1 and ligne_lue[0].strip():
+                        contenu.append((ligne_lue[0].strip(), ""))
 
         if not contenu:
             contenu = list(LISTE_PAR_DEFAUT)
@@ -945,10 +1020,11 @@ class VoxPackApp(ctk.CTk):
     def _ajouter_ligne_ui(self, nom, texte):
         idx = len(self.lignes)
         frame = ctk.CTkFrame(self.frame_table, fg_color="transparent")
-        frame.grid(row=idx, column=0, columnspan=3, sticky="ew", pady=2)
+        frame.grid(row=idx, column=0, columnspan=4, sticky="ew", pady=2)
         frame.grid_columnconfigure(0, weight=0, minsize=40)
         frame.grid_columnconfigure(1, weight=1, uniform="col")
         frame.grid_columnconfigure(2, weight=1, uniform="col")
+        frame.grid_columnconfigure(3, weight=0, minsize=LARGEUR_MESSAGE)
 
         var_check = ctk.BooleanVar(value=False)
         chk = ctk.CTkCheckBox(
@@ -985,19 +1061,56 @@ class VoxPackApp(ctk.CTk):
         entry_txt.insert(0, texte)
         entry_txt.grid(row=0, column=2, sticky="ew", padx=6, pady=4)
 
-        entry_nom.bind("<KeyRelease>", lambda e: self._on_change())
-        entry_txt.bind("<KeyRelease>", lambda e: self._on_change())
+        # Message d'avertissement, à côté de la ligne (vide si tout va bien).
+        # Il a une place réservée : rien ne bouge quand il apparaît.
+        msg = ctk.CTkLabel(
+            frame, text="", font=(FONT_MAIN, 12),
+            text_color=DANGER, anchor="w", justify="left",
+        )
+        msg.grid(row=0, column=3, sticky="w", padx=(4, 2))
+
+        for champ in (entry_nom, entry_txt):
+            champ.bind("<KeyRelease>", lambda e: self._on_change())
+            # Entrée crée la ligne suivante : on enchaîne les phrases sans
+            # lâcher le clavier.
+            champ.bind("<Return>", lambda e: self.ajouter_ligne())
 
         self.lignes.append({
             "frame": frame,
             "var_check": var_check,
             "entry_nom": entry_nom,
             "entry_txt": entry_txt,
+            "msg": msg,
         })
 
     def ajouter_ligne(self):
         self._ajouter_ligne_ui("nouveau", "Texte à prononcer")
         self._on_change()
+        # le curseur se place directement dans la nouvelle ligne, et on
+        # descend jusqu'à elle
+        self.lignes[-1]["entry_nom"].focus_set()
+        self.frame_table._parent_canvas.yview_moveto(1.0)
+
+    def _verifier_noms(self):
+        """Colore en rouge les noms qui posent problème, signale les doublons."""
+        vus = {}
+        for i, ligne in enumerate(self.lignes, start=1):
+            nom = ligne["entry_nom"].get().strip()
+            souci = probleme_nom(nom)
+            if souci is None:
+                deja = vus.get(nom.lower())
+                if deja:
+                    souci = f"déjà utilisé (ligne {deja})"
+                else:
+                    vus[nom.lower()] = i
+            if souci:
+                ligne["entry_nom"].configure(
+                    border_color=DANGER, fg_color=BG_DANGER)
+                ligne["msg"].configure(text=souci)
+            else:
+                ligne["entry_nom"].configure(
+                    border_color="#2A3A48", fg_color=BG_ENTRY)
+                ligne["msg"].configure(text="")
 
     def supprimer_selection(self):
         cochees = [l for l in self.lignes if l["var_check"].get()]
@@ -1037,19 +1150,38 @@ class VoxPackApp(ctk.CTk):
             l["var_check"].set(False)
 
     def _on_change(self):
+        self._verifier_noms()
         self._ecrire_csv()
 
     def _ecrire_csv(self):
+        """Enregistre la liste, sans risque de la perdre.
+
+        On écrit d'abord dans un fichier voisin, puis on remplace l'ancien :
+        si quelque chose interrompt l'écriture (plantage, disque plein), la
+        liste précédente reste intacte. Une copie .bak est conservée.
+        """
         try:
             os.makedirs(DATA_DIR, exist_ok=True)
-            with open(CSV_FILE, "w", encoding="utf-8") as f:
+            temporaire = CSV_FILE + ".tmp"
+            with open(temporaire, "w", encoding="utf-8", newline="") as f:
+                ecrivain = csv.writer(f)
                 for l in self.lignes:
                     nom = l["entry_nom"].get().strip()
                     texte = l["entry_txt"].get().strip()
                     if nom or texte:
-                        f.write(f"{nom},{texte}\n")
-        except Exception:
-            pass
+                        ecrivain.writerow([nom, texte])
+            if os.path.exists(CSV_FILE):
+                shutil.copy2(CSV_FILE, CSV_FILE + ".bak")
+            os.replace(temporaire, CSV_FILE)
+            self._erreur_sauvegarde = False
+        except Exception as e:
+            # Une seule alerte par session : sinon chaque frappe en ouvrirait une
+            if not self._erreur_sauvegarde:
+                self._erreur_sauvegarde = True
+                self.after(0, lambda err=e: self._message(
+                    "La liste n'a pas pu être enregistrée.\n\n"
+                    f"{err}\n\nVérifie l'espace libre de ton disque.",
+                    icone="erreur"))
 
     # ------------------------------------------------------------------
     # Aperçu audio
@@ -1063,24 +1195,58 @@ class VoxPackApp(ctk.CTk):
         if not texte:
             return
         voice_id = VOICES.get(self.combo_voice.get(), "fr-FR-DeniseNeural")
+
+        # Le bouton devient « Arrêter » : la lecture peut être coupée.
+        self._apercu_no += 1
+        numero = self._apercu_no
+        self._lecture = None
+        self.btn_apercu.configure(text="■  Arrêter", command=self.arreter_apercu)
+
         threading.Thread(
-            target=lambda: asyncio.run(self._jouer_apercu(texte, voice_id)),
+            target=lambda: asyncio.run(
+                self._jouer_apercu(texte, voice_id, numero)),
             daemon=True,
         ).start()
 
-    async def _jouer_apercu(self, texte, voice_id):
+    def arreter_apercu(self):
+        """Coupe la lecture en cours."""
+        lecture = self._lecture
+        if lecture is not None:
+            try:
+                lecture.terminate()
+            except Exception:
+                pass
+        self._fin_apercu()
+
+    def _fin_apercu(self):
+        """Le bouton redevient « Écouter l'aperçu »."""
+        try:
+            self.btn_apercu.configure(text="Écouter l'aperçu",
+                                      command=self.ecouter_selection)
+        except Exception:
+            pass
+
+    async def _jouer_apercu(self, texte, voice_id, numero):
         os.makedirs(DATA_DIR, exist_ok=True)
-        temp = os.path.join(DATA_DIR, "preview_temp.mp3")
+        # Un nom de fichier différent pour chaque aperçu : deux clics rapides
+        # ne peuvent plus se supprimer mutuellement le fichier en cours.
+        temp = os.path.join(DATA_DIR, f"apercu_{os.getpid()}_{numero}.mp3")
         try:
             communicate = edge_tts.Communicate(texte, voice_id, volume=VOLUME)
             await communicate.save(temp)
-            subprocess.run(["/usr/bin/afplay", temp])
+            lecture = subprocess.Popen(["/usr/bin/afplay", temp])
+            self._lecture = lecture
+            lecture.wait()
         except Exception as e:
             self.after(0, lambda err=e: self._message(
                 f"L'aperçu n'a pas pu être joué.\n\n{err}", icone="erreur"))
         finally:
             if os.path.exists(temp):
-                os.remove(temp)
+                try:
+                    os.remove(temp)
+                except OSError:
+                    pass
+            self.after(0, self._fin_apercu)
 
     # ------------------------------------------------------------------
     # Génération
@@ -1093,19 +1259,33 @@ class VoxPackApp(ctk.CTk):
             return
 
         taches = []
+        refuses = []
         for l in cochees:
             nom = l["entry_nom"].get().strip()
             texte = l["entry_txt"].get().strip()
-            if nom and texte:
+            souci = probleme_nom(nom)
+            if souci:
+                # un nom invalide donnerait un fichier que la radio ne lirait
+                # pas : on le signale au lieu de le fabriquer pour rien
+                refuses.append((nom or "(vide)", souci))
+            elif texte:
                 taches.append((nom, texte))
         if not taches:
-            self._message("Aucune ligne valide à générer : il faut un nom de "
-                          "fichier ET une phrase.", icone="attention")
+            self._message(
+                "Aucune ligne valide à générer.\n\n"
+                "Il faut un nom de fichier correct ET une phrase.",
+                icone="attention")
             return
 
-        dossier = filedialog.askdirectory(title="Dossier de destination des WAV")
+        dossier = filedialog.askdirectory(
+            title="Dossier de destination des WAV",
+            initialdir=self._reglages.get("dernier_dossier")
+            or os.path.expanduser("~"),
+        )
         if not dossier:
             return
+        self._reglages["dernier_dossier"] = dossier
+        ecrire_reglages(self._reglages)
 
         if os.path.basename(dossier) == "Voix radio":
             self.output_dir = dossier
@@ -1119,23 +1299,24 @@ class VoxPackApp(ctk.CTk):
 
         threading.Thread(
             target=self._run_async_loop,
-            args=(taches, voice_id),
+            args=(taches, voice_id, refuses),
             daemon=True,
         ).start()
 
-    def _run_async_loop(self, taches, voice_id):
+    def _run_async_loop(self, taches, voice_id, refuses=None):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(self._generer(taches, voice_id))
+            loop.run_until_complete(self._generer(taches, voice_id, refuses))
         finally:
             loop.close()
             self.after(0, lambda: self.btn_letsgo.configure(state="normal", fg_color="#00A8B8"))
 
-    async def _generer(self, taches, voice_id):
+    async def _generer(self, taches, voice_id, refuses=None):
         os.makedirs(self.output_dir, exist_ok=True)
         total = len(taches)
-        erreur = None
+        echecs = list(refuses or [])       # noms refusés avant même d'essayer
+        nb_refuses = len(echecs)
 
         for idx, (nom, texte) in enumerate(taches):
             temp_mp3 = os.path.join(self.output_dir, f"{nom}_temp.mp3")
@@ -1148,23 +1329,34 @@ class VoxPackApp(ctk.CTk):
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
                 )
             except Exception as e:
-                erreur = f"Problème avec {nom} : {e}"
-                break
+                # On note l'échec et on passe à la ligne suivante : une phrase
+                # qui rate ne doit pas priver l'utilisateur de toutes les autres.
+                echecs.append((nom, str(e)[:120]))
             finally:
                 if os.path.exists(temp_mp3):
                     os.remove(temp_mp3)
 
-            val = (idx + 1) / total
+            fait = idx + 1
+            val = fait / total
             self.after(0, lambda v=val: self.progress.set(v))
+            self.after(0, lambda f=fait, t=total, n=nom:
+                       self.lbl_compteur.configure(
+                           text=f"{f} fichier{'s' if f > 1 else ''} sur {t}"
+                                f"  —  {n}"))
 
         await asyncio.sleep(0.5)
         self.after(0, lambda: self.progress.reset())
+        self.after(0, lambda: self.lbl_compteur.configure(text=""))
 
-        if erreur:
-            self.after(0, lambda m=erreur: self._message(
-                f"La génération s'est arrêtée.\n\n{m}\n\n"
-                "Vérifie ta connexion Internet : les voix sont fabriquées "
-                "par le service en ligne de Microsoft.",
+        reussis = max(total - (len(echecs) - nb_refuses), 0)
+        if echecs:
+            detail = "\n".join(f"• {nom} : {raison}" for nom, raison in echecs[:6])
+            if len(echecs) > 6:
+                detail += f"\n• … et {len(echecs) - 6} autre(s)"
+            self.after(0, lambda: self._message(
+                f"{reussis} fichier{'s' if reussis > 1 else ''} créé"
+                f"{'s' if reussis > 1 else ''} sur {total}.\n\n"
+                f"{len(echecs)} problème{'s' if len(echecs) > 1 else ''} :\n{detail}",
                 icone="erreur"))
         else:
             out = self.output_dir
