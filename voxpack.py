@@ -201,7 +201,7 @@ def geometrie_fenetre(ecran_large, ecran_haut):
 
 
 def trouver_ressource(*morceaux):
-    """Chemin d'un fichier livré avec l'application (logo, drapeaux…).
+    """Chemin d'un fichier livré avec l'application (logo, icône…).
 
     En version compilée, PyInstaller range ces fichiers dans un dossier
     temporaire (sys._MEIPASS) ; lancée depuis le code source, l'application
@@ -231,17 +231,19 @@ LOGO_PATH = trouver_logo()
 # ------------------------------------------------------------------
 # Langues
 # ------------------------------------------------------------------
-# Deux réglages distincts, à ne pas confondre :
+# UNE seule langue, LANGUE_UI, pour toute l'application. Elle commande :
 #
-#   LANGUE_UI      la langue des TEXTES de l'application (boutons, menus,
-#                  aide, alertes). Elle suit celle du système au premier
-#                  lancement, puis se change dans le menu Fichier > Langue.
+#   - les TEXTES (boutons, menus, aide, alertes), par TEXTES et t() ;
+#   - les VOIX proposées (VOIX[LANGUE_UI]) ;
+#   - la LISTE de phrases (liste_fr.csv ou liste_en.csv, et la liste par
+#     défaut de cette langue).
 #
-#   self.langue    la langue des VOIX (françaises ou anglaises), choisie
-#                  avec les deux drapeaux, à côté du logo.
+# Elle suit celle du système au premier lancement, puis se change dans le menu
+# Fichier > Langue. La propriété VoxPackApp.langue renvoie LANGUE_UI : le code
+# qui parlait de « la langue des voix » suit donc l'interface sans réécriture.
 #
-# Les deux sont indépendantes : un utilisateur anglophone peut très bien
-# garder une interface anglaise et générer des voix françaises.
+# Avoir une seule langue évite un mélange absurde : une interface anglaise
+# avec des voix et une liste françaises.
 LANGUE_UI = "fr"
 
 LANGUES = ["fr", "en"]
@@ -328,7 +330,7 @@ TEXTES = {
         "etat_voix_retirees":
             "{n} voix retirée{s} par le service — liste mise à jour",
         "etat_voix_remises": "Voix indisponibles : liste remise par défaut",
-        "etat_langue_voix": "Voix en {langue} : {n} voix disponibles",
+        "etat_langue_voix": "Langue : {langue} — {n} voix disponibles",
 
         # ----- Noms de fichiers refusés -----
         "pb_vide": "nom vide",
@@ -424,10 +426,11 @@ TEXTES = {
         "titre_aide": "Aide — Vox-Pack",
         "aide_titre": "Comment utiliser l'application",
         "aide_1": "1. Choisir une voix dans le menu déroulant.",
-        "aide_1a": "Les deux drapeaux changent la langue des voix :",
-        "aide_1b": "français (13 voix) ou anglais (18 voix).",
-        "aide_1c": "Votre langue et votre voix sont retrouvées au prochain",
-        "aide_1d": "démarrage, séparément pour chaque langue.",
+        "aide_1a": "Les voix proposées sont celles de la langue de",
+        "aide_1b": "l'application : français (13 voix) ou anglais (18 voix).",
+        "aide_1c": "Pour changer de langue : menu « Fichier », puis « Langue ».",
+        "aide_1d": "Textes, voix et liste changent ensemble, et votre voix est",
+        "aide_1e": "retrouvée au prochain démarrage.",
         "aide_2": "2. Gérer la liste",
         "aide_2a": "Ajouter une ligne : bouton \"Ajouter\"",
         "aide_2b": "Supprimer une ligne : cocher la ligne puis bouton \"Supprimer\"",
@@ -463,7 +466,7 @@ TEXTES = {
         "aide_def1": "Si vous supprimez TOUTE la liste, elle sera reconstruite",
         "aide_def2": "automatiquement au prochain démarrage ({n} lignes).",
         "aide_def5": "Chaque langue a SA liste : la française et l'anglaise sont",
-        "aide_def6": "indépendantes. Changer de langue (les drapeaux) change donc",
+        "aide_def6": "indépendantes. Changer la langue dans le menu change donc",
         "aide_def7": "aussi la liste — et votre travail de l'autre langue est",
         "aide_def8": "conservé tel quel.",
         "aide_def3": "Si vous gardez au moins 1 ligne, vous repartez de cette",
@@ -531,7 +534,7 @@ TEXTES = {
         "etat_voix_retirees":
             "{n} voice{s} removed by the service — list updated",
         "etat_voix_remises": "Voices unavailable: list reset to default",
-        "etat_langue_voix": "Voices in {langue}: {n} available",
+        "etat_langue_voix": "Language: {langue} — {n} voices available",
 
         # ----- Rejected file names -----
         "pb_vide": "empty name",
@@ -626,10 +629,11 @@ TEXTES = {
         "titre_aide": "Help — Vox-Pack",
         "aide_titre": "How to use the application",
         "aide_1": "1. Choose a voice from the drop-down menu.",
-        "aide_1a": "The two flags change the language of the voices:",
-        "aide_1b": "French (13 voices) or English (18 voices).",
-        "aide_1c": "Your language and your voice are remembered the next time",
-        "aide_1d": "you start the application, separately for each language.",
+        "aide_1a": "The voices offered are those of the application's",
+        "aide_1b": "language: French (13 voices) or English (18 voices).",
+        "aide_1c": "To change language: the \"File\" menu, then \"Language\".",
+        "aide_1d": "Texts, voices and list change together, and your voice is",
+        "aide_1e": "remembered the next time you start the application.",
         "aide_2": "2. Manage the list",
         "aide_2a": "Add a line: \"Add\" button",
         "aide_2b": "Delete a line: tick the line, then the \"Delete\" button",
@@ -665,7 +669,7 @@ TEXTES = {
         "aide_def1": "If you delete the WHOLE list, it will be rebuilt",
         "aide_def2": "automatically the next time you start ({n} lines).",
         "aide_def5": "Each language has ITS OWN list: French and English are",
-        "aide_def6": "independent. Changing the language (the flags) therefore",
+        "aide_def6": "independent. Changing the language in the menu therefore",
         "aide_def7": "also changes the list — and your work in the other",
         "aide_def8": "language is kept as it is.",
         "aide_def3": "If you keep at least 1 line, you start from that base",
@@ -995,25 +999,30 @@ TYPO_ALERTE = 18        # le texte des fenêtres d'alerte
 # Sur un écran confortable, rien ne change : l'application garde exactement
 # l'allure pour laquelle elle a été dessinée.
 ECHELLE_UI = 1.0
-VALEURS_BASE = {}
+
+# Les constantes que l'échelle ajuste.
+NOMS_ECHELLE = ("TYPO_LISTE", "HAUTEUR_LIGNE", "TYPO_BOUTON", "TYPO_PETIT_BOUTON",
+                "TYPO_INFO", "HAUTEUR_INFO", "TYPO_MESSAGE", "TYPO_ALERTE",
+                "TYPO_MENU", "TYPO_MENU_BOUTON",
+                "ESPACE_HAUT", "ESPACE_LOGO_BOUTONS", "ESPACE_BOUTONS_LISTE",
+                "ESPACE_LISTE_LEDS", "ESPACE_LEDS_BOUTONS", "ESPACE_BAS",
+                "BTN_H", "BTN_W")
+
+# Les valeurs d'origine, retenues une fois pour toutes à la fin des constantes
+# (voir plus bas). L'échelle peut ainsi être recalculée autant de fois qu'on
+# veut, sans que les réductions s'additionnent : c'est le genre de piège qui
+# fait qu'une interface devient minuscule après deux appels.
+VALEURS_ORIGINE = {}
 
 
 def regler_echelle(hauteur_ecran):
     """Ajuste la typographie et les espacements à la place disponible."""
     global ECHELLE_UI
 
-    noms = ("TYPO_LISTE", "HAUTEUR_LIGNE", "TYPO_BOUTON", "TYPO_PETIT_BOUTON",
-            "TYPO_INFO", "HAUTEUR_INFO", "TYPO_MESSAGE", "TYPO_ALERTE",
-            "ESPACE_HAUT", "ESPACE_LOGO_BOUTONS", "ESPACE_BOUTONS_LISTE",
-            "ESPACE_LISTE_LEDS", "ESPACE_LEDS_BOUTONS", "ESPACE_BAS",
-            "BTN_H", "BTN_W")
-    if not VALEURS_BASE:
-        VALEURS_BASE.update({nom: globals()[nom] for nom in noms})
-
     ECHELLE_UI = 1.0 if hauteur_ecran >= ECRAN_CONFORTABLE else 0.9
 
-    for nom in noms:
-        base = VALEURS_BASE[nom]
+    for nom in NOMS_ECHELLE:
+        base = VALEURS_ORIGINE[nom]
         # Les hauteurs gardent un plancher : en dessous, le texte est rogné.
         plancher = 0.6 if nom.startswith(("TYPO", "HAUTEUR")) else 0
         globals()[nom] = max(int(round(base * ECHELLE_UI)), int(base * plancher))
@@ -1060,10 +1069,14 @@ EPAISSEUR_LEDS = 6
 # s'allumer (l'animation met un instant à la rejoindre).
 PAUSE_LEDS = 0.8
 
-# Drapeaux du sélecteur de langue. Ils sont posés dans le bandeau, au-dessus
-# du menu des voix : leur taille ne déplace donc aucun autre élément.
-TAILLE_DRAPEAU = 42
-ESPACE_DRAPEAUX = 8
+# Menu. Le choix de langue y est entré, et il faut qu'il soit lisible :
+# la police par défaut d'un menu Tk est minuscule sur Windows.
+TYPO_MENU = 14            # texte des entrées du menu
+TYPO_MENU_BOUTON = 26     # les trois barres qui ouvrent le menu (hors macOS)
+
+# Largeur des textes de la fenêtre d'aide, pour qu'ils passent à la ligne au
+# lieu d'être coupés au bord (la fenêtre fait 620 px, moins ses marges).
+LARGEUR_TEXTE_AIDE = 530
 
 # Curseur « main » pour les éléments cliquables. Tk accepte les deux noms sans
 # se plaindre, mais n'affiche la bonne main que si le nom correspond au
@@ -1081,6 +1094,9 @@ LARGEUR_SOUTIEN = 380
 OUI_LARGEUR = 140
 OUI_HAUTEUR = 40
 OUI_TYPO = 18
+
+# Fin des constantes : on retient leurs valeurs d'origine pour l'échelle.
+VALEURS_ORIGINE.update({nom: globals()[nom] for nom in NOMS_ECHELLE})
 
 # Police du texte. La première de la liste que le système sait réellement
 # utiliser est retenue au démarrage. Attention : « SF Pro Display » n'existe
@@ -1394,13 +1410,11 @@ class VoxPackApp(ctk.CTk):
         # Dernière ligne cochée à la souris : sert de point de départ quand on
         # étend la sélection avec la touche Majuscule.
         self._ancre_selection = None
-        # Langue des VOIX (les drapeaux) : retrouvée dans les réglages.
-        self.langue = self._reglages.get("langue", "fr")
-        if self.langue not in VOIX:
-            self.langue = "fr"
-        # Langue des TEXTES : au premier lancement, celle du système ; ensuite,
-        # celle que l'utilisateur a choisie dans le menu. Elle doit être fixée
-        # AVANT de créer les widgets, puisqu'ils sont construits avec t().
+        # UNE seule langue : celle de l'interface. Elle commande les textes,
+        # les voix ET la liste de phrases. Au premier lancement c'est celle du
+        # système ; ensuite, celle que l'utilisateur a choisie dans le menu.
+        # Elle doit être fixée AVANT de créer les widgets, puisqu'ils sont
+        # construits avec t().
         if "langue_ui" not in self._reglages:
             # Premier lancement : on retient la langue devinée, pour que le
             # choix soit stable même si le système change de langue ensuite.
@@ -1430,6 +1444,7 @@ class VoxPackApp(ctk.CTk):
             command=self._ouvrir_aide,
         )
         self._survol(self.btn_aide)
+        self.btn_aide.configure(cursor=CURSEUR_MAIN)
         self.btn_aide.place(relx=1.0, rely=0.0, anchor="ne", x=-15, y=30)
 
         # Bouton du menu, à gauche du « ? ». Sur macOS, le menu est dans la
@@ -1438,71 +1453,21 @@ class VoxPackApp(ctk.CTk):
             self.btn_menu = ctk.CTkButton(
                 self.header,
                 text="≡",
-                font=(FONT_MAIN, 22),
-                width=30,
-                height=30,
+                font=(FONT_MAIN, TYPO_MENU_BOUTON),
+                width=36,
+                height=int(36 * ECHELLE_UI),
                 corner_radius=0,
                 fg_color="transparent",
-                border_width=0,          # discret : trois barres, rien autour
+                border_width=0,          # c'est un menu, pas un bouton
                 text_color=CYAN,
                 hover=False,
                 command=self._ouvrir_menu,
             )
             self._survol(self.btn_menu)
-            # De l'autre côté de la fenêtre, en haut à gauche : le « ? » garde
-            # la droite, et il n'y a rien à cet endroit du bandeau.
-            self.btn_menu.place(x=18, y=28, anchor="nw")
-
-        # ----- Sélecteur de langue (drapeaux) -----
-        # Posés par-dessus le bandeau, en bas à gauche : ils ne poussent rien,
-        # la mise en page ne bouge donc pas d'un pixel. Ils tombent juste
-        # au-dessus du menu des voix.
-        self._images_langue = {}
-        self.boutons_langue = {}
-        for i, code in enumerate(LANGUES):
-            images = []
-            for suffixe in ("", "-estompe"):
-                chemin = trouver_ressource("assets", "sources",
-                                           f"drapeau-{code}{suffixe}.png")
-                try:
-                    drapeau = Image.open(chemin)
-                    images.append(ctk.CTkImage(light_image=drapeau,
-                                               dark_image=drapeau,
-                                               size=(TAILLE_DRAPEAU,
-                                                     TAILLE_DRAPEAU)))
-                except Exception:
-                    images.append(None)
-            self._images_langue[code] = images
-            # Une étiquette, et non un bouton : customtkinter ajoute 16 px de
-            # marge autour de l'image dans un bouton, ce qui ferait chevaucher
-            # les deux drapeaux. L'étiquette, elle, fait exactement la taille
-            # de l'image. Elle reste cliquable (clic + curseur main).
-            #
-            # Si l'image manque (fichier absent, nom mal orthographié…), on
-            # affiche le code de la langue en toutes lettres : un drapeau
-            # invisible est un bug silencieux, mieux vaut un bouton lisible.
-            if images[0] is None:
-                bouton = ctk.CTkLabel(
-                    self.header, text=code.upper(), width=TAILLE_DRAPEAU,
-                    height=TAILLE_DRAPEAU, font=(FONT_MAIN, 13, "bold"),
-                    text_color=CYAN, fg_color=BG_CARD, corner_radius=10,
-                )
-            else:
-                bouton = ctk.CTkLabel(
-                    self.header, text="", image=images[0],
-                    width=TAILLE_DRAPEAU, height=TAILLE_DRAPEAU,
-                    fg_color="transparent",
-                )
-            bouton.place(x=20 + i * (TAILLE_DRAPEAU + ESPACE_DRAPEAUX),
-                         rely=1.0, anchor="sw")
-            bouton.configure(cursor=CURSEUR_MAIN)
-            # Le survol éclaire le drapeau de la langue inactive : il reprend
-            # l'image « active », ce qui donne un retour visuel immédiat.
-            bouton.bind("<Enter>", lambda e, c=code: self._survol_drapeau(c, True))
-            bouton.bind("<Leave>", lambda e, c=code: self._survol_drapeau(c, False))
-            bouton.bind("<Button-1>",
-                        lambda e, c=code: self.changer_langue(c))
-            self.boutons_langue[code] = bouton
+            self.btn_menu.configure(cursor=CURSEUR_MAIN)
+            # Tout en haut à gauche, comme une entrée de barre de menus : le
+            # « ? » garde la droite, et il n'y a rien à cet endroit.
+            self.btn_menu.place(x=14, y=4, anchor="nw")
 
         # Logo
         if os.path.exists(LOGO_PATH):
@@ -1567,7 +1532,6 @@ class VoxPackApp(ctk.CTk):
         self._remplir_voix()
         self.combo_voice.configure(command=self._voix_changee)
         self.combo_voice.pack(side="left", padx=(0, 12))
-        self._maj_boutons_langue()
 
         self.btn_ajouter = self._btn(inner_row, t("ajouter"), self.ajouter_ligne)
         self.btn_ajouter.pack(side="left", padx=5)
@@ -1685,6 +1649,7 @@ class VoxPackApp(ctk.CTk):
             text_color=TEXT_DIM,
             fg_color="transparent",
         )
+        self.signature.configure(cursor=CURSEUR_MAIN)
         self.signature.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-10)
         self.signature.bind("<Button-1>", lambda e: self._ouvrir_soutien())
         self.signature.bind(
@@ -1711,6 +1676,15 @@ class VoxPackApp(ctk.CTk):
     # ------------------------------------------------------------------
     # Menu : exporter / importer une liste, et langue de l'interface
     # ------------------------------------------------------------------
+    @property
+    def langue(self):
+        """La langue de travail : une seule, celle de l'interface.
+
+        Tout le code qui lit self.langue (voix, listes, libellés) suit donc
+        l'interface, sans avoir à être réécrit.
+        """
+        return LANGUE_UI
+
     def _poser_icone(self):
         """Donne son icône à la fenêtre.
 
@@ -1749,18 +1723,17 @@ class VoxPackApp(ctk.CTk):
         """
         style = {}
         if not sys.platform == "darwin":
+            # La police par défaut d'un menu Tk est minuscule sur Windows :
+            # sans cela, les entrées sont illisibles.
             style = dict(background=BG_MAIN, foreground=TEXT_WHITE,
                          activebackground=CYAN, activeforeground=BG_MAIN,
-                         borderwidth=0, relief="flat")
+                         borderwidth=0, relief="flat",
+                         font=(FONT_MAIN, TYPO_MENU))
         barre = Menu(self, **style)
         fichier = Menu(barre, tearoff=0, **style)
-        fichier.add_command(label=t("menu_exporter"),
-                            command=self.exporter_liste)
-        fichier.add_command(label=t("menu_importer"),
-                            command=self.importer_liste)
-        fichier.add_command(label=t("menu_defaut"),
-                            command=self.charger_liste_defaut)
-        fichier.add_separator()
+
+        # La langue en premier : c'est le réglage le plus important, puisque
+        # c'est elle qui commande les textes, les voix ET la liste.
         langue = Menu(fichier, tearoff=0, **style)
         for code in LANGUES:
             langue.add_radiobutton(
@@ -1769,6 +1742,13 @@ class VoxPackApp(ctk.CTk):
                 command=lambda c=code: self.changer_langue_ui(c),
             )
         fichier.add_cascade(label=t("menu_langue"), menu=langue)
+        fichier.add_separator()
+        fichier.add_command(label=t("menu_exporter"),
+                            command=self.exporter_liste)
+        fichier.add_command(label=t("menu_importer"),
+                            command=self.importer_liste)
+        fichier.add_command(label=t("menu_defaut"),
+                            command=self.charger_liste_defaut)
         fichier.add_separator()
         fichier.add_command(label=t("menu_quitter"), command=self.destroy)
         barre.add_cascade(label=t("menu_fichier"), menu=fichier)
@@ -1792,13 +1772,27 @@ class VoxPackApp(ctk.CTk):
             menu.grab_release()
 
     def changer_langue_ui(self, code):
-        """Change la langue des textes et remet à jour tout l'affichage."""
+        """Change la langue de travail : textes, voix, liste de phrases, menu.
+
+        C'est le SEUL endroit qui change de langue. L'application n'en connaît
+        qu'une : celle de l'interface. Un utilisateur anglophone a donc une
+        interface anglaise ET des voix anglaises ET la liste anglaise — jamais
+        un mélange.
+        """
         if code not in TEXTES or code == LANGUE_UI:
             return
+        # On range d'abord ce qui appartient à la langue que l'on quitte :
+        # la voix choisie et la liste de phrases.
+        self._memoriser_voix()
+        self._ecrire_csv()
+        # Puis on change de langue, et on remet tout en place.
         definir_langue_ui(code)
         self._reglages["langue_ui"] = code
         ecrire_reglages(self._reglages)
-        self._appliquer_langue()
+        self._appliquer_langue()      # textes, menu, boutons, liste des voix
+        self.charger_liste()          # la liste de phrases de cette langue
+        self._dire(t("etat_langue_voix", langue=t("langue_" + code),
+                     n=len(VOIX.get(code, ()))))
 
     def _appliquer_langue(self):
         """Redonne leur texte à tous les éléments déjà affichés.
@@ -2059,7 +2053,7 @@ class VoxPackApp(ctk.CTk):
         # La fenêtre se resserre comme le reste de l'interface : sur un écran
         # court (ou à 150 % de mise à l'échelle), une alerte de 430 px paraît
         # énorme pour deux lignes de texte.
-        cote = int(52 * ECHELLE_UI)
+        cote = int(46 * ECHELLE_UI)
         marge = int(24 * ECHELLE_UI)
 
         # Et sa largeur suit le texte : mieux vaut une alerte étroite pour un
@@ -2079,7 +2073,7 @@ class VoxPackApp(ctk.CTk):
         pastille.create_oval(3, 3, cote - 3, cote - 3, outline=couleur, width=2)
         pastille.create_text(cote // 2, cote // 2, text=symbole, fill=couleur,
                              font=(FONT_MAIN, int(24 * ECHELLE_UI), "bold"))
-        pastille.pack(pady=(int(20 * ECHELLE_UI), 6))
+        pastille.pack(pady=(int(12 * ECHELLE_UI), 0))
 
         ctk.CTkLabel(
             popup, text=texte,
@@ -2088,7 +2082,9 @@ class VoxPackApp(ctk.CTk):
         ).pack(padx=marge)
 
         rangee = ctk.CTkFrame(popup, fg_color="transparent")
-        rangee.pack(pady=(int(18 * ECHELLE_UI), int(20 * ECHELLE_UI)))
+        # Marges resserrées : une alerte n'a pas besoin d'autant d'air, et sur
+        # un écran court chaque pixel gagné compte.
+        rangee.pack(pady=(int(10 * ECHELLE_UI), int(8 * ECHELLE_UI)))
 
         for libelle, action in (boutons or [(t("compris"), None)]):
 
@@ -2139,8 +2135,10 @@ class VoxPackApp(ctk.CTk):
         # « Fermer » passe sous la barre des tâches et devient inatteignable.
         # Le texte de l'aide garde sa taille (c'est une fenêtre de lecture) :
         # seule la fenêtre s'adapte, le contenu défile.
+        # 160 px réservés : la barre des tâches et le Dock, pour que la fenêtre
+        # ne vienne pas s'y coller.
         w_popup = min(620, self.winfo_screenwidth() - 80)
-        h_popup = min(660, self.winfo_screenheight() - 90)
+        h_popup = min(600, self.winfo_screenheight() - 160)
         x = self.winfo_x() + (self.winfo_width() - w_popup) // 2
         y = self.winfo_y() + (self.winfo_height() - h_popup) // 2
         popup.geometry(f"{w_popup}x{h_popup}+{max(x, 0)}+{max(y, 0)}")
@@ -2179,6 +2177,7 @@ class VoxPackApp(ctk.CTk):
             ("bullet", t("aide_1b")),
             ("bullet", t("aide_1c")),
             ("bullet", t("aide_1d")),
+            ("bullet", t("aide_1e")),
             ("space", ""),
             ("text", t("aide_2")),
             ("bullet", t("aide_2a")),
@@ -2303,12 +2302,14 @@ class VoxPackApp(ctk.CTk):
                     frame, text="    " + txt,
                     font=(FONT_MAIN, 14),
                     text_color=TEXT_WHITE, anchor="w", justify="left",
+                    wraplength=LARGEUR_TEXTE_AIDE,
                 ).pack(fill="x")
             elif kind == "warning":
                 ctk.CTkLabel(
                     frame, text=txt,
                     font=(FONT_MAIN, 14),
                     text_color="#FF6B6B", anchor="w", justify="left",
+                    wraplength=LARGEUR_TEXTE_AIDE,
                 ).pack(fill="x")
             elif kind == "code":
                 ctk.CTkLabel(
@@ -2346,10 +2347,13 @@ class VoxPackApp(ctk.CTk):
             elif kind == "sep":
                 ctk.CTkFrame(frame, height=1, fg_color="#2A3A48").pack(fill="x", pady=8)
             else:
+                # Les lignes « text » : sans retour à la ligne, une phrase un
+                # peu longue était coupée au bord de la fenêtre.
                 ctk.CTkLabel(
                     frame, text=txt,
                     font=(FONT_MAIN, 13),
                     text_color=TEXT_WHITE, anchor="w", justify="left",
+                    wraplength=LARGEUR_TEXTE_AIDE,
                 ).pack(fill="x")
 
         fermer = self._btn(popup, t("fermer"), popup.destroy, largeur=140)
@@ -2590,44 +2594,6 @@ class VoxPackApp(ctk.CTk):
             self._dire(t("etat_voix_retirees", n=len(retirees),
                          s="s" if len(retirees) > 1 else ""))
 
-    def _survol_drapeau(self, code, dessus):
-        """Survol d'un drapeau : celui de la langue inactive s'éclaire."""
-        if code == self.langue or code not in self.boutons_langue:
-            return
-        images = self._images_langue.get(code, [None, None])
-        image = images[0 if dessus else 1]
-        if image is not None:
-            self.boutons_langue[code].configure(image=image)
-
-    def _maj_boutons_langue(self):
-        """Le drapeau de la langue active est net, l'autre est estompé."""
-        for code, bouton in self.boutons_langue.items():
-            actif = (code == self.langue)
-            image = self._images_langue.get(code, [None, None])[0 if actif else 1]
-            if image is not None:
-                bouton.configure(image=image)
-
-    def changer_langue(self, code):
-        """Clic sur un drapeau : on change la langue des voix ET de la liste.
-
-        Chaque langue a sa propre liste : la liste française reste intacte
-        pendant qu'on travaille en anglais, et inversement.
-
-        À ne pas confondre avec changer_langue_ui, qui change la langue des
-        TEXTES depuis le menu (sans toucher aux listes).
-        """
-        if code == self.langue or code not in VOIX:
-            return
-        self._memoriser_voix()                # on retient celle qu'on quitte
-        self._ecrire_csv()                    # et on enregistre la liste quittée
-        self.langue = code
-        self._remplir_voix()
-        self._maj_boutons_langue()
-        self._sauver_reglages()
-        self.charger_liste()                  # on charge la liste de l'autre
-        self._dire(t("etat_langue_voix", langue=t("langue_" + code),
-                     n=len(VOIX[code])))
-
     def _voix_changee(self, _valeur=None):
         """L'utilisateur a choisi une autre voix.
 
@@ -2668,7 +2634,8 @@ class VoxPackApp(ctk.CTk):
             self._reglages.setdefault("voix", {})[self.langue] = identifiant
 
     def _sauver_reglages(self):
-        self._reglages["langue"] = self.langue
+        """Enregistre les réglages. Une seule langue : langue_ui."""
+        self._reglages["langue_ui"] = LANGUE_UI
         ecrire_reglages(self._reglages)
 
     def _dire(self, texte):

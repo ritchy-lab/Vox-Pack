@@ -12,17 +12,14 @@ import sys
 
 from PyInstaller.utils.hooks import collect_all
 
-# Le logo et les drapeaux du sélecteur de langue doivent voyager avec
-# l'application.
+# Le logo et les icônes doivent voyager avec l'application. (Les dessins de
+# drapeaux restent dans assets/sources/ : ils ne servent plus depuis qu'il n'y
+# a qu'une seule langue.)
 datas = [
     ('logo.png', '.'),
     # L'icône de la fenêtre : Windows ne prend pas celle de l'exécutable.
     ('icon.ico', '.'),
     ('icon.png', '.'),
-    ('assets/sources/drapeau-fr.png', 'assets/sources'),
-    ('assets/sources/drapeau-fr-estompe.png', 'assets/sources'),
-    ('assets/sources/drapeau-en.png', 'assets/sources'),
-    ('assets/sources/drapeau-en-estompe.png', 'assets/sources'),
 ]
 binaries = []
 hiddenimports = []

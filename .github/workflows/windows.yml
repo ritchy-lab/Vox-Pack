@@ -5,6 +5,10 @@
 # le .exe dans les « artefacts » de la page Actions. Il n'y a donc rien à
 # installer sur un PC : on télécharge le fichier déjà fabriqué.
 #
+# Les actions sont en v7 : les versions v4 et v5 tournent encore sur
+# Node.js 20, que GitHub abandonne (avertissement « Node.js 20 is
+# deprecated » à chaque compilation).
+#
 # Pour récupérer le .exe :
 #   1. onglet « Actions » du dépôt
 #   2. dernière exécution « Fabriquer la version Windows »
@@ -24,10 +28,10 @@ jobs:
 
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Installer Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -49,7 +53,7 @@ jobs:
           Get-Item "dist/Vox-Pack.exe" | Format-List Name, Length
 
       - name: Déposer le .exe
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Vox-Pack-Windows
           path: dist/Vox-Pack.exe

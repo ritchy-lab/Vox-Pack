@@ -140,6 +140,15 @@ Légende : `[ ]` à faire · `[x]` fait
 - [x] ~~Compteur de phrases cochées~~ — n'apporte que de l'information.
 - [x] ~~Réglage 6 / 8 caractères~~ — limite fixe à 8, l'aide expliquera le cas
   des versions d'EdgeTX antérieures.
+- [x] ~~Les deux drapeaux (langue des voix séparée de celle des textes)~~ —
+  **supprimés le 16 octobre** : deux réglages là où un seul suffit. Il n'y a
+  plus qu'une langue, celle de l'utilisateur, choisie dans le menu. Elle
+  commande les textes, les voix **et** la liste de phrases. Cela supprime au
+  passage un défaut : un utilisateur anglophone se retrouvait avec une
+  interface anglaise et des voix françaises.
+  **On garde en revanche les deux listes de phrases** (une par langue) : c'est
+  la logique depuis le début, et passer d'une langue à l'autre ne fait rien
+  perdre.
 
 ## Idées notées (pas décidées)
 
