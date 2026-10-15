@@ -15,7 +15,7 @@ import subprocess
 import sys
 import threading
 import webbrowser
-from tkinter import filedialog
+from tkinter import filedialog, Menu
 
 import tkinter.font as tkfont
 
@@ -845,7 +845,102 @@ class VoxPackApp(ctk.CTk):
 
         # On vérifie en arrière-plan que les voix proposées existent toujours
         # chez Microsoft (décalé : la fenêtre s'affiche d'abord).
-        self.after(600, self._verifier_voix) 
+        self.after(600, self._verifier_voix)
+
+        self._construire_menu()
+
+    # ------------------------------------------------------------------
+    # Menu Fichier : exporter / importer une liste
+    # ------------------------------------------------------------------
+    def _construire_menu(self):
+        """Menu « Fichier ». Sur macOS il apparaît dans la barre du système,
+        sur Windows dans la fenêtre : c'est le même code."""
+        barre = Menu(self)
+        fichier = Menu(barre, tearoff=0)
+        fichier.add_command(label="Exporter la liste…",
+                            command=self.exporter_liste)
+        fichier.add_command(label="Importer une liste…",
+                            command=self.importer_liste)
+        fichier.add_separator()
+        fichier.add_command(label="Quitter", command=self.destroy)
+        barre.add_cascade(label="Fichier", menu=fichier)
+        self.configure(menu=barre)
+
+    def exporter_liste(self):
+        """Écrit la liste actuelle dans un fichier choisi (nom,phrase)."""
+        chemin = filedialog.asksaveasfilename(
+            parent=self, title="Exporter la liste",
+            defaultextension=".csv", initialfile="ma-liste-vox-pack.csv",
+            filetypes=[("Fichier CSV", "*.csv"), ("Tous les fichiers", "*.*")],
+        )
+        if not chemin:
+            return
+        try:
+            with open(chemin, "w", encoding="utf-8", newline="") as f:
+                ecrivain = csv.writer(f)
+                ecrivain.writerow(["nom", "phrase"])     # en-tête, pour Excel
+                for ligne in self.lignes:
+                    ecrivain.writerow([ligne["entry_nom"].get().strip(),
+                                       ligne["entry_txt"].get().strip()])
+        except Exception as e:
+            self._message(f"L'export a échoué.\n\n{e}", icone="erreur")
+            return
+        self._message(
+            f"{len(self.lignes)} ligne{'s' if len(self.lignes) > 1 else ''} "
+            f"exportée{'s' if len(self.lignes) > 1 else ''} dans :\n\n{chemin}",
+            icone="succes")
+
+    def importer_liste(self):
+        """Remplace la liste par celle d'un fichier choisi."""
+        chemin = filedialog.askopenfilename(
+            parent=self, title="Importer une liste",
+            filetypes=[("Fichier CSV", "*.csv"), ("Fichier texte", "*.txt"),
+                       ("Tous les fichiers", "*.*")],
+        )
+        if not chemin:
+            return
+        try:
+            with open(chemin, encoding="utf-8-sig") as f:
+                brut = [l for l in csv.reader(f) if l and any(c.strip() for c in l)]
+        except Exception as e:
+            self._message(f"Impossible de lire ce fichier.\n\n{e}", icone="erreur")
+            return
+
+        # Un en-tête « nom,phrase » est ignoré (c'est ce que produit l'export)
+        if brut and brut[0][0].strip().lower() in ("nom", "name", "fichier"):
+            brut = brut[1:]
+        if not brut:
+            self._message("Ce fichier ne contient aucune ligne.", icone="attention")
+            return
+
+        paires = []
+        for morceaux in brut:
+            nom = morceaux[0].strip()
+            # Une seule colonne : on reprend le nom comme phrase de départ,
+            # à corriger ensuite dans la liste.
+            phrase = morceaux[1].strip() if len(morceaux) > 1 else nom
+            paires.append((nom, phrase))
+
+        en_place = len(self.lignes)
+        self._message(
+            f"Remplacer la liste actuelle ({en_place} ligne"
+            f"{'s' if en_place > 1 else ''}) par ces "
+            f"{len(paires)} ligne{'s' if len(paires) > 1 else ''} ?",
+            icone="attention",
+            boutons=[("Oui, remplacer", lambda: self._appliquer_import(paires)),
+                     ("Annuler", None)])
+
+    def _appliquer_import(self, paires):
+        """Vide la liste et la remplace par les lignes importées."""
+        self._supprimer_lignes(list(self.lignes))
+        for nom, phrase in paires:
+            self._ajouter_ligne_ui(nom, phrase)
+        self._on_change()
+        self.after_idle(
+            lambda: self.frame_table._parent_canvas.yview_moveto(0.0))
+        self._message(f"{len(paires)} ligne{'s' if len(paires) > 1 else ''} "
+                      f"importée{'s' if len(paires) > 1 else ''}.", icone="succes")
+
     # ------------------------------------------------------------------
     # Style bouton commun
     # ------------------------------------------------------------------
@@ -1072,11 +1167,17 @@ class VoxPackApp(ctk.CTk):
             ("title", "Comment utiliser l'application"),
             ("space", ""),
             ("text", "1. Choisir une voix dans le menu déroulant."),
+            ("bullet", "Les deux drapeaux changent la langue des voix :"),
+            ("bullet", "français (13 voix) ou anglais (18 voix)."),
+            ("bullet", "Votre langue et votre voix sont retrouvées au prochain"),
+            ("bullet", "démarrage, séparément pour chaque langue."),
             ("space", ""),
             ("text", "2. Gérer la liste"),
             ("bullet", "Ajouter une ligne : bouton \"Ajouter\""),
             ("bullet", "Supprimer une ligne : cocher la ligne puis bouton \"Supprimer\""),
             ("bullet", "Modifier : taper directement dans les cases"),
+            ("bullet", "Cocher plusieurs lignes d'un coup : cliquer sur la"),
+            ("bullet", "première case, puis Majuscule + clic sur la dernière."),
             ("space", ""),
             ("warning", "⚠️  Le nom du fichier ne doit pas dépasser 8 caractères"),
             ("warning", "     et ne doit pas contenir d'accents ni d'espaces."),
@@ -1091,6 +1192,21 @@ class VoxPackApp(ctk.CTk):
             ("space", ""),
             ("text", "5. Générer les fichiers"),
             ("bullet", "Cliquer sur \"Let's Go\" puis choisir un dossier."),
+            ("bullet", "Sous la barre de leds, une ligne indique à chaque instant"),
+            ("bullet", "ce que fait l'application (recherche de la voix, puis"),
+            ("bullet", "génération du fichier WAV)."),
+            ("space", ""),
+            ("title2", "🌐  Connexion Internet nécessaire"),
+            ("text", "Les voix ne sont pas dans l'application : elles viennent du"),
+            ("text", "service de synthèse vocale de Microsoft. Une connexion"),
+            ("text", "Internet est donc indispensable pour générer les fichiers."),
+            ("space", ""),
+            ("warning", "⚠️  Le texte de vos phrases est envoyé à Microsoft pour"),
+            ("warning", "     être prononcé : n'y mettez rien de confidentiel."),
+            ("space", ""),
+            ("bullet", "Sans Internet, l'application vous le dira clairement."),
+            ("bullet", "Si une voix n'existe plus chez Microsoft, elle disparaît"),
+            ("bullet", "toute seule du menu au démarrage de l'application."),
             ("space", ""),
             ("title2", "💾  Sauvegarde automatique"),
             ("text", "Vos modifications sont enregistrées dans :"),
@@ -1101,6 +1217,27 @@ class VoxPackApp(ctk.CTk):
             ("bullet", "automatiquement au prochain démarrage (44 lignes)."),
             ("bullet", "Si vous gardez au moins 1 ligne, vous repartez de cette"),
             ("bullet", "base pour créer votre liste personnalisée."),
+            ("space", ""),
+            ("title2", "📂  Exporter / Importer une liste"),
+            ("text", "Le menu « Fichier » (barre de menus du système sur Mac,"),
+            ("text", "en haut de la fenêtre sur PC) permet de :"),
+            ("bullet", "Exporter la liste pour la sauvegarder ou la partager."),
+            ("bullet", "Importer une liste existante : un nom et une phrase par"),
+            ("bullet", "ligne, séparés par une virgule. L'import remplace la"),
+            ("bullet", "liste actuelle (l'application demande confirmation)."),
+            ("space", ""),
+            ("title2", "📻  Longueur des noms selon votre EdgeTX"),
+            ("text", "La radiocommande lit le nom du fichier : il ne doit pas être"),
+            ("text", "trop long, sinon elle ne le trouve pas."),
+            ("space", ""),
+            ("bullet", "EdgeTX 2.11 et plus récent : 8 caractères, sur toutes"),
+            ("bullet", "les radios."),
+            ("bullet", "EdgeTX 2.10 et plus ancien : 6 caractères sur les radios"),
+            ("bullet", "couleur et les petites radios noir et blanc. Les X9D et"),
+            ("bullet", "X9E acceptent 8 caractères."),
+            ("space", ""),
+            ("warning", "En cas de doute, restez à 6 caractères : ils seront lus"),
+            ("warning", "sur toutes les radios et toutes les versions."),
             ("space", ""),
             ("title2", "🎵  Format des fichiers"),
             ("text", "Les WAV générés sont au format EdgeTX :"),

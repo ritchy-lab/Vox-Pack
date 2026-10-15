@@ -78,6 +78,16 @@ Légende : `[ ]` à faire · `[x]` fait
   supprimée par le service : choisissez-en une autre »…) au lieu de codes
   techniques.
 
+### Aide et gestion des listes (ajouté le 15 octobre)
+
+- [x] **Aide complétée** : bloc « Connexion Internet nécessaire » (les voix
+  viennent de Microsoft, le texte des phrases lui est envoyé, une voix retirée
+  disparaît du menu) et bloc « Longueur des noms selon votre EdgeTX »
+  (8 caractères à partir de la 2.11, 6 avant — 8 sur X9D et X9E).
+- [x] **Menu « Fichier »** : *Exporter la liste…* (fichier `nom,phrase` avec
+  en-tête) et *Importer une liste…* (confirmation avant remplacement,
+  en-tête ignoré, ligne à une seule colonne acceptée).
+
 ## Écarté (décisions de Richard)
 
 - [x] ~~Prévenir avant d'écraser un fichier déjà présent~~ — non souhaité.
@@ -94,12 +104,6 @@ Légende : `[ ]` à faire · `[x]` fait
 
 ## À faire — reste du programme
 
-- [ ] **Aide à compléter** : dire qu'une connexion Internet est nécessaire et
-  que le texte des phrases est envoyé au service en ligne de Microsoft ;
-  expliquer la limite de 6 caractères sur les EdgeTX antérieurs à la 2.11.
-- [ ] **Exporter / Importer une liste** dans un menu (même code pour macOS et
-  Windows : barre de menus du système sur Mac, menu de fenêtre sur PC).
-  Format : `nom,phrase` par ligne — c'est aussi le format d'export.
 - [ ] **Version Windows** (`.exe`) construite automatiquement par GitHub
   Actions ; conversion audio 100 % Python (`soundfile` + `soxr`, déjà
   testée) à la place de `afconvert` ; police système selon la plateforme
