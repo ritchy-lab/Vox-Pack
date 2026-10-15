@@ -115,6 +115,25 @@ Légende : `[ ]` à faire · `[x]` fait
   que si la liste actuelle contient quelque chose. C'est ce défaut qui a fait
   perdre une liste à Richard (récupérée depuis son export du Bureau).
 
+### Version Windows (16 octobre)
+
+- [x] **Conversion audio sans `afconvert`** : `soundfile` + `soxr` ailleurs que
+  sur macOS. Résultat identique (32 kHz, mono, 16 bits, même nombre
+  d'échantillons), vérifié sur une vraie phrase.
+- [x] **Lecture du son sans `afplay`** : `soundfile` + `sounddevice` sur
+  Windows, avec interruption immédiate. Sur macOS, `afplay` reste utilisé :
+  l'application n'embarque donc pas ces bibliothèques.
+- [x] **Recette de compilation multi-plateforme** : `.app` sur macOS, `.exe`
+  en un seul fichier sur Windows, avec les bibliothèques natives
+  (`libsndfile`, `PortAudio`).
+- [x] **Icône de la fenêtre** posée au démarrage (sinon Windows affiche
+  l'icône de Tk dans la barre des tâches) et **menu aux couleurs de
+  l'application** là où le système l'honore.
+- [x] **Fabrication automatique** : `.github/workflows/windows.yml` compile le
+  `.exe` à chaque envoi et le dépose dans les artefacts de la page Actions.
+- [x] **Famille d'icônes** : `icon.icns` et `icon.ico` contiennent le
+  monogramme VP (16 à 64 px) **et** le dessin détaillé au-delà.
+
 ## Écarté (décisions de Richard)
 
 - [x] ~~Prévenir avant d'écraser un fichier déjà présent~~ — non souhaité.
@@ -131,11 +150,9 @@ Légende : `[ ]` à faire · `[x]` fait
 
 ## À faire — reste du programme
 
-- [ ] **Version Windows** (`.exe`) construite automatiquement par GitHub
-  Actions ; conversion audio 100 % Python (`soundfile` + `soxr`, déjà
-  testée) à la place de `afconvert` ; police système selon la plateforme
-  (déjà en place avec `POLICES_PREFEREES`). Richard a un PC Windows pour
-  tester : c'est ce qui rend le chantier possible.
-- [ ] **Déclinaison simplifiée de l'icône** pour les petites tailles
-  (16 et 32 px) : le dessin et le mot y deviennent illisibles.
+- [ ] **Essayer le `.exe` sur le PC de Richard** et corriger ce qui cloche
+  (polices, chemins, lecture du son). C'est le seul moyen de savoir : rien de
+  tout cela ne peut être vérifié depuis un Mac.
+- [ ] **Publier une version** : une page de téléchargement sur GitHub, une
+  capture d'écran ou deux, et l'annonce aux utilisateurs d'EdgeTX.
 

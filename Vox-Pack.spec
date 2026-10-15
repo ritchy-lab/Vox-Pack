@@ -33,7 +33,11 @@ if sys.platform != 'darwin':
     # afplay : rien à embarquer. Ailleurs, tout se fait en Python, et ces
     # bibliothèques traînent des bibliothèques natives (libsndfile, PortAudio)
     # qu'il faut joindre à l'application.
-    paquets += ['soundfile', 'soxr', 'sounddevice', 'numpy']
+    # Les bibliothèques natives de soundfile (libsndfile) et de sounddevice
+    # (PortAudio) sont rangées dans des paquets à part : sans eux, le .exe
+    # démarrerait mais échouerait à la première conversion audio.
+    paquets += ['soundfile', 'soxr', 'sounddevice', 'numpy',
+                '_soundfile_data', '_sounddevice_data']
 
 for paquet in paquets:
     try:
