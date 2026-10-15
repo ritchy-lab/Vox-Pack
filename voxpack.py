@@ -165,6 +165,36 @@ def reprendre_ancienne_liste():
 DOSSIER_SCRIPT = os.path.dirname(os.path.abspath(__file__))
 
 
+# Ce que la fenêtre occupe en hauteur EN DEHORS de la liste : les marges, la
+# rangée de boutons, l'en-tête du tableau, la ligne d'état et les boutons du
+# bas. Sert à décider de la taille du logo sur un petit écran (voir
+# VoxPackApp._taille_logo).
+def place_hors_liste():
+    return (ESPACE_HAUT + ESPACE_LOGO_BOUTONS + BTN_H + ESPACE_BOUTONS_LISTE
+            + 40                      # en-tête du tableau : Nom / Phrase
+            + ESPACE_LISTE_LEDS + HAUTEUR_INFO + ESPACE_LEDS_BOUTONS
+            + 50                      # rangée du bas (bouton « Let's Go »)
+            + ESPACE_BAS + 26)        # marges internes de la liste
+
+
+def taille_logo(hauteur_fenetre, lignes_voulues=7):
+    """Largeur du logo, pour que la fenêtre laisse voir les lignes voulues.
+
+    Sur un grand écran, le logo garde sa taille : c'est lui qui donne son
+    allure à l'application. Sur un petit écran, on le réduit plutôt que de
+    sacrifier des lignes — quatre lignes visibles, c'est trop peu pour
+    travailler.
+    """
+    import math as _math
+    # + 4 : la petite marge sous le logo. Sans elle, on croit gagner une ligne
+    # qui reste invisible de quelques pixels.
+    place_logo = (hauteur_fenetre - place_hors_liste() - 4
+                  - lignes_voulues * (HAUTEUR_LIGNE + 10))
+    # hauteur du logo = largeur / 2,06 (rapport du dessin)
+    largeur = int(max(place_logo, 90) * 2.06)
+    return max(min(LARGEUR_LOGO, largeur), 200)
+
+
 def trouver_ressource(*morceaux):
     """Chemin d'un fichier livré avec l'application (logo, drapeaux…).
 
@@ -1283,6 +1313,9 @@ class VoxPackApp(ctk.CTk):
         # haut mettrait le bouton « Let's Go » sous le bord de l'écran.
         largeur = min(LARGEUR_FENETRE, self.winfo_screenwidth() - 40)
         hauteur = min(HAUTEUR_FENETRE, self.winfo_screenheight() - 100)
+        # Le logo s'adapte à la place disponible : sur un petit écran, mieux
+        # vaut un logo plus modeste que quatre lignes visibles.
+        self.largeur_logo = taille_logo(hauteur)
         # On centre la fenêtre sur l'écran. Le décalage vers le haut tient
         # compte de la barre de menus de macOS, qui mange une trentaine de
         # pixels : sans lui, la fenêtre paraît trop basse.
@@ -1398,7 +1431,7 @@ class VoxPackApp(ctk.CTk):
             try:
                 img = Image.open(LOGO_PATH)
                 ratio = img.height / img.width
-                new_w = LARGEUR_LOGO
+                new_w = self.largeur_logo
                 new_h = int(new_w * ratio)
                 self._logo_image = ctk.CTkImage(
                     light_image=img, dark_image=img, size=(new_w, new_h)
@@ -2005,7 +2038,7 @@ class VoxPackApp(ctk.CTk):
             try:
                 img = Image.open(LOGO_PATH)
                 ratio = img.height / img.width
-                largeur_logo = LARGEUR_LOGO
+                largeur_logo = self.largeur_logo
                 self._logo_aide = ctk.CTkImage(
                     light_image=img, dark_image=img,
                     size=(largeur_logo, int(largeur_logo * ratio)),
