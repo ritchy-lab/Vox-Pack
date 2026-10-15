@@ -33,7 +33,9 @@ Légende : `[ ]` à faire · `[x]` fait
 - [x] **La génération ne s'arrête plus à la première erreur** : elle continue et
   affiche un bilan (réussis / problèmes). Les lignes au nom invalide sont
   refusées d'emblée, avec la raison.
-- [x] **Compteur pendant la génération** : « 3 fichiers sur 12 — mot-arme ».
+- [x] **Compteur pendant la génération** — retiré : le texte (« 3 fichiers sur
+  12 — mot-arme ») rognait la barre de leds, qui ne s'allumait donc pas
+  jusqu'au bout. La barre occupe maintenant toute la largeur.
 - [x] **Confort** : touche Entrée = nouvelle ligne, curseur placé sur la ligne
   créée, dernier dossier de destination mémorisé.
 - [x] **Aperçu** : nom de fichier temporaire unique (deux clics rapides ne se
@@ -62,6 +64,13 @@ liste plus courte, espacements réguliers).
   liste) : elle est aujourd'hui collée au bloc des boutons.
 - [ ] **Harmoniser les espacements** : un même écart partout (en haut, en
   bas, entre les blocs), pour que l'ensemble soit régulier.
+
+## Idées notées (pas décidées)
+
+- **Version web du logiciel** *(idée de Richard, 15 octobre)* : une page dans le
+  navigateur où l'on colle sa liste et où l'on récupère les fichiers WAV, sans
+  rien installer. Le CSS des boutons néon mis de côté servirait alors
+  directement. Rien n'est décidé : c'est noté pour ne pas l'oublier.
 
 ## À faire — reste du programme
 

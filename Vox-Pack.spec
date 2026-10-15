@@ -5,8 +5,15 @@
 # ============================================================
 from PyInstaller.utils.hooks import collect_all
 
-# Le logo doit voyager avec l'application.
-datas = [('logo.png', '.')]
+# Le logo et les drapeaux du sélecteur de langue doivent voyager avec
+# l'application.
+datas = [
+    ('logo.png', '.'),
+    ('assets/sources/drapeau-fr.png', 'assets/sources'),
+    ('assets/sources/drapeau-fr-estompe.png', 'assets/sources'),
+    ('assets/sources/drapeau-en.png', 'assets/sources'),
+    ('assets/sources/drapeau-en-estompe.png', 'assets/sources'),
+]
 binaries = []
 hiddenimports = []
 for paquet in ('customtkinter', 'edge_tts'):
