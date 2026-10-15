@@ -177,22 +177,27 @@ def place_hors_liste():
             + ESPACE_BAS + 26)        # marges internes de la liste
 
 
-def taille_logo(hauteur_fenetre, lignes_voulues=7):
-    """Largeur du logo, pour que la fenêtre laisse voir les lignes voulues.
+def geometrie_fenetre(ecran_large, ecran_haut):
+    """Taille de la fenêtre et du logo, adaptées à l'écran.
 
-    Sur un grand écran, le logo garde sa taille : c'est lui qui donne son
-    allure à l'application. Sur un petit écran, on le réduit plutôt que de
-    sacrifier des lignes — quatre lignes visibles, c'est trop peu pour
-    travailler.
+    Sur un écran confortable, l'application garde exactement l'allure pour
+    laquelle elle a été dessinée. Sur un écran court, elle devient plus
+    compacte : un logo modeste et moins de lignes, mais des lignes lisibles.
+    Une fenêtre qui remplit tout l'écran avec sept lignes tassées n'aide
+    personne.
     """
-    import math as _math
-    # + 4 : la petite marge sous le logo. Sans elle, on croit gagner une ligne
-    # qui reste invisible de quelques pixels.
-    place_logo = (hauteur_fenetre - place_hors_liste() - 4
-                  - lignes_voulues * (HAUTEUR_LIGNE + 10))
-    # hauteur du logo = largeur / 2,06 (rapport du dessin)
-    largeur = int(max(place_logo, 90) * 2.06)
-    return max(min(LARGEUR_LOGO, largeur), 200)
+    confortable = ecran_haut >= ECRAN_CONFORTABLE
+    lignes = LIGNES_GRAND_ECRAN if confortable else LIGNES_PETIT_ECRAN
+    logo = LARGEUR_LOGO if confortable else LARGEUR_LOGO_PETIT
+
+    largeur = min(LARGEUR_FENETRE, ecran_large - 40)
+    # + 4 : la petite marge sous le logo. + 40 : on ne colle pas la liste aux
+    # boutons du bas.
+    hauteur_voulue = (place_hors_liste() + int(logo / 2.06) + 4
+                      + lignes * (HAUTEUR_LIGNE + 10) + 40)
+    marge = 60 if sys.platform.startswith("win") else 100
+    hauteur = min(HAUTEUR_FENETRE, hauteur_voulue, ecran_haut - marge)
+    return largeur, max(hauteur, 380), logo
 
 
 def trouver_ressource(*morceaux):
@@ -1005,12 +1010,7 @@ def regler_echelle(hauteur_ecran):
     if not VALEURS_BASE:
         VALEURS_BASE.update({nom: globals()[nom] for nom in noms})
 
-    if hauteur_ecran >= 900:
-        ECHELLE_UI = 1.0
-    elif hauteur_ecran >= 800:
-        ECHELLE_UI = 0.9
-    else:
-        ECHELLE_UI = 0.82
+    ECHELLE_UI = 1.0 if hauteur_ecran >= ECRAN_CONFORTABLE else 0.9
 
     for nom in noms:
         base = VALEURS_BASE[nom]
@@ -1028,6 +1028,15 @@ def regler_echelle(hauteur_ecran):
 # est plus petit (voir VoxPackApp.__init__).
 LARGEUR_FENETRE = 820
 HAUTEUR_FENETRE = 795
+
+# Écran « confortable » : au-delà de cette hauteur, l'application garde son
+# allure d'origine. En dessous (portable 1080 réglé à 150 % : Windows annonce
+# alors 1280 x 720), elle se resserre : logo plus modeste et moins de lignes,
+# mais des lignes bien lisibles.
+ECRAN_CONFORTABLE = 900
+LIGNES_GRAND_ECRAN = 7
+LIGNES_PETIT_ECRAN = 5
+LARGEUR_LOGO_PETIT = 220
 
 # Largeur du logo dans l'en-tête, en pixels. Le dessin fait 1344 x 652, soit
 # un rapport de 2,06 : 460 px de large donnent 223 px de haut.
@@ -1362,12 +1371,8 @@ class VoxPackApp(ctk.CTk):
         # cette différence vaut deux lignes visibles — d'autant que sur un
         # écran à 150 % de mise à l'échelle, Windows n'annonce que 720 pixels
         # de haut pour un écran 1080.
-        marge = 60 if sys.platform.startswith("win") else 100
-        largeur = min(LARGEUR_FENETRE, self.winfo_screenwidth() - 40)
-        hauteur = min(HAUTEUR_FENETRE, self.winfo_screenheight() - marge)
-        # Le logo s'adapte à la place disponible : sur un petit écran, mieux
-        # vaut un logo plus modeste que quatre lignes visibles.
-        self.largeur_logo = taille_logo(hauteur)
+        largeur, hauteur, self.largeur_logo = geometrie_fenetre(
+            self.winfo_screenwidth(), self.winfo_screenheight())
         # On centre la fenêtre sur l'écran. Le décalage vers le haut tient
         # compte de la barre de menus de macOS, qui mange une trentaine de
         # pixels : sans lui, la fenêtre paraît trop basse.
@@ -1433,19 +1438,20 @@ class VoxPackApp(ctk.CTk):
             self.btn_menu = ctk.CTkButton(
                 self.header,
                 text="≡",
-                font=(FONT_MAIN, 20),
+                font=(FONT_MAIN, 22),
                 width=30,
                 height=30,
-                corner_radius=15,
+                corner_radius=0,
                 fg_color="transparent",
-                border_color=CYAN,
-                border_width=1,
+                border_width=0,          # discret : trois barres, rien autour
                 text_color=CYAN,
                 hover=False,
                 command=self._ouvrir_menu,
             )
             self._survol(self.btn_menu)
-            self.btn_menu.place(relx=1.0, rely=0.0, anchor="ne", x=-55, y=30)
+            # De l'autre côté de la fenêtre, en haut à gauche : le « ? » garde
+            # la droite, et il n'y a rien à cet endroit du bandeau.
+            self.btn_menu.place(x=18, y=28, anchor="nw")
 
         # ----- Sélecteur de langue (drapeaux) -----
         # Posés par-dessus le bandeau, en bas à gauche : ils ne poussent rien,
@@ -2050,21 +2056,39 @@ class VoxPackApp(ctk.CTk):
 
         symbole, couleur = self.ICONES.get(icone, self.ICONES["info"])
 
-        pastille = ctk.CTkCanvas(popup, width=58, height=58,
+        # La fenêtre se resserre comme le reste de l'interface : sur un écran
+        # court (ou à 150 % de mise à l'échelle), une alerte de 430 px paraît
+        # énorme pour deux lignes de texte.
+        cote = int(52 * ECHELLE_UI)
+        marge = int(24 * ECHELLE_UI)
+
+        # Et sa largeur suit le texte : mieux vaut une alerte étroite pour un
+        # message court qu'une grande fenêtre à moitié vide. On garde toujours
+        # de quoi loger les boutons.
+        police = tkfont.Font(family=FONT_MAIN, size=TYPO_ALERTE)
+        besoin = max((police.measure(ligne) for ligne in texte.split("\n")),
+                     default=0) + 2 * marge
+        nb_boutons = len(boutons or [(None, None)])
+        besoin_boutons = nb_boutons * (int(150 * ECHELLE_UI)
+                                       + int(12 * ECHELLE_UI))
+        largeur = int(min(largeur * ECHELLE_UI,
+                          max(besoin, besoin_boutons, int(320 * ECHELLE_UI))))
+
+        pastille = ctk.CTkCanvas(popup, width=cote, height=cote,
                                  bg=BG_MAIN, highlightthickness=0)
-        pastille.create_oval(4, 4, 54, 54, outline=couleur, width=2)
-        pastille.create_text(29, 29, text=symbole, fill=couleur,
-                             font=(FONT_MAIN, 26, "bold"))
-        pastille.pack(pady=(26, 8))
+        pastille.create_oval(3, 3, cote - 3, cote - 3, outline=couleur, width=2)
+        pastille.create_text(cote // 2, cote // 2, text=symbole, fill=couleur,
+                             font=(FONT_MAIN, int(24 * ECHELLE_UI), "bold"))
+        pastille.pack(pady=(int(20 * ECHELLE_UI), 6))
 
         ctk.CTkLabel(
             popup, text=texte,
             font=(FONT_MAIN, TYPO_ALERTE), text_color=TEXT_WHITE,
-            wraplength=largeur - 60, justify="center",
-        ).pack(padx=30)
+            wraplength=largeur - int(50 * ECHELLE_UI), justify="center",
+        ).pack(padx=marge)
 
         rangee = ctk.CTkFrame(popup, fg_color="transparent")
-        rangee.pack(pady=(22, 24))
+        rangee.pack(pady=(int(18 * ECHELLE_UI), int(20 * ECHELLE_UI)))
 
         for libelle, action in (boutons or [(t("compris"), None)]):
 
@@ -2073,8 +2097,9 @@ class VoxPackApp(ctk.CTk):
                 if a:
                     a()
 
-            self._btn(rangee, libelle, cliquer, largeur=150).pack(
-                side="left", padx=6)
+            self._btn(rangee, libelle, cliquer,
+                      largeur=int(150 * ECHELLE_UI)).pack(
+                side="left", padx=int(6 * ECHELLE_UI))
 
         popup.update_idletasks()
         hauteur = popup.winfo_reqheight()
