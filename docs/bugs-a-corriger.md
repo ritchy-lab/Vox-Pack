@@ -88,6 +88,33 @@ Légende : `[ ]` à faire · `[x]` fait
   en-tête) et *Importer une liste…* (confirmation avant remplacement,
   en-tête ignoré, ligne à une seule colonne acceptée).
 
+### Anglais, et une liste par langue (16 octobre)
+
+- [x] **Interface bilingue** : 145 textes dans chaque langue (`TEXTES`, `t()`),
+  aucune clé manquante. La langue suit celle du système au premier lancement
+  (les préférences de macOS, pas `LANG` : lancée depuis VS Code, elle aurait
+  sinon basculé en anglais), puis se change dans le menu *Fichier → Langue*.
+- [x] **Deux listes indépendantes**, une par langue, échangées par les
+  drapeaux : travailler en anglais ne peut plus effacer la liste française.
+- [x] **Liste de phrases anglaise** (44 lignes, noms ≤ 8 caractères).
+- [x] **Menu *Fichier → Charger la liste par défaut*** : remet les phrases
+  livrées avec l'application, dans la langue des voix, après confirmation.
+- [x] **Voix mémorisée par identifiant technique**, et non par son libellé
+  (qui contient « Femme » / « Female »). Les anciens réglages sont convertis
+  tout seuls.
+- [x] **Emma réparée** : `en-US-EmmaNeural` est listée par Microsoft mais ne
+  renvoie plus aucun son. Remplacée par `en-US-EmmaMultilingualNeural`. Les
+  31 voix ont été essayées une par une : les 30 autres fonctionnent.
+- [x] **La voix choisie est cochée dans la liste déroulante** : on voit d'où
+  l'on part quand on veut en changer.
+- [x] **L'aperçu lit toutes les lignes cochées**, l'une après l'autre, et la
+  voix suivante se télécharge pendant la lecture (plus de temps mort).
+- [x] **« Arrêter » arrête vraiment** : avant, il coupait la phrase en cours
+  mais enchaînait la suivante.
+- [x] **La copie de secours ne peut plus être vidée** : elle n'est remplacée
+  que si la liste actuelle contient quelque chose. C'est ce défaut qui a fait
+  perdre une liste à Richard (récupérée depuis son export du Bureau).
+
 ## Écarté (décisions de Richard)
 
 - [x] ~~Prévenir avant d'écraser un fichier déjà présent~~ — non souhaité.
@@ -107,10 +134,8 @@ Légende : `[ ]` à faire · `[x]` fait
 - [ ] **Version Windows** (`.exe`) construite automatiquement par GitHub
   Actions ; conversion audio 100 % Python (`soundfile` + `soxr`, déjà
   testée) à la place de `afconvert` ; police système selon la plateforme
-  (déjà en place avec `POLICES_PREFEREES`).
-- [ ] **Interface en anglais** : les textes de la fenêtre à sortir du code, et
-  une liste de phrases anglaise adaptée (pas une traduction mot à mot). Les
-  voix anglaises, elles, sont déjà là.
+  (déjà en place avec `POLICES_PREFEREES`). Richard a un PC Windows pour
+  tester : c'est ce qui rend le chantier possible.
 - [ ] **Déclinaison simplifiée de l'icône** pour les petites tailles
   (16 et 32 px) : le dessin et le mot y deviennent illisibles.
 
