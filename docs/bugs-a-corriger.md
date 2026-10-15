@@ -41,29 +41,49 @@ Légende : `[ ]` à faire · `[x]` fait
 - [x] **Aperçu** : nom de fichier temporaire unique (deux clics rapides ne se
   gênent plus) et bouton qui devient « ■ Arrêter » pendant la lecture.
 
+### Mise en page (terminée le 15 octobre)
+
+- [x] **Logo agrandi** : 400 px de large sur 194 de haut, réglable par la
+  constante `LARGEUR_LOGO`.
+- [x] **Espacements harmonisés** : six constantes nommées (`ESPACE_HAUT`,
+  `ESPACE_LOGO_BOUTONS`, `ESPACE_BOUTONS_LISTE`, `ESPACE_LISTE_LEDS`,
+  `ESPACE_LEDS_BOUTONS`, `ESPACE_BAS`).
+- [x] **Cases de saisie affinées** (34 px) : **7 lignes visibles**.
+- [x] **Barre de leds affinée** (16 px, segments de 6) et **sans texte** : elle
+  s'allume jusqu'au bout. Durée d'affichage avant extinction réglable
+  (`PAUSE_LEDS`).
+- [x] **Les boutons du bas ne peuvent plus disparaître** quand la fenêtre
+  rapetisse : le bloc du bas est posé en premier, c'est la liste qui se
+  réduit.
+- [x] **Fenêtre** : 820 × 795, ouverte **au centre** de l'écran, et réduite
+  automatiquement si l'écran est plus petit.
+- [x] **Ligne d'état** sous la barre de leds : étape en cours, puis compteur.
+- [x] **Polices des textes d'information agrandies** : état et avertissements
+  14, fenêtres d'alerte 16.
+
+### Langues et voix (ajouté le 15 octobre)
+
+- [x] **31 voix au lieu de 4** : 13 françaises (France, Suisse, Belgique,
+  Québec) et 18 anglaises (États-Unis, Royaume-Uni). Les libellés indiquent
+  **l'accent**, pas un adjectif marketing.
+- [x] **Sélecteur de langue** : deux drapeaux posés dans le bandeau, au-dessus
+  du menu des voix, sans décaler la mise en page. Le drapeau actif est net,
+  l'autre est estompé et s'éclaire au survol.
+- [x] **Mémoire** : la langue et la voix choisies sont retrouvées au
+  démarrage, séparément pour chaque langue.
+- [x] **Vérification des voix au démarrage** : une voix retirée par Microsoft
+  disparaît du menu d'elle-même ; si la vérification échoue (pas de réseau),
+  la liste de l'application est conservée.
+- [x] **Messages d'erreur en français** (« pas de connexion Internet », « voix
+  supprimée par le service : choisissez-en une autre »…) au lieu de codes
+  techniques.
+
 ## Écarté (décisions de Richard)
 
 - [x] ~~Prévenir avant d'écraser un fichier déjà présent~~ — non souhaité.
 - [x] ~~Compteur de phrases cochées~~ — n'apporte que de l'information.
 - [x] ~~Réglage 6 / 8 caractères~~ — limite fixe à 8, l'aide expliquera le cas
   des versions d'EdgeTX antérieures.
-
-## À faire — mise en page (décidé le 15 octobre au soir)
-
-Objectif : retrouver l'allure de la maquette (en-tête large et généreux,
-liste plus courte, espacements réguliers).
-
-- [ ] **Logo nettement plus grand**, comme sur la maquette : il y occupe
-  environ les deux tiers de la largeur de la fenêtre (aujourd'hui 340 px
-  sur 900, soit 38 %). Réglage unique : `LARGEUR_LOGO`.
-- [ ] **Plus d'espace entre la ligne des boutons et la liste.**
-- [ ] **« Baisser la fenêtre des listes »** — formulation exacte de Richard, à
-  préciser : la liste commence plus bas (plus d'espace entre la rangée de
-  boutons et le haut de la liste), ou bien la zone de liste est moins haute ?
-- [ ] **Remonter la barre de progression** (la rapprocher du bas de la
-  liste) : elle est aujourd'hui collée au bloc des boutons.
-- [ ] **Harmoniser les espacements** : un même écart partout (en haut, en
-  bas, entre les blocs), pour que l'ensemble soit régulier.
 
 ## Idées notées (pas décidées)
 
@@ -74,6 +94,9 @@ liste plus courte, espacements réguliers).
 
 ## À faire — reste du programme
 
+- [ ] **Aide à compléter** : dire qu'une connexion Internet est nécessaire et
+  que le texte des phrases est envoyé au service en ligne de Microsoft ;
+  expliquer la limite de 6 caractères sur les EdgeTX antérieurs à la 2.11.
 - [ ] **Exporter / Importer une liste** dans un menu (même code pour macOS et
   Windows : barre de menus du système sur Mac, menu de fenêtre sur PC).
   Format : `nom,phrase` par ligne — c'est aussi le format d'export.
@@ -81,9 +104,9 @@ liste plus courte, espacements réguliers).
   Actions ; conversion audio 100 % Python (`soundfile` + `soxr`, déjà
   testée) à la place de `afconvert` ; police système selon la plateforme
   (déjà en place avec `POLICES_PREFEREES`).
-- [ ] **Interface bilingue** français / anglais : textes à sortir du code,
-  liste de phrases anglaise adaptée (pas une traduction mot à mot), voix
-  anglaises.
+- [ ] **Interface en anglais** : les textes de la fenêtre à sortir du code, et
+  une liste de phrases anglaise adaptée (pas une traduction mot à mot). Les
+  voix anglaises, elles, sont déjà là.
 - [ ] **Déclinaison simplifiée de l'icône** pour les petites tailles
   (16 et 32 px) : le dessin et le mot y deviennent illisibles.
 

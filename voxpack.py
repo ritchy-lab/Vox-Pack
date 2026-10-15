@@ -219,7 +219,7 @@ TYPO_PETIT_BOUTON = 14  # petits boutons (Tout / Rien)
 TYPO_INFO = 12          # la ligne d'état, sous la barre de leds
 HAUTEUR_INFO = 16       # sa hauteur (doit contenir la police ci-dessus)
 TYPO_MESSAGE = 14       # les avertissements, à droite des lignes
-TYPO_ALERTE = 16        # le texte des fenêtres d'alerte
+TYPO_ALERTE = 18        # le texte des fenêtres d'alerte
 
 # ------------------------------------------------------------------
 # Mise en page
@@ -260,6 +260,17 @@ ESPACE_DRAPEAUX = 8
 # se plaindre, mais n'affiche la bonne main que si le nom correspond au
 # système : pointinghand est celui de macOS, hand2 celui de Windows/X11.
 CURSEUR_MAIN = "pointinghand" if sys.platform == "darwin" else "hand2"
+
+# Fenêtre de soutien : largeur de départ. Elle s'élargit si les boutons
+# demandent plus de place (voir _ouvrir_soutien).
+LARGEUR_SOUTIEN = 380
+
+# Le bouton « Oui » de la fenêtre de soutien : largeur, hauteur, police et
+# arrondi. L'arrondi doit valoir environ la moitié de la hauteur, sinon le
+# bouton perd sa forme de « gélule ».
+OUI_LARGEUR = 140
+OUI_HAUTEUR = 40
+OUI_TYPO = 18
 
 # Police du texte. La première de la liste que le système sait réellement
 # utiliser est retenue au démarrage. Attention : « SF Pro Display » n'existe
@@ -896,7 +907,7 @@ class VoxPackApp(ctk.CTk):
         popup.configure(fg_color=BG_MAIN)
         popup.bind("<Escape>", lambda e: popup.destroy())
 
-        largeur = 380
+        largeur = LARGEUR_SOUTIEN
         ctk.CTkLabel(
             popup, text="Mon application te sert ou te plaît ?",
             font=(FONT_MAIN, 16), text_color=TEXT_WHITE,
@@ -917,16 +928,19 @@ class VoxPackApp(ctk.CTk):
         oui = self._btn(
             boutons, "Oui, avec plaisir !",
             lambda: (self._ouvrir_lien(KO_FI_URL), popup.destroy()),
-            largeur=210, hauteur=50, typo=18,
+            largeur=OUI_LARGEUR, hauteur=OUI_HAUTEUR, typo=OUI_TYPO,
         )
-        oui.configure(fg_color=CYAN, text_color=BG_MAIN,
-                      border_color=CYAN, corner_radius=25,
+        oui.configure(fg_color="transparent", text_color=CYAN,
+                      border_color=CYAN, corner_radius=OUI_HAUTEUR // 2,
                       hover_color=CYAN_DARK)
         oui.pack(side="left", padx=7)
         self._btn(boutons, "Une prochaine fois", popup.destroy,
                   small=True, largeur=150).pack(side="left", padx=7)
 
         popup.update_idletasks()
+        # La largeur s'adapte au contenu : si on agrandit le bouton « Oui »,
+        # la fenêtre s'élargit toute seule au lieu de rogner les boutons.
+        largeur = max(LARGEUR_SOUTIEN, popup.winfo_reqwidth())
         hauteur = popup.winfo_reqheight()
         self.update_idletasks()
         x = self.winfo_x() + (self.winfo_width() - largeur) // 2
