@@ -55,8 +55,9 @@ liste plus courte, espacements réguliers).
   environ les deux tiers de la largeur de la fenêtre (aujourd'hui 340 px
   sur 900, soit 38 %). Réglage unique : `LARGEUR_LOGO`.
 - [ ] **Plus d'espace entre la ligne des boutons et la liste.**
-- [ ] **Réduire la hauteur de la liste** : elle occupe aujourd'hui tout
-  l'espace disponible et descend jusqu'aux boutons du bas.
+- [ ] **« Baisser la fenêtre des listes »** — formulation exacte de Richard, à
+  préciser : la liste commence plus bas (plus d'espace entre la rangée de
+  boutons et le haut de la liste), ou bien la zone de liste est moins haute ?
 - [ ] **Remonter la barre de progression** (la rapprocher du bas de la
   liste) : elle est aujourd'hui collée au bloc des boutons.
 - [ ] **Harmoniser les espacements** : un même écart partout (en haut, en
