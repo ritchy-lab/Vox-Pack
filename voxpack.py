@@ -981,6 +981,47 @@ TYPO_MESSAGE = 14       # les avertissements, à droite des lignes
 TYPO_ALERTE = 18        # le texte des fenêtres d'alerte
 
 # ------------------------------------------------------------------
+# Échelle de l'interface
+# ------------------------------------------------------------------
+# Sur un écran de 1280 x 720 (un portable 1080 réglé à 150 %), la fenêtre
+# tient, mais une typographie prévue pour un grand écran paraît énorme : on
+# resserre alors polices et espacements, plutôt que de sacrifier des lignes.
+#
+# Sur un écran confortable, rien ne change : l'application garde exactement
+# l'allure pour laquelle elle a été dessinée.
+ECHELLE_UI = 1.0
+VALEURS_BASE = {}
+
+
+def regler_echelle(hauteur_ecran):
+    """Ajuste la typographie et les espacements à la place disponible."""
+    global ECHELLE_UI
+
+    noms = ("TYPO_LISTE", "HAUTEUR_LIGNE", "TYPO_BOUTON", "TYPO_PETIT_BOUTON",
+            "TYPO_INFO", "HAUTEUR_INFO", "TYPO_MESSAGE", "TYPO_ALERTE",
+            "ESPACE_HAUT", "ESPACE_LOGO_BOUTONS", "ESPACE_BOUTONS_LISTE",
+            "ESPACE_LISTE_LEDS", "ESPACE_LEDS_BOUTONS", "ESPACE_BAS",
+            "BTN_H", "BTN_W")
+    if not VALEURS_BASE:
+        VALEURS_BASE.update({nom: globals()[nom] for nom in noms})
+
+    if hauteur_ecran >= 900:
+        ECHELLE_UI = 1.0
+    elif hauteur_ecran >= 800:
+        ECHELLE_UI = 0.9
+    else:
+        ECHELLE_UI = 0.82
+
+    for nom in noms:
+        base = VALEURS_BASE[nom]
+        # Les hauteurs gardent un plancher : en dessous, le texte est rogné.
+        plancher = 0.6 if nom.startswith(("TYPO", "HAUTEUR")) else 0
+        globals()[nom] = max(int(round(base * ECHELLE_UI)), int(base * plancher))
+    # Les espacements pairs donnent un rendu plus net.
+    globals()["HAUTEUR_LIGNE"] = max(globals()["HAUTEUR_LIGNE"], 24)
+
+
+# ------------------------------------------------------------------
 # Mise en page
 # ------------------------------------------------------------------
 # Taille souhaitée de la fenêtre. Elle se réduit automatiquement si l'écran
@@ -1308,6 +1349,9 @@ class VoxPackApp(ctk.CTk):
         super().__init__()
 
         choisir_police()
+        # Avant de créer le moindre élément : l'interface s'adapte à la place
+        # disponible (voir regler_echelle).
+        regler_echelle(self.winfo_screenheight())
 
         self.title("Vox-Pack")
         # La fenêtre s'ouvre à sa taille idéale, mais se réduit si l'écran est
@@ -1382,6 +1426,26 @@ class VoxPackApp(ctk.CTk):
         )
         self._survol(self.btn_aide)
         self.btn_aide.place(relx=1.0, rely=0.0, anchor="ne", x=-15, y=30)
+
+        # Bouton du menu, à gauche du « ? ». Sur macOS, le menu est dans la
+        # barre du système : ce bouton n'existe pas.
+        if not sys.platform == "darwin":
+            self.btn_menu = ctk.CTkButton(
+                self.header,
+                text="≡",
+                font=(FONT_MAIN, 20),
+                width=30,
+                height=30,
+                corner_radius=15,
+                fg_color="transparent",
+                border_color=CYAN,
+                border_width=1,
+                text_color=CYAN,
+                hover=False,
+                command=self._ouvrir_menu,
+            )
+            self._survol(self.btn_menu)
+            self.btn_menu.place(relx=1.0, rely=0.0, anchor="ne", x=-55, y=30)
 
         # ----- Sélecteur de langue (drapeaux) -----
         # Posés par-dessus le bandeau, en bas à gauche : ils ne poussent rien,
@@ -1665,15 +1729,18 @@ class VoxPackApp(ctk.CTk):
             pass  # une icône, ce n'est pas vital
 
     def _construire_menu(self):
-        """Menu « Fichier ». Sur macOS il apparaît dans la barre du système,
-        sur Windows dans la fenêtre : c'est le même code.
+        """Menu « Fichier ».
 
-        Il est reconstruit à chaque changement de langue : sur macOS, Tk ne
-        sait pas traduire un menu déjà posé.
+        Sur macOS, il vit dans la barre de menus du système : c'est là que les
+        Mac l'attendent, et il n'occupe aucune place dans la fenêtre.
+
+        Sur Windows, une barre de menus dessinée par Tk prend de la hauteur et
+        reste blanche quoi qu'on fasse : on l'ouvre donc depuis un petit
+        bouton, comme le « ? ». Le menu déroulant, lui, prend nos couleurs.
+
+        Le menu est reconstruit à chaque changement de langue : Tk ne sait pas
+        traduire un menu déjà posé.
         """
-        # Windows affiche le menu dans la fenêtre : on le met aux couleurs de
-        # l'application. macOS l'affiche dans la barre du système et ignore
-        # ces réglages — c'est le système qui décide, et c'est très bien.
         style = {}
         if not sys.platform == "darwin":
             style = dict(background=BG_MAIN, foreground=TEXT_WHITE,
@@ -1699,7 +1766,24 @@ class VoxPackApp(ctk.CTk):
         fichier.add_separator()
         fichier.add_command(label=t("menu_quitter"), command=self.destroy)
         barre.add_cascade(label=t("menu_fichier"), menu=fichier)
-        self.configure(menu=barre)
+        self._menu_fichier = fichier
+        if sys.platform == "darwin":
+            self.configure(menu=barre)
+        else:
+            # Pas de barre dans la fenêtre : le menu s'ouvre à la demande.
+            self.configure(menu="")
+
+    def _ouvrir_menu(self, _evenement=None):
+        """Ouvre le menu depuis le bouton « ☰ » (Windows, Linux)."""
+        menu = getattr(self, "_menu_fichier", None)
+        bouton = getattr(self, "btn_menu", None)
+        if menu is None or bouton is None:
+            return
+        try:
+            menu.tk_popup(bouton.winfo_rootx(),
+                          bouton.winfo_rooty() + bouton.winfo_height())
+        finally:
+            menu.grab_release()
 
     def changer_langue_ui(self, code):
         """Change la langue des textes et remet à jour tout l'affichage."""
@@ -2026,7 +2110,12 @@ class VoxPackApp(ctk.CTk):
         popup.configure(fg_color=BG_MAIN)
 
         self.update_idletasks()
-        w_popup, h_popup = 620, 660
+        # La fenêtre d'aide ne doit jamais dépasser l'écran : sinon le bouton
+        # « Fermer » passe sous la barre des tâches et devient inatteignable.
+        # Le texte de l'aide garde sa taille (c'est une fenêtre de lecture) :
+        # seule la fenêtre s'adapte, le contenu défile.
+        w_popup = min(620, self.winfo_screenwidth() - 80)
+        h_popup = min(660, self.winfo_screenheight() - 90)
         x = self.winfo_x() + (self.winfo_width() - w_popup) // 2
         y = self.winfo_y() + (self.winfo_height() - h_popup) // 2
         popup.geometry(f"{w_popup}x{h_popup}+{max(x, 0)}+{max(y, 0)}")
