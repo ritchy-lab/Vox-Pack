@@ -46,11 +46,24 @@ Légende : `[ ]` à faire · `[x]` fait
 - [x] ~~Réglage 6 / 8 caractères~~ — limite fixe à 8, l'aide expliquera le cas
   des versions d'EdgeTX antérieures.
 
-## À faire
+## À faire — mise en page (décidé le 15 octobre au soir)
 
-- [ ] **Aide** : indiquer qu'une connexion Internet est nécessaire et que le
-  texte des phrases est envoyé au service en ligne de Microsoft ; expliquer
-  la limite de 6 caractères sur les EdgeTX antérieurs à la 2.11.
+Objectif : retrouver l'allure de la maquette (en-tête large et généreux,
+liste plus courte, espacements réguliers).
+
+- [ ] **Logo nettement plus grand**, comme sur la maquette : il y occupe
+  environ les deux tiers de la largeur de la fenêtre (aujourd'hui 340 px
+  sur 900, soit 38 %). Réglage unique : `LARGEUR_LOGO`.
+- [ ] **Plus d'espace entre la ligne des boutons et la liste.**
+- [ ] **Réduire la hauteur de la liste** : elle occupe aujourd'hui tout
+  l'espace disponible et descend jusqu'aux boutons du bas.
+- [ ] **Remonter la barre de progression** (la rapprocher du bas de la
+  liste) : elle est aujourd'hui collée au bloc des boutons.
+- [ ] **Harmoniser les espacements** : un même écart partout (en haut, en
+  bas, entre les blocs), pour que l'ensemble soit régulier.
+
+## À faire — reste du programme
+
 - [ ] **Exporter / Importer une liste** dans un menu (même code pour macOS et
   Windows : barre de menus du système sur Mac, menu de fenêtre sur PC).
   Format : `nom,phrase` par ligne — c'est aussi le format d'export.
@@ -62,4 +75,5 @@ Légende : `[ ]` à faire · `[x]` fait
   liste de phrases anglaise adaptée (pas une traduction mot à mot), voix
   anglaises.
 - [ ] **Déclinaison simplifiée de l'icône** pour les petites tailles
-  (16 et 32 px) : le mot « VOX-PACK » y devient illisible.
+  (16 et 32 px) : le dessin et le mot y deviennent illisibles.
+

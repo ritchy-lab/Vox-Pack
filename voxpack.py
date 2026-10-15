@@ -155,17 +155,10 @@ HAUTEUR_LIGNE = 40       # hauteur de ces cases (à agrandir avec la police)
 TYPO_BOUTON = 16        # texte des boutons
 TYPO_PETIT_BOUTON = 14  # petits boutons (Tout / Rien)
 
-# Le logo a plus de poids visuel à gauche (les barres de voix) qu'à droite
-# (les ondes fines) : centré au pixel près, le sous-titre paraît décalé vers
-# la droite. On le décale donc légèrement vers la gauche, pour qu'il tombe
-# sous le monogramme. Mettre 0 pour un centrage strictement mathématique.
-DECALAGE_SOUS_TITRE = 8  # en pixels, vers la gauche
-
-# Écart entre les lettres du sous-titre, en pixels. Tk ne sait pas espacer les
-# lettres : le sous-titre est donc dessiné lettre par lettre (classe
-# TexteEspace ci-dessous). 0 = écartement naturel de la police, 3 ou 4 = plus
-# aéré, -1 = plus serré.
-ESPACEMENT_SOUS_TITRE = 0
+# Largeur du logo dans l'en-tête, en pixels. Chaque tranche de 100 px de
+# largeur ajoute environ 50 px de hauteur à l'en-tête (et retire donc une
+# ligne à la liste). Le dessin fait 1344 x 652, soit un rapport de 2,06.
+LARGEUR_LOGO = 340
 
 # Police du texte. La première de la liste que le système sait réellement
 # utiliser est retenue au démarrage. Attention : « SF Pro Display » n'existe
@@ -390,6 +383,10 @@ class TexteEspace(ctk.CTkCanvas):
     Tk ne sait pas espacer les lettres d'un texte : on dessine donc chaque
     lettre l'une après l'autre, à la distance voulue. L'écartement peut être
     positif (plus aéré) ou négatif (plus serré).
+
+    Plus utilisée depuis que le sous-titre « Fait parler ta radio » a été
+    retiré de l'en-tête, mais conservée : elle servira pour un slogan
+    ailleurs (fenêtre d'aide, à propos…).
     """
 
     def __init__(self, master, texte, taille=16, espacement=0,
@@ -462,7 +459,7 @@ class VoxPackApp(ctk.CTk):
             try:
                 img = Image.open(LOGO_PATH)
                 ratio = img.height / img.width
-                new_w = 220
+                new_w = LARGEUR_LOGO
                 new_h = int(new_w * ratio)
                 self._logo_image = ctk.CTkImage(
                     light_image=img, dark_image=img, size=(new_w, new_h)
@@ -483,20 +480,7 @@ class VoxPackApp(ctk.CTk):
                 text="Vox-Pack",
                 font=(FONT_MAIN, 32),
                 text_color=CYAN,
-            ).pack(anchor="center")
-
-        # Sous-titre (écartement réglable par ESPACEMENT_SOUS_TITRE)
-        self.lbl_sub = TexteEspace(
-            self.header,
-            "Fait parler ta radio",
-            taille=16,
-            espacement=ESPACEMENT_SOUS_TITRE,
-            couleur=LINK_COLOR,
-        )
-        # padx retire la place à droite : le texte se décale vers la gauche
-        self.lbl_sub.pack(anchor="center",
-                          padx=(0, DECALAGE_SOUS_TITRE * 2),
-                          pady=(0, 10))
+            ).pack(anchor="center", pady=(0, 4))
 
         # ----- Ligne unique : Voix + 3 boutons (centrée) -----
         row_all = ctk.CTkFrame(self, fg_color="transparent")
@@ -612,7 +596,7 @@ class VoxPackApp(ctk.CTk):
             width=180,
             height=44,
             corner_radius=22,
-            fg_color="#00A8B8",
+            fg_color="#04C3D4",
             hover_color="#00F0FF",
             text_color="#0A0F14",
             border_width=0,
@@ -838,7 +822,7 @@ class VoxPackApp(ctk.CTk):
             try:
                 img = Image.open(LOGO_PATH)
                 ratio = img.height / img.width
-                largeur_logo = 300
+                largeur_logo = LARGEUR_LOGO
                 self._logo_aide = ctk.CTkImage(
                     light_image=img, dark_image=img,
                     size=(largeur_logo, int(largeur_logo * ratio)),

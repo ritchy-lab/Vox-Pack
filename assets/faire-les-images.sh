@@ -35,7 +35,7 @@ cp "$TRAVAIL/logo.png" logo.png
 echo "     logo.png ($(sips -g pixelWidth -g pixelHeight logo.png | tail -2 | tr -d ' \n' | sed 's/pixelWidth://;s/pixelHeight:/x/'))"
 
 echo "2/3  Icône carrée -> icon.png (${COTE}x${COTE})"
-# Le dessin d'origine fait 838 px de côté : on le porte à 1024 px,
+# Le dessin d'origine est mis au format 1024 px,
 # taille attendue par macOS pour la plus grande déclinaison.
 sips -s format png -z "$COTE" "$COTE" "$ICONE" --out "$TRAVAIL/icone-$COTE.png" >/dev/null
 cp "$TRAVAIL/icone-$COTE.png" icon.png
