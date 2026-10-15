@@ -486,6 +486,7 @@ TEXTES = {
         "aide_soutien": "☕  Mon application te sert ou te plaît ?",
         "aide_lien": "Offre-moi un café  ·  ko-fi.com/ritchy_lab",
         "aide_credits": "Créé avec un brainstorming avec une IA",
+        "aide_ecran": "Écran {ecran} — fenêtre {fenetre}",
     },
 
     "en": {
@@ -687,6 +688,7 @@ TEXTES = {
         "aide_soutien": "☕  Do you find my application useful?",
         "aide_lien": "Buy me a coffee  ·  ko-fi.com/ritchy_lab",
         "aide_credits": "Created with AI brainstorming",
+        "aide_ecran": "Screen {ecran} — window {fenetre}",
     },
 }
 
@@ -1311,8 +1313,14 @@ class VoxPackApp(ctk.CTk):
         # La fenêtre s'ouvre à sa taille idéale, mais se réduit si l'écran est
         # plus petit : sur un portable 1280 x 800, une fenêtre de 820 px de
         # haut mettrait le bouton « Let's Go » sous le bord de l'écran.
+        # Marge réservée à la barre de titre et à celle du système. macOS en
+        # réclame une centaine de pixels ; Windows se contente de soixante, et
+        # cette différence vaut deux lignes visibles — d'autant que sur un
+        # écran à 150 % de mise à l'échelle, Windows n'annonce que 720 pixels
+        # de haut pour un écran 1080.
+        marge = 60 if sys.platform.startswith("win") else 100
         largeur = min(LARGEUR_FENETRE, self.winfo_screenwidth() - 40)
-        hauteur = min(HAUTEUR_FENETRE, self.winfo_screenheight() - 100)
+        hauteur = min(HAUTEUR_FENETRE, self.winfo_screenheight() - marge)
         # Le logo s'adapte à la place disponible : sur un petit écran, mieux
         # vaut un logo plus modeste que quatre lignes visibles.
         self.largeur_logo = taille_logo(hauteur)
@@ -2141,6 +2149,9 @@ class VoxPackApp(ctk.CTk):
             ("lien", t("aide_lien")),
             ("space", ""),
             ("sep", ""),
+            ("petit", t("aide_ecran",
+                        ecran=f"{self.winfo_screenwidth()} × {self.winfo_screenheight()}",
+                        fenetre=f"{self.winfo_width()} × {self.winfo_height()}")),
             ("italic", t("aide_credits")),
         ]
 
@@ -2191,6 +2202,15 @@ class VoxPackApp(ctk.CTk):
                     font=("Menlo", 13),
                     text_color="#7FE0E8", anchor="w", justify="left",
                 ).pack(fill="x", padx=(20, 0))
+            elif kind == "petit":
+                # Information discrète (taille d'écran et de fenêtre) : utile
+                # le jour où quelque chose s'affiche mal sur une machine qu'on
+                # n'a pas sous la main.
+                ctk.CTkLabel(
+                    frame, text=txt,
+                    font=(FONT_MAIN, 11),
+                    text_color=TEXT_DIM, anchor="center", justify="center",
+                ).pack(fill="x", pady=(2, 0))
             elif kind == "italic":
                 ctk.CTkLabel(
                     frame, text=txt,
