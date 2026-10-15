@@ -423,8 +423,8 @@ class VoxPackApp(ctk.CTk):
         choisir_police()
 
         self.title("Vox-Pack")
-        self.geometry("1000x740")
-        self.minsize(950, 600)
+        self.geometry("900x740")
+        self.minsize(820, 600)
         self.resizable(True, True)
         self.configure(fg_color=BG_MAIN)
 
@@ -557,7 +557,7 @@ class VoxPackApp(ctk.CTk):
             row_head, text="Phrase à prononcer par la radiocommande",
             font=(FONT_MAIN, 18, "normal"), text_color=TEXT_WHITE,
         ).grid(row=0, column=2, sticky="w", padx=8, pady=8)
-        row_head.grid_columnconfigure(3, weight=0, minsize=LARGEUR_MESSAGE)
+        row_head.grid_columnconfigure(3, weight=0)
 
         # ----- Zone liste défilante -----
         self.frame_table = ctk.CTkScrollableFrame(
@@ -571,7 +571,7 @@ class VoxPackApp(ctk.CTk):
         self.frame_table.grid_columnconfigure(0, weight=0, minsize=40)
         self.frame_table.grid_columnconfigure(1, weight=1, uniform="col")
         self.frame_table.grid_columnconfigure(2, weight=1, uniform="col")
-        self.frame_table.grid_columnconfigure(3, weight=0, minsize=LARGEUR_MESSAGE)
+        self.frame_table.grid_columnconfigure(3, weight=0)
 
         # customtkinter ne fait défiler la liste que si le widget rapporté par
         # l'événement en fait partie. Sur macOS, cette identification n'est pas
@@ -1024,7 +1024,7 @@ class VoxPackApp(ctk.CTk):
         frame.grid_columnconfigure(0, weight=0, minsize=40)
         frame.grid_columnconfigure(1, weight=1, uniform="col")
         frame.grid_columnconfigure(2, weight=1, uniform="col")
-        frame.grid_columnconfigure(3, weight=0, minsize=LARGEUR_MESSAGE)
+        frame.grid_columnconfigure(3, weight=0)
 
         var_check = ctk.BooleanVar(value=False)
         chk = ctk.CTkCheckBox(
