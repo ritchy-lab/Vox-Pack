@@ -15,27 +15,62 @@ L'application crée les fichiers au format exact attendu par EdgeTX
 
 ## Comment ça marche
 
-1. **Choisis une voix** dans le menu déroulant (Denise, Ariane, Henri, Fabrice).
+1. **Choisis une voix.** Il y en a **31** : 13 en français (France, Suisse,
+   Belgique, Québec) et 18 en anglais (États-Unis, Royaume-Uni). Le menu
+   indique l'accent — « Denise (Femme - France) », « Ryan (Homme -
+   Royaume-Uni) » — et **la voix en cours est cochée** dans la liste.
 2. **Écris tes phrases.** La liste est pré-remplie avec 44 annonces courantes
    (moteur, volets, train, chrono, modes de vol…). Tu peux tout modifier,
    ajouter ou supprimer des lignes.
-3. **Coche** les lignes que tu veux générer, ou clique sur **Tout**.
+3. **Coche** les lignes que tu veux générer, ou clique sur **Tout**. Pour en
+   cocher plusieurs d'un coup : clique sur la première case, puis
+   **Majuscule + clic** sur la dernière.
 4. **Appuie sur Let's Go**, choisis un dossier : les fichiers `.wav` sont créés.
 
-Un bouton **Écouter l'aperçu** permet d'entendre une phrase avant de générer.
+Le bouton **Écouter** fait entendre **toutes les lignes cochées**, l'une après
+l'autre, avant de générer quoi que ce soit.
+
+Pendant la génération, une **ligne d'état** — sous la barre de progression —
+indique à chaque instant ce que fait l'application : recherche de la voix,
+puis écriture du fichier.
 
 Ta liste est enregistrée automatiquement : tu la retrouves au prochain
 démarrage, et tu peux la faire évoluer petit à petit.
+
+## La langue de l'application
+
+L'application existe **en français et en anglais**. Elle démarre dans la
+langue de ton ordinateur, et tu peux en changer quand tu veux dans
+**Fichier → Langue**.
+
+Ce choix commande **les trois à la fois** : les textes, les voix proposées,
+et la liste de phrases. Et **chaque langue garde sa propre liste** : tu peux
+travailler en français, passer en anglais, puis revenir — **tu retrouves ton
+travail intact**.
 
 ## Ce que l'application produit
 
 - Format **WAV PCM 16 bits, 32 kHz, mono** — le format lu par EdgeTX.
 - Un fichier par phrase, nommé d'après la colonne de gauche
   (`mot-arme.wav`, `train-so.wav`…), dans un sous-dossier **Voix radio**.
-- ⚠️ Le nom du fichier doit rester **court** : la longueur acceptée dépend de
-  la radio (6 caractères sur la plupart des modèles, 8 sur les FrSky série X9).
-  Les fichiers sont rangés dans un dossier que tu copies ensuite sur la carte
+- ⚠️ Le nom du fichier est limité à **8 caractères**, sans accent et sans
+  espace (lettres, chiffres, `-` et `_` uniquement).
+  Sur un **EdgeTX antérieur à la 2.11**, seuls **6 caractères** sont lus sur
+  les radios couleur et les petites radios noir et blanc — les X9D et X9E
+  acceptent 8 même avant. **En cas de doute, reste à 6 caractères** : ce sera
+  lu sur toutes les radios et toutes les versions.
+- Les fichiers sont rangés dans un dossier que tu copies ensuite sur la carte
   SD, dans `SOUNDS/<langue>/`.
+
+## Gérer ta liste
+
+Le menu **Fichier** permet de :
+
+- **Exporter** ta liste dans un fichier, pour la sauvegarder ou la partager ;
+- **Importer** une liste existante : un nom et une phrase par ligne, séparés
+  par une virgule. L'application demande confirmation avant de remplacer ;
+- **Charger la liste par défaut**, celle livrée avec l'application, dans la
+  langue de tes voix.
 
 ## Prérequis
 
@@ -105,10 +140,12 @@ recette qui évite l'avertissement « application endommagée ».
 
 ## Où est rangée ma liste ?
 
-    ~/Documents/Vox-Pack/liste_des_voix.csv
+    ~/Documents/Vox-Pack/liste_fr.csv     (liste française)
+    ~/Documents/Vox-Pack/liste_en.csv     (liste anglaise)
 
-Si tu utilisais la version précédente (RadioVox), ta liste est reprise
-automatiquement au premier démarrage. L'ancien dossier n'est jamais supprimé.
+Une liste par langue. Si tu utilisais la version précédente (RadioVox), ta
+liste est reprise automatiquement comme liste française au premier démarrage.
+L'ancien dossier n'est jamais supprimé.
 
 ## L'aide
 
@@ -119,6 +156,9 @@ haut à droite.
 
 - Les voix sont celles du service **edge-tts**, qui s'appuie sur la synthèse
   vocale de Microsoft Edge. Vox-Pack ne fait que les mettre au bon format.
+- Au démarrage, l'application **vérifie que les voix proposées existent
+  toujours** chez Microsoft et retire celles qui ont disparu. Si la
+  vérification échoue (pas de connexion), la liste reste telle quelle.
 - Le service de Microsoft peut changer sans préavis : si la génération
   s'arrête d'un coup avec une erreur, c'est presque toujours que la
   bibliothèque `edge-tts` doit être mise à jour (`pip install --upgrade edge-tts`).

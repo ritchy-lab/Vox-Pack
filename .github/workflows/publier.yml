@@ -1,0 +1,143 @@
+# ============================================================
+# Vox-Pack — publier une version
+# ------------------------------------------------------------
+# Deux façons de s'en servir :
+#
+#   * onglet Actions -> « Publier une version » -> Run workflow :
+#     GitHub fabrique les deux fichiers SANS rien publier. Ils restent dans
+#     les artefacts, pour vérifier que la fabrication fonctionne.
+#
+#   * en poussant une étiquette de version (par exemple v1.0) :
+#     GitHub fabrique les deux fichiers ET crée la page « Releases » du
+#     dépôt, avec les fichiers à télécharger.
+#
+# Le zip du Mac est fabriqué exactement comme par ./build.sh : mêmes
+# attributs nettoyés, même signature, même vérification à l'extraction.
+# ============================================================
+name: Publier une version
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  # ------------------------------------------------------------
+  # macOS
+  # ------------------------------------------------------------
+  macos:
+    name: Fabriquer le .app du Mac
+    runs-on: macos-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+
+      - name: Installer Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer les bibliothèques
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Compiler l'application
+        run: python -m PyInstaller Vox-Pack.spec --noconfirm
+
+      - name: Nettoyer les attributs et signer
+        run: |
+          xattr -cr "dist/Vox-Pack.app"
+          codesign --force --deep --sign - "dist/Vox-Pack.app"
+          codesign --verify --deep --strict "dist/Vox-Pack.app"
+
+      - name: Fabriquer le zip
+        run: |
+          ditto -c -k --norsrc --noextattr --noacl --keepParent \
+            "dist/Vox-Pack.app" "dist/Vox-Pack.zip"
+
+      - name: Vérifier le zip, comme le fera l'utilisateur
+        run: |
+          mkdir -p /tmp/verif
+          ditto -x -k "dist/Vox-Pack.zip" /tmp/verif
+          codesign --verify --deep --strict "/tmp/verif/Vox-Pack.app"
+          if [ ! -d "/tmp/verif/Vox-Pack.app" ]; then
+            echo "Le zip ne contient pas l'application."
+            exit 1
+          fi
+
+      - name: Déposer le zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: Vox-Pack-macOS
+          path: dist/Vox-Pack.zip
+          if-no-files-found: error
+
+  # ------------------------------------------------------------
+  # Windows
+  # ------------------------------------------------------------
+  windows:
+    name: Fabriquer le .exe du PC
+    runs-on: windows-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+
+      - name: Installer Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer les bibliothèques
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Compiler l'application
+        run: python -m PyInstaller Vox-Pack.spec --noconfirm
+
+      - name: Vérifier que le .exe existe
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/Vox-Pack.exe")) {
+            Write-Error "Le .exe n'a pas été fabriqué."
+            exit 1
+          }
+          Get-Item "dist/Vox-Pack.exe" | Format-List Name, Length
+
+      - name: Déposer le .exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: Vox-Pack-Windows
+          path: dist/Vox-Pack.exe
+          if-no-files-found: error
+
+  # ------------------------------------------------------------
+  # La page « Releases », seulement quand on pousse une étiquette
+  # ------------------------------------------------------------
+  publier:
+    name: Créer la page de téléchargement
+    needs: [macos, windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+
+      - name: Récupérer les deux fichiers fabriqués
+        uses: actions/download-artifact@v7
+        with:
+          path: fichiers
+
+      - name: Créer la version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Vox-Pack ${GITHUB_REF_NAME}" \
+            --notes-file docs/notes-de-version.md \
+            "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
+            "fichiers/Vox-Pack-Windows/Vox-Pack.exe"

@@ -157,10 +157,42 @@ Légende : `[ ]` à faire · `[x]` fait
   rien installer. Le CSS des boutons néon mis de côté servirait alors
   directement. Rien n'est décidé : c'est noté pour ne pas l'oublier.
 
+## Publier une version (prêt, à déclencher)
+
+La fabrication est automatique : `.github/workflows/publier.yml` construit le
+`.app` du Mac sur une machine macOS, le `.exe` du PC sur une machine Windows,
+et les dépose tous les deux.
+
+**Pour fabriquer sans rien publier** (pour vérifier) :
+
+    onglet Actions -> « Publier une version » -> Run workflow
+    les deux fichiers arrivent dans les artefacts de l'exécution
+
+**Pour publier pour de bon** : créer une **étiquette de version** sur GitHub.
+
+    GitHub -> Releases -> Draft a new release -> Choose a tag -> v1.0
+    -> Publish release
+
+La page « Releases » est alors créée avec les deux fichiers à télécharger, et
+le texte de `docs/notes-de-version.md`. Le lien de téléchargement du README
+pointe déjà dessus : il fonctionnera tout seul.
+
 ## À faire — reste du programme
 
-- [ ] **Publier une version** : une page de téléchargement sur GitHub, une
-  capture d'écran ou deux, et l'annonce aux utilisateurs d'EdgeTX.
+- [ ] **2 ou 3 captures d'écran** de l'application (Richard veut les faire
+  lui-même) : à ajouter au README.
+- [ ] **L'annonce** (forum EdgeTX, RC Groups…) quand la version sera publiée.
+- [ ] **Dossier de sortie en français** : `voxpack.py` (lignes 2924 et 2927)
+  écrit « Voix radio » en dur. Un utilisateur anglophone voit donc un dossier
+  au nom français. Proposition : un nom **neutre**, `Vox-Pack`, le même dans
+  toutes les langues (le traduire ferait changer le dossier de nom quand on
+  change de langue). **En attente de l'accord de Richard.**
+- [ ] **README** : préciser `SOUNDS/fr` ou `SOUNDS/en` au lieu de
+  `SOUNDS/<langue>/` (une ligne).
+- [ ] *Optionnel* : la fenêtre de soutien a une largeur fixe (380 px), non
+  adaptée aux écrans courts. Richard a dit de laisser tel quel.
+- [ ] *Optionnel* : un certificat Apple (99 €/an) supprimerait l'avertissement
+  au premier lancement sur Mac.
 
 ### Essayé et validé sur PC (16 octobre, soir)
 

@@ -15,26 +15,59 @@ ready to copy onto the radio's SD card.
 
 ## How it works
 
-1. **Pick a voice** from the drop-down menu (Denise, Ariane, Henri, Fabrice).
+1. **Pick a voice.** There are **31** of them: 13 in French (France,
+   Switzerland, Belgium, Quebec) and 18 in English (United States, United
+   Kingdom). The menu shows the accent — "Denise (Female - France)", "Ryan
+   (Male - United Kingdom)" — and **the current voice is ticked** in the list.
 2. **Type your phrases.** The list comes pre-filled with 44 common
    announcements (engine, flaps, gear, timer, flight modes…). You can edit,
    add or remove any line.
-3. **Tick** the lines you want, or click **Tout** (all).
+3. **Tick** the lines you want, or click **All**. To tick several at once:
+   click the first box, then **Shift + click** on the last one.
 4. **Press Let's Go** and choose a folder: the `.wav` files are created.
 
-The **Écouter l'aperçu** button (preview) lets you hear a phrase before
-generating anything.
+The **Listen** button plays **every ticked line**, one after another, before
+you generate anything.
+
+While generating, a **status line** — under the progress bar — tells you at
+every moment what the application is doing: fetching the voice, then writing
+the file.
 
 Your list is saved automatically, so you find it again next time.
+
+## The application's language
+
+The application comes **in French and in English**. It starts in the language
+of your computer, and you can change it whenever you like in
+**File → Language**.
+
+That choice drives **all three at once**: the texts, the voices offered, and
+the phrase list. And **each language keeps its own list**: you can work in
+French, switch to English, then come back — **your work is still there**.
 
 ## What it produces
 
 - **WAV PCM 16-bit, 32 kHz, mono** — the format EdgeTX reads.
 - One file per phrase, named after the left-hand column
   (`mot-arme.wav`, `train-so.wav`…), inside a **Voix radio** sub-folder.
-- ⚠️ File names must stay **short**: the allowed length depends on the radio
-  (6 characters on most models, 8 on FrSky X9 series). Copy the folder onto the
-  SD card, inside `SOUNDS/<language>/`.
+- ⚠️ File names are limited to **8 characters**, with no accent and no space
+  (letters, digits, `-` and `_` only).
+  On an **EdgeTX older than 2.11**, only **6 characters** are read on colour
+  radios and small black-and-white radios — the X9D and X9E accept 8 even
+  before that. **If in doubt, stay at 6 characters**: it will be read on every
+  radio and every version.
+- The files go into a folder that you then copy onto the SD card, inside
+  `SOUNDS/<language>/`.
+
+## Managing your list
+
+The **File** menu lets you:
+
+- **Export** your list to a file, to back it up or share it;
+- **Import** an existing list: one name and one phrase per line, separated by
+  a comma. The application asks for confirmation before replacing anything;
+- **Load the default list**, the one shipped with the application, in the
+  language of your voices.
 
 ## Requirements
 
@@ -102,10 +135,12 @@ that avoids the "application is damaged" warning.
 
 ## Where is my list stored?
 
-    ~/Documents/Vox-Pack/liste_des_voix.csv
+    ~/Documents/Vox-Pack/liste_fr.csv     (French list)
+    ~/Documents/Vox-Pack/liste_en.csv     (English list)
 
-If you used the previous version (RadioVox), your list is picked up
-automatically on first launch. The old folder is never deleted.
+One list per language. If you used the previous version (RadioVox), your list
+is picked up automatically as the French list on first launch. The old folder
+is never deleted.
 
 ## Help
 
@@ -115,6 +150,9 @@ The application explains itself: click the **?** in the top right corner.
 
 - The voices come from the **edge-tts** service, which relies on Microsoft
   Edge's speech synthesis. Vox-Pack only converts them to the right format.
+- On startup, the application **checks that the voices it offers still exist**
+  at Microsoft's end, and drops the ones that have disappeared. If that check
+  fails (no connection), the list is left untouched.
 - Microsoft's service can change without notice: if generation suddenly stops
   with an error, it almost always means the `edge-tts` library needs updating
   (`pip install --upgrade edge-tts`).
