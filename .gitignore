@@ -25,6 +25,11 @@ dist/
 # Icône macOS (généré à partir de icon.png / logo.png)
 icon.iconset/
 
+# Captures de travail (gardées sur le Mac, inutiles dans le dépôt) :
+# doublons, alertes, cas d'erreur. Seules les images affichées dans les
+# README sont envoyées.
+captures/non-utilisees/
+
 # Divers
 *.zip
 *.log

@@ -13,6 +13,23 @@ You type your phrases, pick a voice, and press **Let's Go**. The application
 creates the files in the exact format EdgeTX expects (16-bit, 32 kHz, mono),
 ready to copy onto the radio's SD card.
 
+## What it looks like
+
+<img src="captures/fenetre-en.png" alt="The Vox-Pack window" width="820">
+
+You write your phrases, pick a voice, tick the lines to generate, and press
+**Let's Go**.
+
+<img src="captures/voix-pretes-en.png" alt="Your voices are ready" width="520">
+
+Two clicks later, a folder of `.wav` files ready for the radio. The app always
+tells you **where** it wrote them, and **what may have failed**.
+
+<img src="captures/aide-en.png" alt="Vox-Pack's help window" width="520">
+
+And it explains itself: the **?** button in the top right corner opens this
+help.
+
 ## How it works
 
 1. **Pick a voice.** There are **31** of them: 13 in French (France,

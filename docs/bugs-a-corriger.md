@@ -145,6 +145,12 @@ Légende : `[ ]` à faire · `[x]` fait
   son image, et Windows ne prévoit aucune grille (contrairement à Apple, qui
   impose 88 %). Le `.ico` est désormais **recadré au plus juste** ; le `.icns`
   garde la proportion d'Apple, monogramme compris.
+- **Le chemin affiché dans la fenêtre de fin était coupé** : « /Users/richard
+  cogne/Documents/mes voix radio/Vox-Pack » est plus large que la fenêtre, et
+  Tk le coupait au milieu d'un mot. Le dossier personnel s'affiche maintenant
+  « ~ » : le chemin tient sur une ligne, et le nom de l'utilisateur ne s'étale
+  plus sur les captures d'écran. *(Repéré par Richard en regardant une capture
+  de présentation.)*
 - **Le dossier de sortie s'appelait « Voix radio », écrit en dur en français** :
   un utilisateur anglophone recevait un dossier au nom français. Il s'appelle
   maintenant **`Vox-Pack`** — un nom neutre, le même dans toutes les langues

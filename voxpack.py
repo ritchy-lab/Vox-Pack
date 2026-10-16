@@ -49,6 +49,25 @@ FORMAT_EDGETX = (32000, 1)             # 32 kHz, mono (ce que lit la radio)
 DOSSIER_SORTIE = "Vox-Pack"
 
 
+def chemin_lisible(chemin):
+    """Raccourcit le début du chemin : le dossier personnel devient « ~ ».
+
+    Sans cela, « /Users/richardcogne/Documents/mes voix radio/Vox-Pack » est
+    trop large pour la fenêtre de fin de génération, et Tk le coupe n'importe
+    où — au milieu d'un mot, ce qui rend le chemin illisible. Avec « ~ », il
+    reste court, et le nom de l'utilisateur ne s'étale pas sur les captures
+    d'écran.
+    """
+    if not chemin:
+        return chemin
+    personnel = os.path.expanduser("~")
+    if chemin == personnel:
+        return "~"
+    if chemin.startswith(personnel + os.sep):
+        return "~" + chemin[len(personnel):]
+    return chemin
+
+
 def convertir_en_wav(source_mp3, destination_wav):
     """Convertit un MP3 en WAV 16 bits, 32 kHz, mono (le format EdgeTX).
 
@@ -3006,7 +3025,7 @@ class VoxPackApp(ctk.CTk):
         else:
             out = self.output_dir
             self.after(0, lambda: self._message(
-                t("msg_succes", dossier=out),
+                t("msg_succes", dossier=chemin_lisible(out)),
                 icone="succes",
                 boutons=[(t("ouvrir_dossier"),
                           lambda: self._ouvrir_dossier(out)),
