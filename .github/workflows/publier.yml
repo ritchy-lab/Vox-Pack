@@ -132,12 +132,26 @@ jobs:
         with:
           path: fichiers
 
-      - name: Créer la version
+      # Deux cas possibles, et il faut les deux :
+      #   * la page n'existe pas encore (on a poussé une étiquette à la main) :
+      #     on la crée, avec le texte de docs/notes-de-version.md ;
+      #   * la page existe déjà (Richard l'a créée depuis l'interface GitHub,
+      #     ce qui est le chemin le plus simple) : on se contente d'y déposer
+      #     les deux fichiers, sans toucher à son texte.
+      - name: Déposer les fichiers dans la version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "Vox-Pack ${GITHUB_REF_NAME}" \
-            --notes-file docs/notes-de-version.md \
-            "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
-            "fichiers/Vox-Pack-Windows/Vox-Pack.exe"
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "La page existe déjà : on y ajoute les fichiers."
+            gh release upload "${GITHUB_REF_NAME}" \
+              "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
+              "fichiers/Vox-Pack-Windows/Vox-Pack.exe" --clobber
+          else
+            echo "La page n'existe pas : on la crée."
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "Vox-Pack ${GITHUB_REF_NAME}" \
+              --notes-file docs/notes-de-version.md \
+              "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
+              "fichiers/Vox-Pack-Windows/Vox-Pack.exe"
+          fi
