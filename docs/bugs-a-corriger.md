@@ -173,7 +173,7 @@ Légende : `[ ]` à faire · `[x]` fait
   rien installer. Le CSS des boutons néon mis de côté servirait alors
   directement. Rien n'est décidé : c'est noté pour ne pas l'oublier.
 
-## Publier une version (prêt, à déclencher)
+## Publier une version (fait le 16 octobre)
 
 La fabrication est automatique : `.github/workflows/publier.yml` construit le
 `.app` du Mac sur une machine macOS, le `.exe` du PC sur une machine Windows,
@@ -193,11 +193,26 @@ La page « Releases » est alors créée avec les deux fichiers à télécharger
 le texte de `docs/notes-de-version.md`. Le lien de téléchargement du README
 pointe déjà dessus : il fonctionnera tout seul.
 
+## Publié (16 octobre 2026)
+
+**Vox-Pack 1.0 est en ligne** : https://github.com/ritchy-lab/Vox-Pack/releases
+
+- `.zip` de 26,4 Mo pour macOS, `.exe` de 42 Mo pour Windows, tous les deux
+  fabriqués par GitHub Actions à partir de l'étiquette
+- le lien de téléchargement du README pointe dessus et fonctionne
+
+**Ce qu'il a fallu apprendre** : GitHub met une majuscule toute seule dans son
+champ d'étiquette (Richard a obtenu « V1.0 »), et un workflow qui n'écoute que
+« v* » ne se déclenche pas — la page est alors publiée **sans aucun fichier**.
+Le déclencheur accepte maintenant les deux, et un lancement à la main peut
+viser une étiquette précise pour compléter une version déjà publiée.
+
 ## À faire — reste du programme
 
-- [ ] **2 ou 3 captures d'écran** de l'application (Richard veut les faire
-  lui-même) : à ajouter au README.
-- [ ] **L'annonce** (forum EdgeTX, RC Groups…) quand la version sera publiée.
+- [ ] *Optionnel* : **2 ou 3 captures d'écran** dans le README (Richard veut
+  les faire lui-même).
+- [ ] *Optionnel* : **l'annonce** (forum EdgeTX, RC Groups…). Richard préfère
+  attendre de voir s'il y a des retours.
 - [ ] *Optionnel* : la fenêtre de soutien a une largeur fixe (380 px), non
   adaptée aux écrans courts. Richard a dit de laisser tel quel.
 - [ ] *Optionnel* : un certificat Apple (99 €/an) supprimerait l'avertissement
