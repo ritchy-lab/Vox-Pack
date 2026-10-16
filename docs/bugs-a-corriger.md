@@ -134,6 +134,22 @@ Légende : `[ ]` à faire · `[x]` fait
 - [x] **Famille d'icônes** : `icon.icns` et `icon.ico` contiennent le
   monogramme VP (16 à 64 px) **et** le dessin détaillé au-delà.
 
+### Icônes et dossier de sortie (16 octobre, après-midi)
+
+- **Le monogramme VP ne servait plus à rien de visible.** Le seuil était à
+  64 px — exactement la taille de la vue par icônes du Finder : Richard voyait
+  donc le monogramme là où il attendait son dessin, alors que le Dock (128 px)
+  affichait le bon. Le monogramme ne sert plus que pour **16 et 32 px** ;
+  partout ailleurs, c'est le dessin de Richard.
+- **L'icône était trop petite sur PC** : le monogramme n'occupait que 69 % de
+  son image, et Windows ne prévoit aucune grille (contrairement à Apple, qui
+  impose 88 %). Le `.ico` est désormais **recadré au plus juste** ; le `.icns`
+  garde la proportion d'Apple, monogramme compris.
+- **Le dossier de sortie s'appelait « Voix radio », écrit en dur en français** :
+  un utilisateur anglophone recevait un dossier au nom français. Il s'appelle
+  maintenant **`Vox-Pack`** — un nom neutre, le même dans toutes les langues
+  (le traduire l'aurait fait changer de nom en changeant de langue).
+
 ## Écarté (décisions de Richard)
 
 - [x] ~~Prévenir avant d'écraser un fichier déjà présent~~ — non souhaité.
@@ -182,13 +198,6 @@ pointe déjà dessus : il fonctionnera tout seul.
 - [ ] **2 ou 3 captures d'écran** de l'application (Richard veut les faire
   lui-même) : à ajouter au README.
 - [ ] **L'annonce** (forum EdgeTX, RC Groups…) quand la version sera publiée.
-- [ ] **Dossier de sortie en français** : `voxpack.py` (lignes 2924 et 2927)
-  écrit « Voix radio » en dur. Un utilisateur anglophone voit donc un dossier
-  au nom français. Proposition : un nom **neutre**, `Vox-Pack`, le même dans
-  toutes les langues (le traduire ferait changer le dossier de nom quand on
-  change de langue). **En attente de l'accord de Richard.**
-- [ ] **README** : préciser `SOUNDS/fr` ou `SOUNDS/en` au lieu de
-  `SOUNDS/<langue>/` (une ligne).
 - [ ] *Optionnel* : la fenêtre de soutien a une largeur fixe (380 px), non
   adaptée aux écrans courts. Richard a dit de laisser tel quel.
 - [ ] *Optionnel* : un certificat Apple (99 €/an) supprimerait l'avertissement

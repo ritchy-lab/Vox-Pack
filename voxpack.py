@@ -43,6 +43,11 @@ AFCONVERT = "/usr/bin/afconvert"        # macOS : présent d'origine, très rapi
 AFPLAY = "/usr/bin/afplay"              # macOS : lecture d'un son
 FORMAT_EDGETX = (32000, 1)             # 32 kHz, mono (ce que lit la radio)
 
+# Nom du sous-dossier où sont rangés les fichiers générés. Volontairement
+# neutre : dans la langue de l'utilisateur, il changerait de nom quand on
+# change de langue, et on ne saurait plus où sont ses fichiers.
+DOSSIER_SORTIE = "Vox-Pack"
+
 
 def convertir_en_wav(source_mp3, destination_wav):
     """Convertit un MP3 en WAV 16 bits, 32 kHz, mono (le format EdgeTX).
@@ -2921,10 +2926,12 @@ class VoxPackApp(ctk.CTk):
         self._reglages["dernier_dossier"] = dossier
         ecrire_reglages(self._reglages)
 
-        if os.path.basename(dossier) == "Voix radio":
+        # Si l'utilisateur a déjà choisi le sous-dossier lui-même, on n'en
+        # crée pas un deuxième à l'intérieur.
+        if os.path.basename(dossier) == DOSSIER_SORTIE:
             self.output_dir = dossier
         else:
-            self.output_dir = os.path.join(dossier, "Voix radio")
+            self.output_dir = os.path.join(dossier, DOSSIER_SORTIE)
 
         voice_id = identifiant_voix(self.langue, self.combo_voice.get())
 

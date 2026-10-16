@@ -49,7 +49,7 @@ French, switch to English, then come back — **your work is still there**.
 
 - **WAV PCM 16-bit, 32 kHz, mono** — the format EdgeTX reads.
 - One file per phrase, named after the left-hand column
-  (`mot-arme.wav`, `train-so.wav`…), inside a **Voix radio** sub-folder.
+  (`mot-arme.wav`, `train-so.wav`…), inside a **Vox-Pack** sub-folder.
 - ⚠️ File names are limited to **8 characters**, with no accent and no space
   (letters, digits, `-` and `_` only).
   On an **EdgeTX older than 2.11**, only **6 characters** are read on colour
@@ -57,7 +57,7 @@ French, switch to English, then come back — **your work is still there**.
   before that. **If in doubt, stay at 6 characters**: it will be read on every
   radio and every version.
 - The files go into a folder that you then copy onto the SD card, inside
-  `SOUNDS/<language>/`.
+  `SOUNDS/en` (or `SOUNDS/fr`).
 
 ## Managing your list
 

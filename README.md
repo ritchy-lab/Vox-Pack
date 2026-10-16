@@ -52,7 +52,7 @@ travail intact**.
 
 - Format **WAV PCM 16 bits, 32 kHz, mono** — le format lu par EdgeTX.
 - Un fichier par phrase, nommé d'après la colonne de gauche
-  (`mot-arme.wav`, `train-so.wav`…), dans un sous-dossier **Voix radio**.
+  (`mot-arme.wav`, `train-so.wav`…), dans un sous-dossier **Vox-Pack**.
 - ⚠️ Le nom du fichier est limité à **8 caractères**, sans accent et sans
   espace (lettres, chiffres, `-` et `_` uniquement).
   Sur un **EdgeTX antérieur à la 2.11**, seuls **6 caractères** sont lus sur
@@ -60,7 +60,7 @@ travail intact**.
   acceptent 8 même avant. **En cas de doute, reste à 6 caractères** : ce sera
   lu sur toutes les radios et toutes les versions.
 - Les fichiers sont rangés dans un dossier que tu copies ensuite sur la carte
-  SD, dans `SOUNDS/<langue>/`.
+  SD, dans `SOUNDS/fr` (ou `SOUNDS/en`).
 
 ## Gérer ta liste
 

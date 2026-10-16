@@ -22,12 +22,43 @@ import sys
 from PIL import Image
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PETITE = os.path.join(RACINE, "assets", "sources", "icone-petite.png")
 GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack.png")
 
-# Le monogramme pour les petites tailles, le détail à partir de 64 px.
-MONOGRAMME = (16, 24, 32, 48)
-DETAILLE = (64, 128, 256)
+# Un seul dessin, à toutes les tailles : Richard veut son émetteur partout.
+# Le monogramme VP, pourtant plus net en 16 px, a été écarté par Richard — il
+# ne veut pas deux icônes selon l'endroit où on regarde.
+TAILLES = (16, 24, 32, 48, 64, 128, 256)
+
+
+def recadrer(image, respiration=0.01):
+    """Rase les bords transparents, en gardant à peine 1 % de respiration.
+
+    Windows n'impose aucune grille : ses applications remplissent leur case.
+    Le monogramme de Richard n'occupait que 69 % de son image, et le dessin
+    détaillé 87 % — une fois posés dans la barre des tâches, ils paraissaient
+    plus petits que les autres applications. Sur macOS, la marge est au
+    contraire imposée par Apple (toutes les icônes s'alignent sur une grille) :
+    elle est donc conservée dans le .icns, et retirée ici.
+    """
+    boite = image.getbbox()
+    if boite is None:
+        return image
+    gauche, haut, droite, bas = boite
+    cote = max(droite - gauche, bas - haut)
+    marge = int(cote * respiration)
+    # On recadre au plus juste, puis on remet la copie dans un carré : les
+    # icônes doivent être carrées.
+    carre = image.crop((gauche, haut, droite, bas))
+    cote = max(carre.width, carre.height)
+    fond = Image.new("RGBA", (cote, cote), (0, 0, 0, 0))
+    fond.alpha_composite(carre, ((cote - carre.width) // 2,
+                                 (cote - carre.height) // 2))
+    if marge:
+        reduit = Image.new("RGBA", (cote - 2 * marge, cote - 2 * marge),
+                           (0, 0, 0, 0))
+        reduit.alpha_composite(fond.resize(reduit.size, Image.LANCZOS))
+        fond = reduit
+    return fond
 
 
 def ecrire_ico(images, chemin):
@@ -53,18 +84,15 @@ def ecrire_ico(images, chemin):
 
 
 def main():
-    if not (os.path.exists(PETITE) and os.path.exists(GRANDE)):
+    if not os.path.exists(GRANDE):
         print("     (dessins manquants : icon.ico non refait)")
         return 1
 
-    petite = Image.open(PETITE).convert("RGBA")
-    grande = Image.open(GRANDE).convert("RGBA")
-
-    images = [petite.resize((c, c), Image.LANCZOS) for c in MONOGRAMME]
-    images += [grande.resize((c, c), Image.LANCZOS) for c in DETAILLE]
+    grande = recadrer(Image.open(GRANDE).convert("RGBA"))
+    images = [grande.resize((c, c), Image.LANCZOS) for c in TAILLES]
     ecrire_ico(images, os.path.join(RACINE, "icon.ico"))
-    print("     icon.ico : monogramme en " + "/".join(map(str, MONOGRAMME))
-          + ", détail en " + "/".join(map(str, DETAILLE)))
+    print("     icon.ico : le dessin à toutes les tailles ("
+          + "/".join(map(str, TAILLES)) + "), recadré pour remplir sa case")
     return 0
 
 
