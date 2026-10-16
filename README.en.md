@@ -1,4 +1,4 @@
-<img src="logo.png" alt="Vox-Pack" width="800">
+<img src="assets/logo-fond-sombre.png" alt="Vox-Pack" width="760">
 
 🇫🇷 **[Version française](README.md)**
 
@@ -38,11 +38,53 @@ Your list is saved automatically, so you find it again next time.
 
 ## Requirements
 
-- **macOS 11 or newer** (Apple Silicon). A Windows version is in preparation.
+- **macOS 11 or newer** (Apple Silicon) or **Windows 10 or newer**.
 - **An Internet connection**: the voices are synthesised by Microsoft Edge's
   online service. The text of your phrases is therefore sent to Microsoft when
   you generate. Without a connection, no voice can be created.
 - Python 3.10 or newer, only if you install from source.
+
+## Installing
+
+### macOS
+
+1. Download **`Vox-Pack.zip`** from the
+   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) page and unzip it.
+2. Drag **Vox-Pack.app** into your **Applications** folder.
+
+3. **The very first time, macOS will refuse to open it**: the application does
+   not come from the App Store and has no Apple certificate (it costs €99 a
+   year). Two ways to allow it:
+
+   **a) Right-click → Open** on the application, then confirm.
+   *(On the most recent macOS versions, this no longer works.)*
+
+   **b) System Settings → Privacy & Security**, scroll down to the message
+   about **Vox-Pack**, then click **"Open Anyway"**. Confirm with your password
+   or Touch ID.
+
+   **This is a one-off.** After that, a normal double-click works.
+
+<details>
+<summary>If macOS claims the application is "damaged"</summary>
+
+That message is misleading — nothing is broken. It is the consequence of not
+having an Apple certificate. Open **Terminal**, paste this line, then start the
+application again:
+
+    xattr -dr com.apple.quarantine /Applications/Vox-Pack.app
+
+</details>
+
+### Windows
+
+1. Download **`Vox-Pack.exe`** from the
+   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) page.
+2. Double-click it. Windows shows **"Windows protected your PC"**: click
+   **More info**, then **Run anyway**.
+
+   Again, this is because the application is not signed. It asks for no special
+   rights: it simply creates the `.wav` files in the folder you choose.
 
 ## Installing from source
 

@@ -159,9 +159,16 @@ Légende : `[ ]` à faire · `[x]` fait
 
 ## À faire — reste du programme
 
-- [ ] **Essayer le `.exe` sur le PC de Richard** et corriger ce qui cloche
-  (polices, chemins, lecture du son). C'est le seul moyen de savoir : rien de
-  tout cela ne peut être vérifié depuis un Mac.
 - [ ] **Publier une version** : une page de téléchargement sur GitHub, une
   capture d'écran ou deux, et l'annonce aux utilisateurs d'EdgeTX.
+
+### Essayé et validé sur PC (16 octobre, soir)
+
+Richard a installé le `.exe` sur un PC prêté (Windows, écran 1920 × 1080 réglé
+à 150 %) et **n'a trouvé aucun problème** : taille de la fenêtre, alertes,
+aide, menu Fichier, génération des fichiers `.wav` — tout fonctionne.
+
+Seule remarque, **assumée par Richard** : la fenêtre de soutien (Ko-fi) n'a pas
+été réduite sur écran court (largeur fixe de 380 px). À reprendre seulement si
+elle le gêne un jour.
 

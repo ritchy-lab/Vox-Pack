@@ -1,4 +1,4 @@
-<img src="logo.png" alt="Vox-Pack" width="800">
+<img src="assets/logo-fond-sombre.png" alt="Vox-Pack" width="760">
 
 🇬🇧 **[English version](README.en.md)**
 
@@ -39,12 +39,55 @@ démarrage, et tu peux la faire évoluer petit à petit.
 
 ## Prérequis
 
-- **macOS 11 ou plus récent** (Apple Silicon). Une version Windows est en
-  préparation.
+- **macOS 11 ou plus récent** (Apple Silicon) ou **Windows 10 ou plus récent**.
 - **Une connexion Internet** : les voix sont synthétisées par le service en
   ligne de Microsoft Edge. Le texte de tes phrases est donc envoyé à Microsoft
   au moment de la génération. Sans connexion, aucune voix ne peut être créée.
 - Python 3.10 ou supérieur uniquement si tu installes depuis les sources.
+
+## Installation
+
+### macOS
+
+1. Télécharge **`Vox-Pack.zip`** depuis la page
+   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) et décompresse-le.
+2. Glisse **Vox-Pack.app** dans ton dossier **Applications**.
+
+3. **Au tout premier lancement, macOS refusera de l'ouvrir** : l'application
+   ne vient pas de l'App Store et n'a pas de certificat Apple (il coûte 99 €
+   par an). Deux façons de l'autoriser :
+
+   **a) Clic droit → Ouvrir** sur l'application, puis confirme.
+   *(Sur les macOS les plus récents, cette méthode ne suffit plus.)*
+
+   **b) Réglages Système → Confidentialité et sécurité**, descends jusqu'au
+   message qui parle de **Vox-Pack**, puis clique sur **« Ouvrir quand même »**.
+   Confirme avec ton mot de passe ou Touch ID.
+
+   **C'est à faire une seule fois.** Ensuite, un double-clic normal suffira.
+
+<details>
+<summary>Si macOS affirme que l'application est « endommagée »</summary>
+
+Ce message est trompeur — l'application n'a rien de cassé. C'est la
+conséquence de l'absence de certificat Apple. Ouvre le **Terminal**, colle
+cette ligne, puis relance l'application :
+
+    xattr -dr com.apple.quarantine /Applications/Vox-Pack.app
+
+</details>
+
+### Windows
+
+1. Télécharge **`Vox-Pack.exe`** depuis la page
+   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases).
+2. Double-clique dessus. Windows affiche **« Windows a protégé votre
+   ordinateur »** : clique sur **Informations complémentaires**, puis sur
+   **Exécuter quand même**.
+
+   Là encore, c'est parce que l'application n'est pas signée. Elle ne demande
+   aucun droit particulier : elle crée juste les fichiers `.wav` dans le
+   dossier que tu choisis.
 
 ## Installation depuis les sources
 
