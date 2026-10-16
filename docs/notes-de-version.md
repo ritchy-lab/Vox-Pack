@@ -26,6 +26,6 @@ expliqués dans le [README](https://github.com/ritchy-lab/Vox-Pack#installation)
 
 ---
 
-*Cette page est créée automatiquement par GitHub quand une étiquette de version
-est poussée. Les détails, les captures d'écran et l'aide se trouvent dans le
-[README](https://github.com/ritchy-lab/Vox-Pack).*
+**Tout est expliqué dans le
+[README](https://github.com/ritchy-lab/Vox-Pack)** : comment ça marche, où sont
+rangés tes fichiers, et comment les copier sur la carte SD de ta radio.

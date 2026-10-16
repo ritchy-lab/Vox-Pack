@@ -19,8 +19,17 @@ name: Publier une version
 on:
   push:
     tags:
+      # GitHub met une majuscule toute seule dans son champ d'étiquette :
+      # on accepte donc les deux, sinon la publication reste sans fichier.
       - 'v*'
+      - 'V*'
   workflow_dispatch:
+    inputs:
+      etiquette:
+        description: "Étiquette de la version à compléter (exemple : V1.0).
+          Laisser vide pour fabriquer sans rien publier."
+        required: false
+        default: ""
 
 jobs:
   # ------------------------------------------------------------
@@ -119,7 +128,9 @@ jobs:
   publier:
     name: Créer la page de téléchargement
     needs: [macos, windows]
-    if: startsWith(github.ref, 'refs/tags/')
+    # Soit on a poussé une étiquette, soit on a lancé la fabrication à la main
+    # en indiquant l'étiquette d'une version déjà publiée.
+    if: startsWith(github.ref, 'refs/tags/') || inputs.etiquette != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -141,16 +152,18 @@ jobs:
       - name: Déposer les fichiers dans la version
         env:
           GH_TOKEN: ${{ github.token }}
+          ETIQUETTE: ${{ inputs.etiquette || github.ref_name }}
         run: |
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+          echo "Version visée : ${ETIQUETTE}"
+          if gh release view "${ETIQUETTE}" >/dev/null 2>&1; then
             echo "La page existe déjà : on y ajoute les fichiers."
-            gh release upload "${GITHUB_REF_NAME}" \
+            gh release upload "${ETIQUETTE}" \
               "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
               "fichiers/Vox-Pack-Windows/Vox-Pack.exe" --clobber
           else
             echo "La page n'existe pas : on la crée."
-            gh release create "${GITHUB_REF_NAME}" \
-              --title "Vox-Pack ${GITHUB_REF_NAME}" \
+            gh release create "${ETIQUETTE}" \
+              --title "Vox-Pack ${ETIQUETTE}" \
               --notes-file docs/notes-de-version.md \
               "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
               "fichiers/Vox-Pack-Windows/Vox-Pack.exe"
