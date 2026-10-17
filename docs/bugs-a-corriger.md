@@ -215,10 +215,16 @@ viser une étiquette précise pour compléter une version déjà publiée.
 
 ## À faire — reste du programme
 
-- [ ] *Optionnel* : **2 ou 3 captures d'écran** dans le README (Richard veut
-  les faire lui-même).
+- [x] ~~2 ou 3 captures d'écran dans le README~~ — fait le 16 octobre : six
+  captures, dans les deux langues, détourées.
 - [ ] *Optionnel* : **l'annonce** (forum EdgeTX, RC Groups…). Richard préfère
   attendre de voir s'il y a des retours.
+- [ ] **Choisir la carte de visite du dépôt** : quatre propositions dans
+  `assets/cartes/` (A ou B, français ou anglais). Richard veut voir avant.
+- [ ] **Publier une 1.1** : la 1.0 n'a pas les corrections du 17 octobre — en
+  particulier la **molette sous Windows**, qui saute d'un coup dans la 1.0.
+- [ ] *Optionnel* : le nombre de voix (« 13 / 18 ») est écrit en dur dans
+  l'aide ; le calculer à partir de la liste serait plus juste.
 - [ ] *Optionnel* : la fenêtre de soutien a une largeur fixe (380 px), non
   adaptée aux écrans courts. Richard a dit de laisser tel quel.
 - [ ] *Optionnel* : un certificat Apple (99 €/an) supprimerait l'avertissement

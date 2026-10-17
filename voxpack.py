@@ -6,10 +6,12 @@
 
 import asyncio
 import csv
+import io
 import json
 import locale
 import os
 import queue
+import re
 import shutil
 import string
 import subprocess
@@ -52,7 +54,7 @@ DOSSIER_SORTIE = "Vox-Pack"
 def chemin_lisible(chemin):
     """Raccourcit le début du chemin : le dossier personnel devient « ~ ».
 
-    Sans cela, « /Users/richardcogne/Documents/mes voix radio/Vox-Pack » est
+    Sans cela, « /Users/nom/Documents/mes voix radio/Vox-Pack » est
     trop large pour la fenêtre de fin de génération, et Tk le coupe n'importe
     où — au milieu d'un mot, ce qui rend le chemin illisible. Avec « ~ », il
     reste court, et le nom de l'utilisateur ne s'étale pas sur les captures
@@ -95,6 +97,21 @@ def convertir_en_wav(source_mp3, destination_wav):
     if taux != cible:
         donnees = soxr.resample(donnees, taux, cible, quality="VHQ")
     sf.write(destination_wav, donnees, cible, subtype="PCM_16")
+
+
+def lire_lignes_csv(fichier):
+    """Lit un CSV dont le séparateur est la virgule ou le point-virgule.
+
+    Excel en version française enregistre avec « ; » : sans cette détection,
+    toute la ligne devenait le nom du fichier. Le séparateur est choisi sur
+    la première ligne non vide.
+    """
+    texte = fichier.read()
+    premiere = next((l for l in texte.splitlines() if l.strip()), "")
+    separateur = ";" if premiere.count(";") > premiere.count(",") else ","
+    return [l for l in csv.reader(io.StringIO(texte, newline=""),
+                                  delimiter=separateur)
+            if l and any(c.strip() for c in l)]
 
 
 def chemin_liste(langue):
@@ -287,6 +304,19 @@ def langue_du_systeme():
     """
     essais = []
     if sys.platform == "darwin":
+        # La langue d'interface choisie par l'utilisateur est la première de
+        # AppleLanguages ; AppleLocale ne donne que la région (un Mac en
+        # français avec une région étrangère passerait en anglais).
+        try:
+            sortie = subprocess.run(["defaults", "read", "-g", "AppleLanguages"],
+                                    capture_output=True, text=True, timeout=5)
+            if sortie.returncode == 0:
+                trouve = re.search(r'[\(\s]"?([A-Za-z]{2,3})[-_"\s,)]',
+                                   sortie.stdout)
+                if trouve:
+                    return "fr" if trouve.group(1).lower() == "fr" else "en"
+        except Exception:
+            pass
         try:
             sortie = subprocess.run(["defaults", "read", "-g", "AppleLocale"],
                                     capture_output=True, text=True, timeout=5)
@@ -438,6 +468,8 @@ TEXTES = {
             "{problemes} problème{s2} :\n{detail}",
         "msg_autres": "• … et {n} autre(s)",
         "msg_succes": "Vos voix sont prêtes.\n\n{dossier}",
+        "msg_dossier_echec":
+            "Impossible de créer le dossier de destination.\n\n{err}",
 
         # ----- Fenêtre de soutien -----
         "titre_soutien": "Soutenir le projet",
@@ -451,7 +483,8 @@ TEXTES = {
         "aide_titre": "Comment utiliser l'application",
         "aide_1": "1. Choisir une voix dans le menu déroulant.",
         "aide_1a": "Les voix proposées sont celles de la langue de",
-        "aide_1b": "l'application : français (13 voix) ou anglais (18 voix).",
+        "aide_1b": "l'application : français ({nfr} voix) ou anglais ({nen} voix).",
+        "voix_multilingue": "Multilingue",
         "aide_1c": "Pour changer de langue : menu « Fichier », puis « Langue ».",
         "aide_1d": "Textes, voix et liste changent ensemble, et votre voix est",
         "aide_1e": "retrouvée au prochain démarrage.",
@@ -641,6 +674,8 @@ TEXTES = {
             "{problemes} problem{s2}:\n{detail}",
         "msg_autres": "• … and {n} more",
         "msg_succes": "Your voices are ready.\n\n{dossier}",
+        "msg_dossier_echec":
+            "The destination folder could not be created.\n\n{err}",
 
         # ----- Support window -----
         "titre_soutien": "Support the project",
@@ -654,7 +689,8 @@ TEXTES = {
         "aide_titre": "How to use the application",
         "aide_1": "1. Choose a voice from the drop-down menu.",
         "aide_1a": "The voices offered are those of the application's",
-        "aide_1b": "language: French (13 voices) or English (18 voices).",
+        "aide_1b": "language: French ({nfr} voices) or English ({nen} voices).",
+        "voix_multilingue": "Multilingual",
         "aide_1c": "To change language: the \"File\" menu, then \"Language\".",
         "aide_1d": "Texts, voices and list change together, and your voice is",
         "aide_1e": "remembered the next time you start the application.",
@@ -826,8 +862,16 @@ def libelle_voix(entree, langue_ui=None):
     """
     _identifiant, prenom, genre, accent = entree
     table = TEXTES.get(langue_ui or LANGUE_UI, TEXTES["fr"])
+    # Ces voix devinent la langue de chaque mot : sur une phrase française,
+    # un mot anglais peut sortir avec l'accent anglais. Autant le dire, et
+    # remplacer l'accent annoncé (« France ») par la vraie nature de la voix :
+    # prétendre qu'elle est « de France » serait faux.
+    if "Multilingual" in _identifiant:
+        origine = table.get("voix_multilingue", "Multilingue")
+    else:
+        origine = table.get('accent_' + accent, accent)
     return (f"{prenom} ({table.get('genre_' + genre, genre)} - "
-            f"{table.get('accent_' + accent, accent)})")
+            f"{origine})")
 
 
 def voix_de_la_langue(code):
@@ -1431,6 +1475,9 @@ class VoxPackApp(ctk.CTk):
         self._soutien = None
         self._reglages = lire_reglages()
         self._erreur_sauvegarde = False
+        # Fichiers dont la copie de secours (.bak) a déjà été faite pendant
+        # cette session (voir _ecrire_csv).
+        self._bak_faits = set()
         # Dernière ligne cochée à la souris : sert de point de départ quand on
         # étend la sélection avec la touche Majuscule.
         self._ancre_selection = None
@@ -1612,6 +1659,10 @@ class VoxPackApp(ctk.CTk):
         # molette nous-mêmes, en regardant simplement où se trouve le curseur.
         self.frame_table._parent_canvas.unbind_all("<MouseWheel>")
         self.bind_all("<MouseWheel>", self._molette_liste, add="+")
+        if sys.platform.startswith("linux"):
+            # Sous Linux, la molette n'envoie pas <MouseWheel> mais Button-4/5.
+            self.bind_all("<Button-4>", self._molette_liste, add="+")
+            self.bind_all("<Button-5>", self._molette_liste, add="+")
 
         # ----- Bas : barre de leds, boutons -----
         # Empilé AVANT la liste : ainsi le bloc du bas garde toujours sa place,
@@ -1883,7 +1934,7 @@ class VoxPackApp(ctk.CTk):
             return
         try:
             with open(chemin, encoding="utf-8-sig") as f:
-                brut = [l for l in csv.reader(f) if l and any(c.strip() for c in l)]
+                brut = lire_lignes_csv(f)
         except Exception as e:
             self._message(t("msg_import_illisible", err=e), icone="erreur")
             return
@@ -2151,7 +2202,7 @@ class VoxPackApp(ctk.CTk):
         popup.title(t("titre_aide"))
         popup.resizable(False, False)
         popup.transient(self)
-        popup.grab_set()
+        popup.after(150, lambda: self._saisir_popup(popup))
         popup.configure(fg_color=BG_MAIN)
 
         self.update_idletasks()
@@ -2198,7 +2249,7 @@ class VoxPackApp(ctk.CTk):
             ("space", ""),
             ("text", t("aide_1")),
             ("bullet", t("aide_1a")),
-            ("bullet", t("aide_1b")),
+            ("bullet", t("aide_1b", nfr=len(VOIX["fr"]), nen=len(VOIX["en"]))),
             ("bullet", t("aide_1c")),
             ("bullet", t("aide_1d")),
             ("bullet", t("aide_1e")),
@@ -2241,7 +2292,7 @@ class VoxPackApp(ctk.CTk):
             ("space", ""),
             ("title2", t("aide_sauv_titre")),
             ("text", t("aide_sauv1")),
-            ("code", "~/Documents/Vox-Pack/liste_des_voix.csv"),
+            ("code", f"~/Documents/Vox-Pack/liste_{self.langue}.csv"),
             ("space", ""),
             ("title2", t("aide_def_titre")),
             ("bullet", t("aide_def1")),
@@ -2406,7 +2457,17 @@ class VoxPackApp(ctk.CTk):
         canvas = self.frame_table._parent_canvas
         if canvas.yview() == (0.0, 1.0):      # tout tient à l'écran
             return
-        canvas.yview("scroll", -event.delta, "units")
+        if getattr(event, "num", None) == 4:        # Linux : vers le haut
+            unites = -1
+        elif getattr(event, "num", None) == 5:      # Linux : vers le bas
+            unites = 1
+        elif sys.platform.startswith("win"):
+            # Windows : 120 par cran de molette (macOS : de petites valeurs).
+            unites = -int(event.delta / 6)
+        else:
+            unites = -event.delta
+        if unites:
+            canvas.yview("scroll", unites, "units")
 
     def charger_liste(self):
         for ligne in self.lignes:
@@ -2439,6 +2500,10 @@ class VoxPackApp(ctk.CTk):
         for nom, texte in contenu:
             self._ajouter_ligne_ui(nom, texte)
 
+        # Les lignes sont nouvelles : l'ancre de sélection n'a plus de sens,
+        # et les noms invalides doivent être signalés dès l'affichage.
+        self._ancre_selection = None
+        self._verifier_noms()
         self._ecrire_csv()
 
     def _ajouter_ligne_ui(self, nom, texte):
@@ -2462,7 +2527,7 @@ class VoxPackApp(ctk.CTk):
         # la coche (ou la décoche) à toutes les lignes depuis la dernière
         # cliquée — comme dans le Finder.
         chk.bind("<Button-1>",
-                 lambda e, i=idx: self._clic_case(i, bool(e.state & 0x0001)),
+                 lambda e, v=var_check: self._clic_case(v, bool(e.state & 0x0001)),
                  add="+")
 
         entry_nom = ctk.CTkEntry(
@@ -2675,7 +2740,7 @@ class VoxPackApp(ctk.CTk):
         except Exception:
             pass
 
-    def _clic_case(self, index, majuscule):
+    def _clic_case(self, var, majuscule):
         """Clic sur une case à cocher, éventuellement avec la touche Majuscule.
 
         Sans Majuscule : on coche ou décoche cette ligne (comportement normal),
@@ -2683,6 +2748,12 @@ class VoxPackApp(ctk.CTk):
         Avec Majuscule : on applique le nouvel état à TOUTES les lignes depuis
         la dernière cliquée jusqu'à celle-ci, en haut comme en bas.
         """
+        # L'index est cherché ICI, au moment du clic : après une suppression,
+        # un index retenu à la création de la ligne ne serait plus le bon.
+        index = next((i for i, l in enumerate(self.lignes)
+                      if l["var_check"] is var), None)
+        if index is None:
+            return
         etat = self.lignes[index]["var_check"].get()
         if majuscule and self._ancre_selection is not None \
                 and self._ancre_selection < len(self.lignes):
@@ -2771,11 +2842,15 @@ class VoxPackApp(ctk.CTk):
                     texte = l["entry_txt"].get().strip()
                     if nom or texte:
                         ecrivain.writerow([nom, texte])
-            # On ne rafraîchit la copie de secours que si la liste actuelle
-            # contenait quelque chose : sinon, vider sa liste effacerait aussi
-            # la dernière sauvegarde. C'est exactement ce qui est arrivé.
-            if os.path.exists(fichier) and os.path.getsize(fichier) > 0:
-                shutil.copy2(fichier, fichier + ".bak")
+            # La copie de secours est faite UNE fois par session et par liste,
+            # avant la première écriture : elle garde la liste telle qu'elle
+            # était à l'ouverture. Rafraîchie à chaque frappe, elle ne
+            # contenait que l'état d'une frappe plus tôt, et vider la liste
+            # effaçait aussi la dernière sauvegarde utile.
+            if fichier not in self._bak_faits:
+                self._bak_faits.add(fichier)
+                if os.path.exists(fichier) and os.path.getsize(fichier) > 0:
+                    shutil.copy2(fichier, fichier + ".bak")
             os.replace(temporaire, fichier)
             self._erreur_sauvegarde = False
         except Exception as e:
@@ -2835,6 +2910,7 @@ class VoxPackApp(ctk.CTk):
             except Exception:
                 pass
         self._fin_apercu()
+        self._dire("")
 
     def _fin_apercu(self):
         """Le bouton redevient « Écouter »."""
@@ -2902,6 +2978,10 @@ class VoxPackApp(ctk.CTk):
                         os.remove(fichier)
                     except OSError:
                         pass
+        if self._apercu_no != numero:
+            # « Arrêter » a déjà tout remis en place, ou un autre aperçu a
+            # pris le relais : ne pas toucher à son bouton ni à son message.
+            return
         try:
             self.after(0, self._fin_apercu)
         except Exception:
@@ -2921,10 +3001,20 @@ class VoxPackApp(ctk.CTk):
 
         taches = []
         refuses = []
+        vus = {}
         for l in cochees:
             nom = l["entry_nom"].get().strip()
             texte = l["entry_txt"].get().strip()
             souci = probleme_nom(nom)
+            if souci is None:
+                # Deux lignes au même nom (majuscules ignorées, comme sur le
+                # disque d'un Mac ou d'un PC) : la seconde écraserait la
+                # première en silence.
+                deja = vus.get(nom.lower())
+                if deja:
+                    souci = t("pb_doublon", n=deja)
+                else:
+                    vus[nom.lower()] = self.lignes.index(l) + 1
             if souci:
                 # un nom invalide donnerait un fichier que la radio ne lirait
                 # pas : on le signale au lieu de le fabriquer pour rien
@@ -2970,10 +3060,16 @@ class VoxPackApp(ctk.CTk):
             loop.run_until_complete(self._generer(taches, voice_id, refuses))
         finally:
             loop.close()
-            self.after(0, lambda: self.btn_letsgo.configure(state="normal", fg_color="#00A8B8"))
+            self.after(0, lambda: self.btn_letsgo.configure(state="normal", fg_color="#04C3D4"))
 
     async def _generer(self, taches, voice_id, refuses=None):
-        os.makedirs(self.output_dir, exist_ok=True)
+        try:
+            os.makedirs(self.output_dir, exist_ok=True)
+        except OSError as e:
+            self._dire("")
+            self.after(0, lambda err=e: self._message(
+                t("msg_dossier_echec", err=err), icone="erreur"))
+            return
         total = len(taches)
         echecs = list(refuses or [])       # noms refusés avant même d'essayer
         nb_refuses = len(echecs)
@@ -3018,7 +3114,7 @@ class VoxPackApp(ctk.CTk):
                 detail += "\n" + t("msg_autres", n=len(echecs) - 6)
             self.after(0, lambda: self._message(
                 t("msg_bilan_echecs", reussis=reussis,
-                  s1="s" if reussis > 1 else "", total=total,
+                  s1="s" if reussis > 1 else "", total=total + nb_refuses,
                   problemes=len(echecs), s2="s" if len(echecs) > 1 else "",
                   detail=detail),
                 icone="erreur"))
