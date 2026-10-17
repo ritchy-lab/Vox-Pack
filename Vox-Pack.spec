@@ -99,9 +99,9 @@ if sys.platform == 'darwin':
         name='Vox-Pack.app',
         icon='icon.icns',
         bundle_identifier='com.ritchy-lab.vox-pack',
-        version='1.0',
+        version='1.1',
         info_plist={
-            'CFBundleShortVersionString': '1.0',
+            'CFBundleShortVersionString': '1.1',
             'NSHumanReadableCopyright': '© 2026 ritchy-lab',
             'LSMinimumSystemVersion': '11.0',
         },

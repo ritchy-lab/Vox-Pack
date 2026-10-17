@@ -805,7 +805,7 @@ VOIX = {
         # France
         ("fr-FR-DeniseNeural", "Denise", "f", "france"),
         ("fr-FR-HenriNeural", "Henri", "h", "france"),
-        ("fr-FR-EloiseNeural", "Eloise", "f", "france"),
+        ("fr-FR-EloiseNeural", "Eloise", "e", "france"),
         ("fr-FR-VivienneMultilingualNeural", "Vivienne", "f", "france"),
         ("fr-FR-RemyMultilingualNeural", "Remy", "h", "france"),
         # Suisse
@@ -839,7 +839,7 @@ VOIX = {
         ("en-GB-SoniaNeural", "Sonia", "f", "uk"),
         ("en-GB-RyanNeural", "Ryan", "h", "uk"),
         ("en-GB-LibbyNeural", "Libby", "f", "uk"),
-        ("en-GB-MaisieNeural", "Maisie", "f", "uk"),
+        ("en-GB-MaisieNeural", "Maisie", "e", "uk"),
         ("en-GB-ThomasNeural", "Thomas", "h", "uk"),
     ],
 }

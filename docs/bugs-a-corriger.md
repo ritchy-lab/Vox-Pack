@@ -156,6 +156,27 @@ Légende : `[ ]` à faire · `[x]` fait
   maintenant **`Vox-Pack`** — un nom neutre, le même dans toutes les langues
   (le traduire l'aurait fait changer de nom en changeant de langue).
 
+### Voix : libellés justes (17 octobre)
+
+- **Eloise** (fr-FR) et **Maisie** (en-GB) sont des voix **d'enfant**, pas de
+  femme : Richard les a entendues. Elles sont maintenant étiquetées
+  « Enfant » / « Child », comme Ana. *(Il les a trouvées à l'oreille, dans les
+  deux langues.)*
+- **Vivienne, Remy et Emma** n'existent chez Microsoft **qu'en version
+  multilingue** (vérifié : le service ne propose pas de version simple). Elles
+  devinent la langue de chaque mot, et un mot anglais peut sortir avec
+  l'accent anglais. Leur libellé annonce donc « Multilingue » au lieu de
+  « France » ou « USA ».
+- L'aide **compte** les voix (13 et 18) au lieu de les écrire en dur : si une
+  voix disparaît du service, l'aide dira la vérité.
+
+### Versions (17 octobre)
+
+- **1.1** publiée : les corrections de la relecture externe (molette Windows,
+  Maj+clic, doublons, CSV « ; »…).
+- `build.sh` lit le numéro de version dans `Vox-Pack.spec` : le zip ne
+  s'appellera plus « 1.0 » quand l'application sera en 1.1.
+
 ## Écarté (décisions de Richard)
 
 - [x] ~~Prévenir avant d'écraser un fichier déjà présent~~ — non souhaité.
