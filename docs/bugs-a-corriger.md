@@ -190,6 +190,9 @@ Légende : `[ ]` à faire · `[x]` fait
 - **Règle retenue** : enregistrer et envoyer le numéro de version **avant** de
   créer l'étiquette d'une version. Une étiquette posée trop tôt fabrique des
   fichiers qui ne correspondent pas à leur nom.
+- **La 1.2 est en ligne** (18 octobre), avec `Vox-Pack.zip` et `Vox-Pack.exe`
+  déposés par GitHub Actions. Vérifié en téléchargeant le fichier comme un
+  visiteur : l'application annonce bien **1.2**, et sa signature est valide.
 
 ## Écarté (décisions de Richard)
 
@@ -254,10 +257,9 @@ viser une étiquette précise pour compléter une version déjà publiée.
   captures, dans les deux langues, détourées.
 - [ ] *Optionnel* : **l'annonce** (forum EdgeTX, RC Groups…). Richard préfère
   attendre de voir s'il y a des retours.
-- [ ] **Publier la 1.2** : créer l'étiquette `V1.2` sur GitHub. La fabrication
-  automatique dépose alors les deux fichiers, et l'application annoncera enfin
-  le même numéro que sa page. *(Le changement est déjà enregistré dans le
-  dépôt : voir « Version 1.2 » plus haut.)*
+- [x] ~~**Publier la 1.2**~~ — fait le 18 octobre : étiquette `V1.2`, les deux
+  fichiers déposés par GitHub Actions, et l'application publiée annonce enfin
+  le même numéro que sa page.
 - [ ] **Carte de visite du dépôt** : il ne reste que la **A** (français et
   anglais) dans `assets/cartes/` — les deux B en ont été retirées. Reste à
   confirmer le choix, puis à la poser dans *Settings → Social preview*.
