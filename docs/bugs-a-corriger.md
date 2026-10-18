@@ -175,7 +175,21 @@ Légende : `[ ]` à faire · `[x]` fait
 - **1.1** publiée : les corrections de la relecture externe (molette Windows,
   Maj+clic, doublons, CSV « ; »…).
 - `build.sh` lit le numéro de version dans `Vox-Pack.spec` : le zip ne
-  s'appellera plus « 1.0 » quand l'application sera en 1.1.
+  s'appellera plus « 1.0 » quand l'application sera en 1.2.
+
+### Version 1.2 (18 octobre)
+
+- **La 1.1 en ligne ne contenait pas son propre dernier travail.** Le numéro
+  de version a été passé à 1.1 dans un enregistrement fait **après** la
+  fabrication des fichiers. Résultat : ce que les gens téléchargent depuis la
+  page « Vox-Pack 1.1 » s'annonce encore **1.0** dans « Lire les
+  informations », et Eloise / Maisie y sont encore étiquetées « Femme ».
+- **La 1.2 répare cela** : `Vox-Pack.spec` passe en 1.2, et la page de version
+  sera fabriquée depuis ce numéro. Aucune autre correction : le code des voix
+  était déjà juste, seul le fichier publié était en retard.
+- **Règle retenue** : enregistrer et envoyer le numéro de version **avant** de
+  créer l'étiquette d'une version. Une étiquette posée trop tôt fabrique des
+  fichiers qui ne correspondent pas à leur nom.
 
 ## Écarté (décisions de Richard)
 
@@ -240,12 +254,13 @@ viser une étiquette précise pour compléter une version déjà publiée.
   captures, dans les deux langues, détourées.
 - [ ] *Optionnel* : **l'annonce** (forum EdgeTX, RC Groups…). Richard préfère
   attendre de voir s'il y a des retours.
-- [ ] **Choisir la carte de visite du dépôt** : quatre propositions dans
-  `assets/cartes/` (A ou B, français ou anglais). Richard veut voir avant.
-- [ ] **Publier une 1.1** : la 1.0 n'a pas les corrections du 17 octobre — en
-  particulier la **molette sous Windows**, qui saute d'un coup dans la 1.0.
-- [ ] *Optionnel* : le nombre de voix (« 13 / 18 ») est écrit en dur dans
-  l'aide ; le calculer à partir de la liste serait plus juste.
+- [ ] **Publier la 1.2** : créer l'étiquette `V1.2` sur GitHub. La fabrication
+  automatique dépose alors les deux fichiers, et l'application annoncera enfin
+  le même numéro que sa page. *(Le changement est déjà enregistré dans le
+  dépôt : voir « Version 1.2 » plus haut.)*
+- [ ] **Carte de visite du dépôt** : il ne reste que la **A** (français et
+  anglais) dans `assets/cartes/` — les deux B en ont été retirées. Reste à
+  confirmer le choix, puis à la poser dans *Settings → Social preview*.
 - [ ] *Optionnel* : la fenêtre de soutien a une largeur fixe (380 px), non
   adaptée aux écrans courts. Richard a dit de laisser tel quel.
 - [ ] *Optionnel* : un certificat Apple (99 €/an) supprimerait l'avertissement

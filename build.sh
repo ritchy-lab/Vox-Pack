@@ -19,9 +19,9 @@ set -e
 cd "$(dirname "$0")"
 # Le numéro de version vient de la recette (Vox-Pack.spec) : une seule source
 # de vérité, pour que le zip ne s'appelle jamais « 1.0 » quand l'application
-# est en 1.1.
+# est en 1.2.
 VERSION=$(grep -o "version='[0-9][0-9.]*'" Vox-Pack.spec | head -1 | cut -d"'" -f2)
-VERSION=${VERSION:-1.1}
+VERSION=${VERSION:-1.2}
 NOM="Vox-Pack"
 
 # L'environnement Python du projet. On passe par « python -m PyInstaller »
