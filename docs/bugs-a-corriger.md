@@ -194,6 +194,91 @@ Légende : `[ ]` à faire · `[x]` fait
   déposés par GitHub Actions. Vérifié en téléchargeant le fichier comme un
   visiteur : l'application annonce bien **1.2**, et sa signature est valide.
 
+### Sons système d'EdgeTX (18 octobre, soir — en essai)
+
+- [x] **Menu « Créer les sons système… »** (sans « avec ma voix », la voix est
+  déjà choisie) : l'application
+  télécharge la **liste officielle d'EdgeTX** (`voices/fr-FR.csv` ou
+  `en-GB.csv`), puis demande seulement le dossier d'arrivée ; la voix est
+  celle déjà sélectionnée. Les fichiers vont dans un sous-dossier `SYSTEM/`.
+- [x] **Rien n'est embarqué** : le fichier est récupéré chez EdgeTX à la
+  demande de l'utilisateur (le dépôt EdgeTX est en GPL, Vox-Pack reste MIT).
+  Une copie de secours est gardée dans `~/Documents/Vox-Pack/`.
+- [x] **La liste de l'utilisateur n'est jamais touchée** : le circuit est
+  séparé (`creer_sons_systeme`), il lit la liste officielle et écrit des WAV,
+  rien d'autre.
+- [x] **Seules les lignes `Path = SYSTEM` sont générées** (186 sons français,
+  212 anglais) ; les noms fautifs et les doublons sont signalés sans arrêter
+  le reste.
+- [x] **Arrêt propre** : le bouton « Let's Go » devient « ■ Arrêter », le
+  fichier en cours se termine, les fichiers déjà écrits restent.
+- [x] **Aucun fichier tronqué** : le WAV est fabriqué dans le dossier
+  temporaire du système puis déplacé dans `SYSTEM/` une fois complet.
+- [x] **Aide** : un bloc « Créer les sons système » explique la démarche, le
+  temps (≈ 1,2 s par son, ~4 min selon le service et le réseau), le bouton
+  Arrêter et la copie de `SYSTEM/` sur la carte.
+- [x] **Détail des essais** : à la fin de `docs/demande-sons-systeme.md`.
+- [ ] **Essai dans l'application**, puis copie de `SYSTEM/` sur la carte.
+
+### Voix : Vivienne retirée (18 octobre, soir)
+
+- **Vivienne** (`fr-FR-VivienneMultilingualNeural`) prononce certains mots en
+  anglais ou en espagnol : Richard l'a entendue, elle ne convient pas au
+  français. Retirée de la liste.
+- **Pas de remplaçante** : Microsoft ne propose que **13 voix françaises**, et
+  l'application les avait déjà toutes. Le français passe de 13 à 12 voix, et
+  l'application de 31 à **30 voix**.
+- **Remy** (`fr-FR-RemyMultilingualNeural`), l'autre voix multilingue, est
+  retirée aussi : Richard l'a demandé le 18 octobre au soir. Le français n'a
+  donc plus aucune voix multilingue : **11 voix**.
+- Une voix enregistrée qui n'existe plus bascule sur la première de la liste
+  (Denise) : rien ne casse chez les utilisateurs.
+- **Emily ajoutée** (`en-IE-EmilyNeural`, Irlande) : c'est la **voix
+  officielle d'EdgeTX pour l'anglais**. Elle est réglée à **+10 %** de vitesse,
+  comme dans `voice_generation_config.py` du dépôt. L'anglais passe de 18 à
+  **19 voix**, le total est de **30** (11 françaises + 19 anglaises).
+- **L'étoile ★** marque les deux voix officielles dans le sélecteur (Denise et
+  Emily) ; l'aide explique ce que veut dire l'étoile.
+
+### Aide : présentation homogène (18 octobre, soir)
+
+- [x] **Textes de l'aide réécrits d'un seul tenant** : phrases complètes,
+  même voix (« vous »), même ponctuation, plus de lignes coupées à la main.
+- [x] **Puces et avertissements alignés** : quand le texte passe à la ligne,
+  la suite reste sous le texte, plus sous la puce ou sous le ⚠️.
+- [x] **Espacement régulier** entre paragraphes et sections ; les titres des
+  étapes 1 à 5 ont le même style que les autres titres.
+- [x] **L'étoile ★** des voix officielles est expliquée dans l'aide.
+
+### Langue des fenêtres de macOS (18 octobre, soir)
+
+- [x] **Le sélecteur de dossier s'affichait en anglais** alors que
+  l'application est en français. Ce n'est pas un texte de Vox-Pack : c'est une
+  fenêtre de macOS, et macOS choisit sa langue d'après les langues que
+  **l'application** déclare. Une application empaquetée par PyInstaller n'en
+  déclare aucune, donc macOS la croit anglaise.
+  `Vox-Pack.spec` déclare maintenant `fr` et `en` (`CFBundleLocalizations`,
+  et `CFBundleAllowMixedLocalizations`, le correctif que Python applique à son
+  propre lanceur depuis la 3.12) : dans l'application finie, le sélecteur
+  suivra la langue du Mac.
+- [ ] **À vérifier à la prochaine compilation.** Depuis le terminal
+  (`venv/bin/python voxpack.py`), c'est `Python.app` qui fournit la fenêtre et
+  qui impose l'anglais : le phénomène y restera, c'est normal.
+- [x] **Le mot « Choose » du sélecteur de dossier** : Tk l'écrit en dur
+  (`[panel setPrompt:@"Choose"]`). Le sélecteur de Tk est remplacé par le
+  **panneau natif de macOS** (`NSOpenPanel`, via PyObjC), affiché en **feuille
+  attachée** à la fenêtre — comme « Importer une liste » — avec le bouton
+  **« Choisir »**. Vérifié dans une application compilée de contrôle : la
+  feuille s'ouvre et se referme correctement. PyObjC est ajouté à la recette
+  et aux `requirements.txt` (macOS uniquement), soit 3 Mo de plus.
+
+### Défilement rapide (18 octobre, soir)
+
+- [x] **La liste sautait quand on scrollait vite.** Sur macOS, Tk envoie la
+  vitesse du geste dans `event.delta` : un geste rapide valait 20 ou 30, et la
+  liste se déplaçait de 160 à 240 px d'un coup. Chaque événement est maintenant
+  borné à 3 crans (24 px) : le défilement reste rapide, mais ne saute plus.
+
 ## Écarté (décisions de Richard)
 
 - [x] ~~Prévenir avant d'écraser un fichier déjà présent~~ — non souhaité.

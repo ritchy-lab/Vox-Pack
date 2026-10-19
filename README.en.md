@@ -32,10 +32,11 @@ help.
 
 ## How it works
 
-1. **Pick a voice.** There are **31** of them: 13 in French (France,
-   Switzerland, Belgium, Quebec) and 18 in English (United States, United
-   Kingdom). The menu shows the accent — "Denise (Female - France)", "Ryan
-   (Male - United Kingdom)" — and **the current voice is ticked** in the list.
+1. **Pick a voice.** There are **30** of them: 11 in French (France,
+   Switzerland, Belgium, Quebec) and 19 in English (United States, United
+   Kingdom, Ireland). The menu shows the accent — "Denise (Female - France)",
+   "Ryan (Male - United Kingdom)" — the current voice is ticked, and **★**
+   marks EdgeTX's official voice (Denise in French, Emily in English).
 2. **Type your phrases.** The list comes pre-filled with 44 common
    announcements (engine, flaps, gear, timer, flight modes…). You can edit,
    add or remove any line.
@@ -51,6 +52,27 @@ every moment what the application is doing: fetching the voice, then writing
 the file.
 
 Your list is saved automatically, so you find it again next time.
+
+## EdgeTX system sounds
+
+The **File → Create system sounds…** menu builds the **186 official SYSTEM
+files** in French (**212** in English) with the chosen voice, in a `SYSTEM/`
+folder to copy to the SD card. The list comes from the official EdgeTX
+repository and is not modified; your phrases, list and settings are untouched.
+
+## Robot voices
+
+On the right of the window, **four dots Robot 1 to Robot 4** transform the
+chosen voice. None lit: the normal voice. Click a dot, then **Listen**; click
+the lit dot again to return to normal. The effect also applies to the list
+files and the system sounds.
+
+## Updates
+
+At startup, the application quietly checks whether a newer version has been
+published on the Releases page. If so, a small window offers to download it
+straight to your Downloads folder, then opens the folder; otherwise nothing
+appears. If you are offline, nothing happens.
 
 ## The application's language
 

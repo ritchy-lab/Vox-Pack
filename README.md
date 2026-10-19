@@ -32,10 +32,11 @@ droite ouvre cette aide.
 
 ## Comment ça marche
 
-1. **Choisis une voix.** Il y en a **31** : 13 en français (France, Suisse,
-   Belgique, Québec) et 18 en anglais (États-Unis, Royaume-Uni). Le menu
-   indique l'accent — « Denise (Femme - France) », « Ryan (Homme -
-   Royaume-Uni) » — et **la voix en cours est cochée** dans la liste.
+1. **Choisis une voix.** Il y en a **30** : 11 en français (France, Suisse,
+   Belgique, Québec) et 19 en anglais (États-Unis, Royaume-Uni, Irlande). Le
+   menu indique l'accent — « Denise (Femme - France) », « Ryan (Homme -
+   Royaume-Uni) » — la voix en cours est cochée, et la **★** marque la voix
+   officielle d'EdgeTX (Denise en français, Emily en anglais).
 2. **Écris tes phrases.** La liste est pré-remplie avec 44 annonces courantes
    (moteur, volets, train, chrono, modes de vol…). Tu peux tout modifier,
    ajouter ou supprimer des lignes.
@@ -53,6 +54,28 @@ puis écriture du fichier.
 
 Ta liste est enregistrée automatiquement : tu la retrouves au prochain
 démarrage, et tu peux la faire évoluer petit à petit.
+
+## Les sons système d'EdgeTX
+
+Le menu **Fichier → Créer les sons système…** fabrique les **186 annonces
+SYSTEM officielles** en français (**212** en anglais) avec la voix choisie,
+dans un dossier `SYSTEM/` à copier sur la carte SD. La liste vient du dépôt
+officiel EdgeTX et n'est pas modifiée ; tes phrases, ta liste et tes réglages
+ne sont pas touchés.
+
+## Les voix de robot
+
+À droite de la fenêtre, **quatre pastilles Robot 1 à Robot 4** transforment
+la voix choisie. Aucune allumée : la voix normale. Clique une pastille, puis
+**Écouter** ; reclique la pastille allumée pour revenir à la normale. L'effet
+s'applique aussi aux fichiers de la liste et aux sons système.
+
+## Les mises à jour
+
+Au démarrage, l'application vérifie discrètement si une version plus récente
+est publiée sur la page Releases. Si c'est le cas, une petite fenêtre propose
+de la télécharger directement dans ton dossier Téléchargements, puis ouvre le
+dossier ; sinon, rien ne s'affiche. Si tu es hors ligne, il ne se passe rien.
 
 ## La langue de l'application
 

@@ -17,6 +17,13 @@ customtkinter==6.0.0
 # Lecture des images (logo)
 Pillow==12.3.0
 
+# Effet robot (traitement du WAV)
+numpy==2.4.6
+
+# macOS uniquement : sélecteur de dossier natif (feuille NSOpenPanel)
+# en français, à la place de celui de Tk qui écrit « Choose » en dur.
+pyobjc-framework-Cocoa==12.2.2; sys_platform == "darwin"
+
 # --- Uniquement en dehors de macOS ---
 # Sur macOS, la conversion audio utilise afconvert et la lecture afplay, tous
 # deux fournis par le système. Ailleurs (Windows), tout se fait en Python :

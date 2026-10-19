@@ -10,6 +10,7 @@
 # ============================================================
 import sys
 
+from version import VERSION
 from PyInstaller.utils.hooks import collect_all
 
 # Le logo et les icônes doivent voyager avec l'application. (Les dessins de
@@ -25,6 +26,10 @@ binaries = []
 hiddenimports = []
 
 paquets = ['customtkinter', 'edge_tts']
+if sys.platform == 'darwin':
+    # PyObjC : le sélecteur de dossier natif (feuille NSOpenPanel) qui parle
+    # français, au lieu du sélecteur de Tk qui écrit « Choose » en dur.
+    paquets += ['objc', 'AppKit', 'Foundation', 'CoreFoundation']
 if sys.platform != 'darwin':
     # Sur macOS, la conversion audio passe par afconvert et la lecture par
     # afplay : rien à embarquer. Ailleurs, tout se fait en Python, et ces
@@ -99,11 +104,19 @@ if sys.platform == 'darwin':
         name='Vox-Pack.app',
         icon='icon.icns',
         bundle_identifier='com.ritchy-lab.vox-pack',
-        version='1.2',
+        version=VERSION,
         info_plist={
-            'CFBundleShortVersionString': '1.2',
+            'CFBundleShortVersionString': VERSION,
             'NSHumanReadableCopyright': '© 2026 ritchy-lab',
             'LSMinimumSystemVersion': '11.0',
+            # Sans ces deux lignes, les fenêtres fournies par macOS (choix
+            # d'un dossier, d'un fichier…) s'affichent en anglais même sur un
+            # Mac français : macOS choisit leur langue d'après les langues que
+            # l'application déclare, et PyInstaller n'en déclare aucune.
+            # C'est le même correctif que Python a appliqué à son propre
+            # lanceur (Python.app) en 3.12.
+            'CFBundleLocalizations': ['fr', 'en'],
+            'CFBundleAllowMixedLocalizations': True,
         },
     )
 else:

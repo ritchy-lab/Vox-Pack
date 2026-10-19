@@ -11,6 +11,18 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 1.3
+
+- **Les fichiers son système d'EdgeTX** — la grande nouveauté : les **186
+  annonces SYSTEM** françaises (**212** en anglais) en un clic, avec la voix
+  choisie, dans un dossier `SYSTEM/` prêt pour la carte SD.
+- **Pour le fun** : la possibilité de créer des **voix de robot**, avec
+  quatre pastilles Robot 1 à 4 (aucune allumée = voix normale).
+- **Mises à jour** : vérification automatique au démarrage, avec une petite
+  fenêtre pour télécharger la nouvelle version.
+- Aide remaniée, voix officielles Denise et Emily (★), choix du dossier
+  macOS natif.
+
 ## À télécharger
 
 - **macOS** : `Vox-Pack.zip` — à décompresser, puis glisser l'application dans
@@ -42,6 +54,19 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 1.3
+
+- **EdgeTX system sound files** — the big one: all **186 French SYSTEM
+  files** (**212** in English) in one click, with the chosen voice, in a
+  `SYSTEM/` folder ready for the SD card.
+- **Just for fun**: the ability to create **robot voices**, with four dots
+  Robot 1 to 4 (none lit = normal voice).
+- **Updates**: automatic check at startup, with a small window to download
+  the new version.
+- Reworked help, official Denise and Emily voices (★), native macOS folder
+  picker.
+
 
 ### What to download
 

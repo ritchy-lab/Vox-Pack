@@ -13,19 +13,26 @@ import os
 import queue
 import re
 import shutil
+import ssl
 import string
 import subprocess
 import sys
+import tempfile
 import threading
 import time
+import urllib.request
+import wave
 import webbrowser
 from tkinter import filedialog, Menu
 
 import tkinter.font as tkfont
 
 import customtkinter as ctk
-from PIL import Image
+from PIL import Image, ImageTk
+import certifi
 import edge_tts
+
+from version import VERSION
 
 # ------------------------------------------------------------------
 # Configuration
@@ -99,6 +106,82 @@ def convertir_en_wav(source_mp3, destination_wav):
     sf.write(destination_wav, donnees, cible, subtype="PCM_16")
 
 
+# ------------------------------------------------------------------
+# Voix de robot
+# ------------------------------------------------------------------
+# Quatre presets appliqués à la voix choisie. L'interface ne montre que
+# « Robot 1 » à « Robot 4 » : c'est l'oreille qui choisit.
+# Rangés du plus grave au plus aigu (les réglages sont ceux de Richard).
+ROBOTS = {
+    1: {"pitch": "-30Hz", "ring": 52, "dry": 0.40,
+        "echo": ((0.025, 0.30), (0.050, 0.15))},
+    2: {"pitch": None, "ring": 55, "dry": 0.18,
+        "echo": ((0.025, 0.35), (0.050, 0.20))},
+    3: {"pitch": "+40Hz", "ring": 60, "dry": 0.18,
+        "echo": ((0.025, 0.35), (0.050, 0.20))},
+    4: {"pitch": "+50Hz", "ring": 70, "dry": 0.50,
+        "echo": ((0.025, 0.30), (0.080, 0.40))},
+}
+
+
+def appliquer_effet_robot(chemin, numero):
+    """Applique un preset robot à un WAV EdgeTX (32 kHz, mono, 16 bits).
+
+    Le fichier est réécrit dans un temporaire puis remplacé : une panne ne
+    peut pas laisser un WAV tronqué que la radio tenterait de lire.
+    """
+    reglage = ROBOTS.get(numero)
+    if not reglage:
+        return
+    import numpy as np
+
+    with wave.open(chemin, "rb") as w:
+        if (w.getframerate() != FORMAT_EDGETX[0] or w.getnchannels() != 1
+                or w.getsampwidth() != 2):
+            return
+        sr = w.getframerate()
+        brut = w.readframes(w.getnframes())
+    if len(brut) < 4:
+        return
+    x = np.frombuffer(brut, dtype="<i2").astype(np.float32) / 32768.0
+
+    def passe_haut(sig, fc):
+        n = max(1, int(sr / fc))
+        return sig - np.convolve(sig, np.ones(n) / n, mode="same")
+
+    def passe_bas(sig, fc):
+        n = max(1, int(sr / fc))
+        return np.convolve(sig, np.ones(n) / n, mode="same")
+
+    t = np.arange(len(x)) / sr
+    melange = (reglage["dry"] * x
+               + (1 - reglage["dry"]) * x
+               * np.sin(2 * np.pi * reglage["ring"] * t))
+    melange = passe_bas(passe_haut(melange, 200), 5200)
+    sortie = melange.copy()
+    for secondes, gain in reglage["echo"]:
+        n = int(secondes * sr)
+        sortie[n:] += gain * melange[:-n]
+    pic = np.max(np.abs(sortie)) or 1.0
+    sortie = 0.92 * sortie / pic
+
+    temporaire = chemin + ".robot"
+    try:
+        with wave.open(temporaire, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(
+                (np.clip(sortie, -1, 1) * 32767).astype("<i2").tobytes())
+        os.replace(temporaire, chemin)
+    finally:
+        if os.path.exists(temporaire):
+            try:
+                os.remove(temporaire)
+            except OSError:
+                pass
+
+
 def lire_lignes_csv(fichier):
     """Lit un CSV dont le séparateur est la virgule ou le point-virgule.
 
@@ -122,6 +205,181 @@ def chemin_liste(langue):
     unique — Richard a perdu une liste en essayant l'anglais.
     """
     return os.path.join(DATA_DIR, f"liste_{langue}.csv")
+
+
+# ------------------------------------------------------------------
+# Sons système d'EdgeTX
+# ------------------------------------------------------------------
+# La liste officielle des sons est tenue par l'équipe EdgeTX :
+#
+#     https://github.com/EdgeTX/edgetx-sdcard-sounds  (dossier voices/)
+#
+# C'est ELLE que Vox-Pack utilise, et pas le fichier de la carte SD : il n'y
+# a pas besoin de brancher la carte, et la liste est toujours à jour. Le
+# fichier est téléchargé chez EdgeTX au moment de l'usage, puis lu. Rien n'est
+# embarqué dans Vox-Pack (le dépôt EdgeTX est en GPL, Vox-Pack en MIT) : c'est
+# le fichier d'EdgeTX, récupéré à la demande de l'utilisateur, comme s'il le
+# téléchargeait lui-même. Ne jamais en mettre une copie dans le dépôt.
+#
+# Le fichier officiel se présente ainsi (six colonnes, virgules) :
+#
+#     "String ID","Source text","Translation","Context","Path","Filename"
+#     "1","0","0","","SYSTEM","0000.wav"
+#
+# La phrase est « Translation », le nom est « Filename », et « Path » vaut
+# SYSTEM ou rien (racine de la langue). Le CSV livré sur la carte, lui, tient
+# en trois colonnes séparées par « ; » :
+#
+#     SOUNDS/fr/SYSTEM;0000.wav;0
+#
+# On sait lire les deux (utile pour les copies gardées en secours).
+#
+# On ne garde QUE les lignes du dossier SYSTEM (décision de Richard) : la
+# racine mélange des sons officiels (armé, altitude, modes de vol…) et les sons
+# personnels de l'utilisateur, qu'on ne veut pas refabriquer.
+URL_CSV_OFFICIEL = ("https://raw.githubusercontent.com/EdgeTX/"
+                    "edgetx-sdcard-sounds/master/voices/{}.csv")
+
+# La langue de l'interface commande celle des voix : il n'y a donc que deux
+# fichiers utiles. « en » correspond à en-GB, le paquet anglais d'EdgeTX (le
+# dépôt ne se sert que de celui-là pour construire SOUNDS/en).
+CSV_OFFICIEL = {"fr": "fr-FR", "en": "en-GB"}
+
+
+def csv_officiel_sons_systeme(langue):
+    """Télécharge la liste officielle et renvoie ses sons SYSTEM.
+
+    Une copie est gardée dans les données de l'application : si GitHub ne
+    répond pas, on repart de cette copie plutôt que de laisser l'utilisateur
+    sans rien. Renvoie (lignes, langue, depuis_cache).
+    """
+    code = CSV_OFFICIEL.get(langue, "en-GB")
+    cache = os.path.join(DATA_DIR, f"sons-systeme-{code}.csv")
+    try:
+        # Même trousseau de certificats qu'edge-tts (certifi) : dans
+        # l'application compilée, les chemins de macOS ou de Windows ne sont
+        # pas fiables. C'est ce qui fait marcher le téléchargement partout.
+        contexte = ssl.create_default_context(cafile=certifi.where())
+        with urllib.request.urlopen(URL_CSV_OFFICIEL.format(code),
+                                    timeout=15, context=contexte) as reponse:
+            texte = reponse.read().decode("utf-8-sig")
+        lignes, _ = _filtrer_sons_systeme(
+            lire_lignes_csv(io.StringIO(texte)), langue)
+        if not lignes:
+            raise ValueError("le fichier reçu ne contient aucun son système")
+    except Exception:
+        if not os.path.exists(cache):
+            raise
+        lignes, _ = lire_csv_sons_systeme(cache, langue)
+        if not lignes:
+            raise
+        return lignes, langue, True
+
+    # La copie n'est écrite qu'une fois le fichier reconnu valable : une page
+    # d'erreur de GitHub ne peut pas remplacer la bonne copie.
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        temporaire = cache + ".tmp"
+        with open(temporaire, "w", encoding="utf-8", newline="") as fichier:
+            fichier.write(texte)
+        os.replace(temporaire, cache)
+    except OSError:
+        pass  # une copie de secours, ce n'est pas vital
+    return lignes, langue, False
+
+
+def lire_csv_sons_systeme(chemin, langue=None):
+    """Lit un CSV de sons système (format officiel ou format carte).
+
+    Renvoie (lignes, langue) : lignes = [(nom, phrase)] et langue déduite du
+    chemin si le fichier la contient (« fr » pour « SOUNDS/fr/SYSTEM »), sinon
+    celle qu'on lui donne.
+    """
+    try:
+        with open(chemin, encoding="utf-8-sig") as fichier:
+            return _filtrer_sons_systeme(lire_lignes_csv(fichier), langue)
+    except UnicodeDecodeError:
+        # Un CSV préparé sous Windows peut être en Latin-1 : les accents ne
+        # sont alors pas lisibles en UTF-8, mais le fichier reste exploitable.
+        with open(chemin, encoding="latin-1") as fichier:
+            return _filtrer_sons_systeme(lire_lignes_csv(fichier), langue)
+
+
+def _filtrer_sons_systeme(morceaux, langue=None):
+    """Garde les lignes du dossier SYSTEM, et rien d'autre."""
+    lignes = []
+    langues = {}
+    if not morceaux:
+        return lignes, langue or ""
+
+    # Les deux formats se reconnaissent à leur en-tête. On lit les colonnes
+    # par leur NOM pour le fichier officiel : l'ordre pourrait changer.
+    entete = [c.strip().lower() for c in morceaux[0]]
+    officiel = all(c in entete for c in ("translation", "path", "filename"))
+    if officiel:
+        i_phrase = entete.index("translation")
+        i_dossier = entete.index("path")
+        i_nom = entete.index("filename")
+        debut = 1
+    else:
+        i_dossier, i_nom, i_phrase = 0, 1, 2
+        debut = 0
+
+    for colonnes in morceaux[debut:]:
+        # Une phrase peut manquer : la ligne ne sert alors à rien.
+        if len(colonnes) < max(i_dossier, i_nom, i_phrase) + 1:
+            continue
+        dossier = colonnes[i_dossier].strip().replace("\\", "/").rstrip("/")
+        if officiel:
+            # Path vaut « SYSTEM » ou rien (racine).
+            if dossier.upper() != "SYSTEM":
+                continue
+        elif not dossier.upper().endswith("/SYSTEM"):
+            continue
+        nom = colonnes[i_nom].strip()
+        if nom.lower().endswith(".wav"):
+            nom = nom[:-4]
+        phrase = colonnes[i_phrase].strip()
+        if not nom or not phrase:
+            continue
+        lignes.append((nom, phrase))
+        if not officiel:
+            # La langue se lit dans le chemin, pas dans une liste écrite en
+            # dur : une carte en allemand, en japonais… marche pareil.
+            parties = [p for p in dossier.split("/") if p]
+            if len(parties) >= 2:
+                langues[parties[-2]] = langues.get(parties[-2], 0) + 1
+
+    if officiel:
+        return lignes, langue or ""
+    detectee = max(langues, key=langues.get) if langues else ""
+    return lignes, detectee or (langue or "")
+
+
+def trier_sons_systeme(lignes):
+    """Écarte les noms que la radio ne lirait pas, et les doublons.
+
+    Renvoie (taches, refuses) : taches = [(nom, phrase)] à fabriquer,
+    refuses = [(nom, raison)] à signaler. On ne s'arrête jamais au premier
+    problème : un seul nom fautif ne doit pas priver l'utilisateur de tous
+    les autres sons.
+    """
+    taches, refuses, vus = [], [], {}
+    for rang, (nom, phrase) in enumerate(lignes, start=1):
+        souci = probleme_nom(nom)
+        if souci is None:
+            # Deux lignes au même nom : la seconde écraserait la première en
+            # silence. Majuscules ignorées, comme sur le disque d'un Mac.
+            deja = vus.get(nom.lower())
+            if deja:
+                souci = t("pb_doublon", n=deja)
+            else:
+                vus[nom.lower()] = rang
+        if souci:
+            refuses.append((nom or t("pb_vide"), souci))
+        elif phrase:
+            taches.append((nom, phrase))
+    return taches, refuses
 
 
 # ------------------------------------------------------------------
@@ -370,6 +628,7 @@ TEXTES = {
         "accent_quebec": "Québec",
         "accent_usa": "USA",
         "accent_uk": "Royaume-Uni",
+        "accent_irlande": "Irlande",
 
         # ----- Noms des langues -----
         "langue_fr": "Français",
@@ -385,6 +644,9 @@ TEXTES = {
             "{n} voix retirée{s} par le service — liste mise à jour",
         "etat_voix_remises": "Voix indisponibles : liste remise par défaut",
         "etat_langue_voix": "Langue : {langue} — {n} voix disponibles",
+        "etat_sons_arret": "Arrêt demandé — fin du fichier en cours…",
+        "etat_csv_telechargement":
+            "Téléchargement de la liste officielle EdgeTX…",
 
         # ----- Noms de fichiers refusés -----
         "pb_vide": "nom vide",
@@ -403,6 +665,9 @@ TEXTES = {
         "err_voix_absente":
             "voix supprimée par le service : choisissez-en une autre",
         "err_lent": "le service n'a pas répondu à temps (connexion lente ?)",
+        "err_illisible":
+            "Le service de voix a renvoyé une réponse illisible. "
+            "Réessayez dans un instant.",
         "err_reseau": "pas de connexion Internet",
 
         # ----- Menu -----
@@ -410,6 +675,7 @@ TEXTES = {
         "menu_exporter": "Exporter la liste…",
         "menu_importer": "Importer une liste…",
         "menu_defaut": "Charger la liste par défaut",
+        "menu_sons_systeme": "Créer les sons système…",
         "menu_quitter": "Quitter",
         "menu_langue": "Langue",
 
@@ -417,6 +683,7 @@ TEXTES = {
         "titre_export": "Exporter la liste",
         "titre_import": "Importer une liste",
         "titre_dossier": "Dossier de destination des WAV",
+        "titre_dossier_systeme": "Dossier où créer le dossier SYSTEM",
         "nom_export": "ma-liste-vox-pack.csv",
         "type_csv": "Fichier CSV",
         "type_txt": "Fichier texte",
@@ -438,11 +705,19 @@ TEXTES = {
         "adjectif_fr": "françaises",
         "adjectif_en": "anglaises",
         "msg_import_ok": "{n} ligne{s} importée{s}.",
+        "msg_csv_aucun_systeme":
+            "La liste officielle d'EdgeTX ne contient aucun son système.\n\n"
+            "Réessayez plus tard : le fichier a peut-être changé.",
+        "msg_csv_officiel_echec":
+            "La liste officielle d'EdgeTX n'a pas pu être téléchargée.\n\n"
+            "Vérifiez la connexion Internet, puis réessayez.\n\n{err}",
 
         # ----- Boutons et messages courants -----
         "annuler": "Annuler",
         "compris": "Compris",
         "fermer": "Fermer",
+        "choisir": "Choisir",
+        "voix_normale": "Voix normale",
         "ouvrir_dossier": "Ouvrir le dossier",
         "btn_supprimer": "Supprimer",
 
@@ -460,6 +735,9 @@ TEXTES = {
         "msg_generer_aucune":
             "Aucune ligne valide à générer.\n\n"
             "Il faut un nom de fichier correct ET une phrase.",
+        "msg_genere_deja":
+            "Une génération est déjà en cours.\n\n"
+            "Attendez qu'elle se termine.",
         "msg_sauvegarde_echec":
             "La liste n'a pas pu être enregistrée.\n\n"
             "{err}\n\nVérifie l'espace libre de ton disque.",
@@ -468,6 +746,20 @@ TEXTES = {
             "{problemes} problème{s2} :\n{detail}",
         "msg_autres": "• … et {n} autre(s)",
         "msg_succes": "Vos voix sont prêtes.\n\n{dossier}",
+        "msg_sons_succes":
+            "{n} fichier{s} système créé{s} dans :\n\n{dossier}",
+        "msg_sons_copier":
+            "Copiez ce dossier SYSTEM dans SOUNDS/{langue}/ de votre carte, "
+            "en remplaçant l'ancien.",
+        "msg_sons_bilan":
+            "{reussis} fichier{s1} système créé{s1} sur {total}.\n\n"
+            "{problemes} problème{s2} :\n{detail}",
+        "msg_sons_problemes": "{problemes} problème{s2} :\n{detail}",
+        "msg_sons_arrete":
+            "Génération arrêtée.\n\n{n} fichier{s} créé{s} dans :\n\n{dossier}",
+        "msg_sons_cache":
+            "Liste officielle non téléchargée : la copie enregistrée "
+            "a été utilisée.",
         "msg_dossier_echec":
             "Impossible de créer le dossier de destination.\n\n{err}",
 
@@ -481,77 +773,168 @@ TEXTES = {
         # ----- Fenêtre d'aide -----
         "titre_aide": "Aide — Vox-Pack",
         "aide_titre": "Comment utiliser l'application",
-        "aide_1": "1. Choisir une voix dans le menu déroulant.",
-        "aide_1a": "Les voix proposées sont celles de la langue de",
-        "aide_1b": "l'application : français ({nfr} voix) ou anglais ({nen} voix).",
-        "voix_multilingue": "Multilingue",
-        "aide_1c": "Pour changer de langue : menu « Fichier », puis « Langue ».",
-        "aide_1d": "Textes, voix et liste changent ensemble, et votre voix est",
-        "aide_1e": "retrouvée au prochain démarrage.",
-        "aide_2": "2. Gérer la liste",
-        "aide_2a": "Ajouter une ligne : bouton \"Ajouter\"",
-        "aide_2b": "Supprimer une ligne : cocher la ligne puis bouton \"Supprimer\"",
-        "aide_2c": "Modifier : taper directement dans les cases",
-        "aide_2d": "Cocher plusieurs lignes d'un coup : cliquer sur la",
-        "aide_2e": "première case, puis Majuscule + clic sur la dernière.",
-        "aide_nom1": "⚠️  Le nom du fichier ne doit pas dépasser 8 caractères",
-        "aide_nom2": "     et ne doit pas contenir d'accents ni d'espaces.",
-        "aide_3": "3. Cocher les lignes à générer",
-        "aide_3a": "Bouton \"Tout\" pour tout cocher",
-        "aide_3b": "Bouton \"Rien\" pour tout décocher",
-        "aide_3c": "Une seule ligne : cocher juste celle-ci",
-        "aide_4": "4. Écouter un aperçu",
-        "aide_4a": "Cocher une ou plusieurs lignes, puis cliquer sur "
-                   "\"Écouter\" : elles sont lues l'une après l'autre.",
-        "aide_5": "5. Générer les fichiers",
-        "aide_5a": "Cliquer sur \"Let's Go\" puis choisir un dossier.",
-        "aide_5b": "Sous la barre de leds, une ligne indique à chaque instant",
-        "aide_5c": "ce que fait l'application (recherche de la voix, puis",
-        "aide_5d": "génération du fichier WAV).",
+        # ----- 1. Voix -----
+        "aide_1": "1. Choisissez une voix",
+        "aide_1a":
+            "Les voix proposées sont celles de la langue de l'application : "
+            "{nfr} en français et {nen} en anglais. Le menu indique le genre "
+            "et l'accent — « Denise (Femme - France) », « Ryan (Homme - "
+            "Royaume-Uni) » — et la voix en cours est cochée.",
+        "aide_officielle":
+            "La ★ marque la voix officielle d'EdgeTX pour cette langue : même "
+            "voix et même vitesse que sur la radio.",
+        "aide_robot_titre": "🤖  Voix de robot",
+        "aide_robot1":
+            "À droite de la fenêtre, quatre pastilles : Robot 1 à Robot 4. "
+            "Aucune cochée : la voix normale.",
+        "aide_robot2":
+            "Cliquez une pastille, puis « Écouter » : l'effet s'applique à la "
+            "voix choisie. Recliquez la pastille allumée pour revenir à la "
+            "normale.",
+        "aide_robot3":
+            "L'effet s'applique aussi aux fichiers de la liste et aux sons "
+            "système.",
+        "aide_1b":
+            "Pour changer de langue : menu « Fichier », puis « Langue ». Les "
+            "textes, les voix et la liste changent ensemble, et votre voix "
+            "est retrouvée au prochain démarrage.",
+        # ----- 2. Liste -----
+        "aide_2": "2. Gérez la liste",
+        "aide_2a":
+            "« Ajouter » crée une ligne ; « Supprimer » efface les lignes "
+            "cochées.",
+        "aide_2b": "Modifiez une ligne en tapant directement dans ses cases.",
+        "aide_2c":
+            "Pour cocher plusieurs lignes d'un coup : cliquez sur la "
+            "première case, puis Majuscule + clic sur la dernière.",
+        "aide_nom1":
+            "Le nom du fichier ne doit pas dépasser 8 caractères et ne doit "
+            "contenir ni accent ni espace.",
+        # ----- 3. Cocher -----
+        "aide_3": "3. Cochez les lignes à générer",
+        "aide_3a": "« Tout » coche toutes les lignes ; « Rien » les décoche.",
+        "aide_3b": "Pour une seule ligne, cochez uniquement celle-ci.",
+        # ----- 4. Écouter -----
+        "aide_4": "4. Écoutez un aperçu",
+        "aide_4a":
+            "Cochez une ou plusieurs lignes, puis cliquez sur « Écouter » : "
+            "elles sont lues l'une après l'autre.",
+        # ----- 5. Générer -----
+        "aide_5": "5. Générez les fichiers",
+        "aide_5a": "Cliquez sur « Let's Go », puis choisissez un dossier.",
+        "aide_5b":
+            "Sous la barre de leds, une ligne indique à chaque instant ce que "
+            "fait l'application : recherche de la voix, puis génération du "
+            "fichier WAV.",
+        # ----- Internet -----
         "aide_net_titre": "🌐  Connexion Internet nécessaire",
-        "aide_net1": "Les voix ne sont pas dans l'application : elles viennent du",
-        "aide_net2": "service de synthèse vocale de Microsoft. Une connexion",
-        "aide_net3": "Internet est donc indispensable pour générer les fichiers.",
-        "aide_net4": "⚠️  Le texte de vos phrases est envoyé à Microsoft pour",
-        "aide_net5": "     être prononcé : n'y mettez rien de confidentiel.",
+        "aide_net1":
+            "Les voix ne sont pas dans l'application : elles viennent du "
+            "service de synthèse vocale de Microsoft. Une connexion Internet "
+            "est donc indispensable pour générer les fichiers.",
+        "aide_net4":
+            "Le texte de vos phrases est envoyé à Microsoft pour être "
+            "prononcé : n'y mettez rien de confidentiel.",
         "aide_net6": "Sans Internet, l'application vous le dira clairement.",
-        "aide_net7": "Si une voix n'existe plus chez Microsoft, elle disparaît",
-        "aide_net8": "toute seule du menu au démarrage de l'application.",
+        "aide_net7":
+            "Si une voix n'existe plus chez Microsoft, elle disparaît toute "
+            "seule du menu au démarrage de l'application.",
+        # ----- Sauvegarde -----
         "aide_sauv_titre": "💾  Sauvegarde automatique",
         "aide_sauv1": "Vos modifications sont enregistrées dans :",
+        # ----- Liste par défaut -----
         "aide_def_titre": "♻️  Liste par défaut",
-        "aide_def1": "Si vous supprimez TOUTE la liste, elle sera reconstruite",
-        "aide_def2": "automatiquement au prochain démarrage ({n} lignes).",
-        "aide_def5": "Chaque langue a SA liste : la française et l'anglaise sont",
-        "aide_def6": "indépendantes. Changer la langue dans le menu change donc",
-        "aide_def7": "aussi la liste — et votre travail de l'autre langue est",
-        "aide_def8": "conservé tel quel.",
-        "aide_def3": "Si vous gardez au moins 1 ligne, vous repartez de cette",
-        "aide_def4": "base pour créer votre liste personnalisée.",
+        "aide_def1":
+            "Si vous supprimez TOUTE la liste, elle sera reconstruite "
+            "automatiquement au prochain démarrage ({n} lignes).",
+        "aide_def5":
+            "Chaque langue a SA liste : la française et l'anglaise sont "
+            "indépendantes. Changer la langue dans le menu change donc aussi "
+            "la liste, et votre travail de l'autre langue est conservé tel "
+            "quel.",
+        "aide_def3":
+            "Si vous gardez au moins 1 ligne, vous repartez de cette base "
+            "pour créer votre liste personnalisée.",
+        # ----- Export / import -----
         "aide_exp_titre": "📂  Exporter / Importer une liste",
-        "aide_exp1": "Le menu « Fichier » (barre de menus du système sur Mac,",
-        "aide_exp2": "en haut de la fenêtre sur PC) permet de :",
-        "aide_exp3": "Exporter la liste pour la sauvegarder ou la partager.",
-        "aide_exp4": "Importer une liste existante : un nom et une phrase par",
-        "aide_exp5": "ligne, séparés par une virgule. L'import remplace la",
-        "aide_exp6": "liste actuelle (l'application demande confirmation).",
-        "aide_edge_titre": "📻  Longueur des noms selon votre EdgeTX",
-        "aide_edge1": "La radiocommande lit le nom du fichier : il ne doit pas être",
-        "aide_edge2": "trop long, sinon elle ne le trouve pas.",
-        "aide_edge3": "EdgeTX 2.11 et plus récent : 8 caractères, sur toutes",
-        "aide_edge4": "les radios.",
-        "aide_edge5": "EdgeTX 2.10 et plus ancien : 6 caractères sur les radios",
-        "aide_edge6": "couleur et les petites radios noir et blanc. Les X9D et",
-        "aide_edge7": "X9E acceptent 8 caractères.",
-        "aide_edge8": "En cas de doute, restez à 6 caractères : ils seront lus",
-        "aide_edge9": "sur toutes les radios et toutes les versions.",
+        "aide_exp1":
+            "Le menu « Fichier » se trouve dans la barre de menus du système "
+            "sur Mac, et en haut de la fenêtre sur PC.",
+        "aide_exp3":
+            "« Exporter la liste… » enregistre la liste pour la sauvegarder "
+            "ou la partager.",
+        "aide_exp4":
+            "« Importer une liste… » remplace la liste actuelle par un "
+            "fichier : un nom et une phrase par ligne, séparés par une "
+            "virgule. L'application demande confirmation.",
+        # ----- Sons système -----
+        "aide_sys_titre": "📻  Créer les sons système de la radio",
+        "aide_sys1": "Le menu « Fichier » propose « Créer les sons système… ».",
+        "aide_sys2":
+            "L'application télécharge la liste officielle d'EdgeTX, refait "
+            "les sons SYSTEM avec la voix choisie en haut de la fenêtre, et "
+            "crée un dossier SYSTEM/ dans le dossier que vous indiquez.",
+        "aide_sys3":
+            "Comptez environ 1,2 seconde par son, soit près de 4 minutes pour "
+            "la liste française. Ce temps dépend de l'occupation du service "
+            "de voix et de votre connexion Internet.",
+        "aide_sys4":
+            "Pendant l'opération, « Let's Go » devient « ■ Arrêter » : le "
+            "fichier en cours se termine, et les fichiers déjà créés restent.",
+        "aide_sys5":
+            "Ensuite, copiez le dossier SYSTEM/ dans SOUNDS/<langue>/ de "
+            "votre carte SD, en remplaçant l'ancien. Vos sons personnels et "
+            "ceux des scripts ne sont pas touchés.",
+        # ----- Longueur des noms -----
+        "aide_edge_titre": "📏  Longueur des noms selon votre EdgeTX",
+        "aide_edge1":
+            "La radiocommande lit le nom du fichier : il ne doit pas être "
+            "trop long, sinon elle ne le trouve pas.",
+        "aide_edge3":
+            "EdgeTX 2.11 et plus récent : 8 caractères, sur toutes les radios.",
+        "aide_edge5":
+            "EdgeTX 2.10 et plus ancien : 6 caractères sur les radios couleur "
+            "et les petites radios noir et blanc. Les X9D et X9E acceptent "
+            "8 caractères.",
+        "aide_edge8":
+            "En cas de doute, restez à 6 caractères : ils seront lus sur "
+            "toutes les radios et toutes les versions.",
+        # ----- Format -----
         "aide_fmt_titre": "🎵  Format des fichiers",
         "aide_fmt1": "Les WAV générés sont au format EdgeTX :",
         "aide_fmt2": "16 bits, 32 kHz, mono.",
-        "aide_soutien": "☕  Mon application te sert ou te plaît ?",
-        "aide_lien": "Offre-moi un café  ·  ko-fi.com/ritchy_lab",
+        # ----- Bas de page -----
+        "aide_soutien": "☕  Mon application vous sert ou vous plaît ?",
+        "aide_lien": "Offrez-moi un café  ·  ko-fi.com/ritchy_lab",
+        "aide_maj_titre": "🔄  Mises à jour",
+        "aide_maj":
+            "Les nouvelles versions sont publiées sur la page Releases. "
+            "L'application vérifie automatiquement au démarrage : si une "
+            "version plus récente existe, une petite fenêtre vous propose "
+            "de la télécharger dans votre dossier Téléchargements.",
+        "maj_titre": "Mise à jour disponible",
+        "maj_texte":
+            "La version {version} est disponible.\n"
+            "Vous utilisez la version {actuelle}.",
+        "maj_telecharger": "Télécharger",
+        "maj_plus_tard": "Plus tard",
+        "maj_telechargement": "Téléchargement…",
+        "maj_telecharge_mac":
+            "Téléchargé dans :\n{chemin}\n\n"
+            "Ouvre le dossier, puis remplace l'ancienne application par "
+            "la nouvelle.",
+        "maj_telecharge_win":
+            "Téléchargé dans :\n{chemin}\n\n"
+            "Ferme Vox-Pack, puis lance le nouveau fichier.",
+        "maj_ouvrir_dossier": "Ouvrir le dossier",
+        "maj_page": "Voir la page",
+        "maj_fermer": "Fermer",
+        "maj_echec":
+            "Le téléchargement a échoué. Tu peux ouvrir la page Releases.",
+        "aide_github":
+            "Nouvelles versions  ·  github.com/ritchy-lab/Vox-Pack/releases",
         "aide_credits": "Créé avec un brainstorming avec une IA",
-        "aide_ecran": "Écran {ecran} — fenêtre {fenetre}",
+        "aide_ecran": "Version {version} — écran {ecran} — fenêtre {fenetre}",
     },
 
     "en": {
@@ -578,6 +961,7 @@ TEXTES = {
         "accent_quebec": "Quebec",
         "accent_usa": "USA",
         "accent_uk": "United Kingdom",
+        "accent_irlande": "Ireland",
 
         # ----- Language names -----
         "langue_fr": "French",
@@ -592,6 +976,9 @@ TEXTES = {
             "{n} voice{s} removed by the service — list updated",
         "etat_voix_remises": "Voices unavailable: list reset to default",
         "etat_langue_voix": "Language: {langue} — {n} voices available",
+        "etat_sons_arret": "Stop requested — finishing the current file…",
+        "etat_csv_telechargement":
+            "Downloading the official EdgeTX list…",
 
         # ----- Rejected file names -----
         "pb_vide": "empty name",
@@ -609,6 +996,9 @@ TEXTES = {
         "err_refus": "service refused (voice unavailable, or update needed)",
         "err_voix_absente": "voice removed by the service: pick another one",
         "err_lent": "the service did not answer in time (slow connection?)",
+        "err_illisible":
+            "The voice service returned an unreadable response. "
+            "Try again in a moment.",
         "err_reseau": "no Internet connection",
 
         # ----- Menu -----
@@ -616,6 +1006,7 @@ TEXTES = {
         "menu_exporter": "Export list…",
         "menu_importer": "Import a list…",
         "menu_defaut": "Load the default list",
+        "menu_sons_systeme": "Create the system sounds…",
         "menu_quitter": "Quit",
         "menu_langue": "Language",
 
@@ -623,6 +1014,7 @@ TEXTES = {
         "titre_export": "Export the list",
         "titre_import": "Import a list",
         "titre_dossier": "Folder for the generated WAV files",
+        "titre_dossier_systeme": "Folder where the SYSTEM folder will be created",
         "nom_export": "my-vox-pack-list.csv",
         "type_csv": "CSV file",
         "type_txt": "Text file",
@@ -644,11 +1036,19 @@ TEXTES = {
         "adjectif_fr": "French",
         "adjectif_en": "English",
         "msg_import_ok": "{n} line{s} imported.",
+        "msg_csv_aucun_systeme":
+            "The official EdgeTX list contains no system sound.\n\n"
+            "Try again later: the file may have changed.",
+        "msg_csv_officiel_echec":
+            "The official EdgeTX list could not be downloaded.\n\n"
+            "Check the Internet connection, then try again.\n\n{err}",
 
         # ----- Common buttons and messages -----
         "annuler": "Cancel",
         "compris": "Got it",
         "fermer": "Close",
+        "choisir": "Choose",
+        "voix_normale": "Normal voice",
         "ouvrir_dossier": "Open the folder",
         "btn_supprimer": "Delete",
 
@@ -666,6 +1066,9 @@ TEXTES = {
         "msg_generer_aucune":
             "No valid line to generate.\n\n"
             "Each line needs a correct file name AND a phrase.",
+        "msg_genere_deja":
+            "A generation is already running.\n\n"
+            "Wait for it to finish.",
         "msg_sauvegarde_echec":
             "The list could not be saved.\n\n"
             "{err}\n\nCheck the free space on your disk.",
@@ -674,6 +1077,18 @@ TEXTES = {
             "{problemes} problem{s2}:\n{detail}",
         "msg_autres": "• … and {n} more",
         "msg_succes": "Your voices are ready.\n\n{dossier}",
+        "msg_sons_succes": "{n} system file{s} created in:\n\n{dossier}",
+        "msg_sons_copier":
+            "Copy this SYSTEM folder into SOUNDS/{langue}/ on your card, "
+            "replacing the old one.",
+        "msg_sons_bilan":
+            "{reussis} system file{s1} created out of {total}.\n\n"
+            "{problemes} problem{s2}:\n{detail}",
+        "msg_sons_problemes": "{problemes} problem{s2}:\n{detail}",
+        "msg_sons_arrete":
+            "Generation stopped.\n\n{n} file{s} created in:\n\n{dossier}",
+        "msg_sons_cache":
+            "Official list not downloaded: the saved copy was used.",
         "msg_dossier_echec":
             "The destination folder could not be created.\n\n{err}",
 
@@ -687,77 +1102,161 @@ TEXTES = {
         # ----- Help window -----
         "titre_aide": "Help — Vox-Pack",
         "aide_titre": "How to use the application",
-        "aide_1": "1. Choose a voice from the drop-down menu.",
-        "aide_1a": "The voices offered are those of the application's",
-        "aide_1b": "language: French ({nfr} voices) or English ({nen} voices).",
-        "voix_multilingue": "Multilingual",
-        "aide_1c": "To change language: the \"File\" menu, then \"Language\".",
-        "aide_1d": "Texts, voices and list change together, and your voice is",
-        "aide_1e": "remembered the next time you start the application.",
+        # ----- 1. Voice -----
+        "aide_1": "1. Choose a voice",
+        "aide_1a":
+            "The voices offered are those of the application's language: "
+            "{nfr} in French and {nen} in English. The menu shows the gender "
+            "and the accent — “Denise (Female - France)”, “Ryan (Male - "
+            "United Kingdom)” — and the current voice is ticked.",
+        "aide_officielle":
+            "The ★ marks EdgeTX's official voice for that language: same "
+            "voice and same speed as on the radio.",
+        "aide_robot_titre": "🤖  Robot voices",
+        "aide_robot1":
+            "On the right of the window, four dots: Robot 1 to Robot 4. "
+            "None ticked: the normal voice.",
+        "aide_robot2":
+            "Click a dot, then “Listen”: the effect applies to the chosen "
+            "voice. Click the lit dot again to return to normal.",
+        "aide_robot3":
+            "The effect also applies to the list files and the system "
+            "sounds.",
+        "aide_1b":
+            "To change language: the “File” menu, then “Language”. Texts, "
+            "voices and the list change together, and your voice is "
+            "remembered the next time you start.",
+        # ----- 2. List -----
         "aide_2": "2. Manage the list",
-        "aide_2a": "Add a line: \"Add\" button",
-        "aide_2b": "Delete a line: tick the line, then the \"Delete\" button",
-        "aide_2c": "Edit: type directly in the boxes",
-        "aide_2d": "Tick several lines at once: click the first box, then",
-        "aide_2e": "Shift + click the last one.",
-        "aide_nom1": "⚠️  The file name must not be longer than 8 characters",
-        "aide_nom2": "     and must not contain accents or spaces.",
+        "aide_2a": "“Add” creates a line; “Delete” removes the ticked lines.",
+        "aide_2b": "Edit a line by typing directly in its boxes.",
+        "aide_2c":
+            "To tick several lines at once: click the first box, then Shift + "
+            "click the last one.",
+        "aide_nom1":
+            "The file name must not be longer than 8 characters and must not "
+            "contain accents or spaces.",
+        # ----- 3. Tick -----
         "aide_3": "3. Tick the lines to generate",
-        "aide_3a": "\"All\" button to tick everything",
-        "aide_3b": "\"None\" button to untick everything",
-        "aide_3c": "A single line: tick just that one",
+        "aide_3a": "“All” ticks every line; “None” unticks them.",
+        "aide_3b": "For a single line, tick just that one.",
+        # ----- 4. Listen -----
         "aide_4": "4. Listen to a preview",
-        "aide_4a": "Tick one or more lines, then click \"Listen\" : "
-                   "they are played one after another.",
+        "aide_4a":
+            "Tick one or more lines, then click “Listen”: they are played "
+            "one after another.",
+        # ----- 5. Generate -----
         "aide_5": "5. Generate the files",
-        "aide_5a": "Click \"Let's Go\", then choose a folder.",
-        "aide_5b": "Under the LED bar, a line tells you at every moment",
-        "aide_5c": "what the application is doing (fetching the voice, then",
-        "aide_5d": "building the WAV file).",
+        "aide_5a": "Click “Let's Go”, then choose a folder.",
+        "aide_5b":
+            "Under the LED bar, a line tells you at every moment what the "
+            "application is doing: fetching the voice, then building the WAV "
+            "file.",
+        # ----- Internet -----
         "aide_net_titre": "🌐  Internet connection required",
-        "aide_net1": "The voices are not inside the application: they come from",
-        "aide_net2": "Microsoft's speech service. An Internet connection is",
-        "aide_net3": "therefore essential to generate the files.",
-        "aide_net4": "⚠️  The text of your phrases is sent to Microsoft in",
-        "aide_net5": "     order to be spoken: keep it free of anything private.",
+        "aide_net1":
+            "The voices are not inside the application: they come from "
+            "Microsoft's speech service. An Internet connection is therefore "
+            "essential to generate the files.",
+        "aide_net4":
+            "The text of your phrases is sent to Microsoft in order to be "
+            "spoken: keep it free of anything private.",
         "aide_net6": "Without Internet, the application will tell you clearly.",
-        "aide_net7": "If a voice no longer exists at Microsoft, it disappears",
-        "aide_net8": "from the menu by itself when the application starts.",
+        "aide_net7":
+            "If a voice no longer exists at Microsoft, it disappears from the "
+            "menu by itself when the application starts.",
+        # ----- Saving -----
         "aide_sauv_titre": "💾  Automatic saving",
         "aide_sauv1": "Your changes are saved in:",
+        # ----- Default list -----
         "aide_def_titre": "♻️  Default list",
-        "aide_def1": "If you delete the WHOLE list, it will be rebuilt",
-        "aide_def2": "automatically the next time you start ({n} lines).",
-        "aide_def5": "Each language has ITS OWN list: French and English are",
-        "aide_def6": "independent. Changing the language in the menu therefore",
-        "aide_def7": "also changes the list — and your work in the other",
-        "aide_def8": "language is kept as it is.",
-        "aide_def3": "If you keep at least 1 line, you start from that base",
-        "aide_def4": "to build your own list.",
+        "aide_def1":
+            "If you delete the WHOLE list, it will be rebuilt automatically "
+            "the next time you start ({n} lines).",
+        "aide_def5":
+            "Each language has ITS OWN list: French and English are "
+            "independent. Changing the language in the menu therefore also "
+            "changes the list, and your work in the other language is kept "
+            "as it is.",
+        "aide_def3":
+            "If you keep at least 1 line, you start from that base to build "
+            "your own list.",
+        # ----- Export / import -----
         "aide_exp_titre": "📂  Exporting / Importing a list",
-        "aide_exp1": "The \"File\" menu (the system menu bar on Mac, at the top",
-        "aide_exp2": "of the window on PC) lets you:",
-        "aide_exp3": "Export the list to save it or share it.",
-        "aide_exp4": "Import an existing list: one name and one phrase per",
-        "aide_exp5": "line, separated by a comma. Importing replaces the",
-        "aide_exp6": "current list (the application asks for confirmation).",
-        "aide_edge_titre": "📻  Name length according to your EdgeTX",
-        "aide_edge1": "The radio reads the file name: it must not be too long,",
-        "aide_edge2": "otherwise it will not find it.",
-        "aide_edge3": "EdgeTX 2.11 and newer: 8 characters, on",
-        "aide_edge4": "every radio.",
-        "aide_edge5": "EdgeTX 2.10 and older: 6 characters on colour radios",
-        "aide_edge6": "and small black-and-white radios. The X9D and X9E",
-        "aide_edge7": "accept 8 characters.",
-        "aide_edge8": "If in doubt, stay at 6 characters: they will be read",
-        "aide_edge9": "on every radio and every version.",
+        "aide_exp1":
+            "The “File” menu is in the system menu bar on Mac, and at the top "
+            "of the window on PC.",
+        "aide_exp3":
+            "“Export list…” saves the list so you can keep it or share it.",
+        "aide_exp4":
+            "“Import a list…” replaces the current list with a file: one "
+            "name and one phrase per line, separated by a comma. The "
+            "application asks for confirmation.",
+        # ----- System sounds -----
+        "aide_sys_titre": "📻  Create the radio's system sounds",
+        "aide_sys1": "The “File” menu offers “Create the system sounds…”.",
+        "aide_sys2":
+            "The application downloads EdgeTX's official list, rebuilds the "
+            "SYSTEM sounds with the voice chosen at the top of the window, "
+            "and creates a SYSTEM/ folder inside the folder you choose.",
+        "aide_sys3":
+            "Allow about 1.2 seconds per sound, i.e. nearly 4 minutes for the "
+            "French list. This time depends on how busy the voice service is "
+            "and on your Internet connection.",
+        "aide_sys4":
+            "While it runs, “Let's Go” becomes “■ Stop”: the current file "
+            "finishes, and the files already created stay.",
+        "aide_sys5":
+            "Then copy the SYSTEM/ folder into SOUNDS/<language>/ on your SD "
+            "card, replacing the old one. Your personal sounds and the script "
+            "sounds are not touched.",
+        # ----- Name length -----
+        "aide_edge_titre": "📏  Name length according to your EdgeTX",
+        "aide_edge1":
+            "The radio reads the file name: it must not be too long, "
+            "otherwise it will not find it.",
+        "aide_edge3": "EdgeTX 2.11 and newer: 8 characters, on every radio.",
+        "aide_edge5":
+            "EdgeTX 2.10 and older: 6 characters on colour radios and small "
+            "black-and-white radios. The X9D and X9E accept 8 characters.",
+        "aide_edge8":
+            "If in doubt, stay at 6 characters: they will be read on every "
+            "radio and every version.",
+        # ----- Format -----
         "aide_fmt_titre": "🎵  File format",
         "aide_fmt1": "The generated WAV files use the EdgeTX format:",
         "aide_fmt2": "16-bit, 32 kHz, mono.",
+        # ----- Footer -----
         "aide_soutien": "☕  Do you find my application useful?",
         "aide_lien": "Buy me a coffee  ·  ko-fi.com/ritchy_lab",
+        "aide_maj_titre": "🔄  Updates",
+        "aide_maj":
+            "New versions are published on the Releases page. The application "
+            "checks automatically at startup: if a newer version exists, a "
+            "small window offers to download it to your Downloads folder.",
+        "maj_titre": "Update available",
+        "maj_texte":
+            "Version {version} is available.\n"
+            "You are using version {actuelle}.",
+        "maj_telecharger": "Download",
+        "maj_plus_tard": "Later",
+        "maj_telechargement": "Downloading…",
+        "maj_telecharge_mac":
+            "Downloaded to:\n{chemin}\n\n"
+            "Open the folder, then replace the old application with the "
+            "new one.",
+        "maj_telecharge_win":
+            "Downloaded to:\n{chemin}\n\n"
+            "Close Vox-Pack, then run the new file.",
+        "maj_ouvrir_dossier": "Open folder",
+        "maj_page": "See the page",
+        "maj_fermer": "Close",
+        "maj_echec":
+            "The download failed. You can open the Releases page.",
+        "aide_github":
+            "New versions  ·  github.com/ritchy-lab/Vox-Pack/releases",
         "aide_credits": "Created with AI brainstorming",
-        "aide_ecran": "Screen {ecran} — window {fenetre}",
+        "aide_ecran": "Version {version} — screen {ecran} — window {fenetre}",
     },
 }
 
@@ -806,8 +1305,6 @@ VOIX = {
         ("fr-FR-DeniseNeural", "Denise", "f", "france"),
         ("fr-FR-HenriNeural", "Henri", "h", "france"),
         ("fr-FR-EloiseNeural", "Eloise", "e", "france"),
-        ("fr-FR-VivienneMultilingualNeural", "Vivienne", "f", "france"),
-        ("fr-FR-RemyMultilingualNeural", "Remy", "h", "france"),
         # Suisse
         ("fr-CH-ArianeNeural", "Ariane", "f", "suisse"),
         ("fr-CH-FabriceNeural", "Fabrice", "h", "suisse"),
@@ -835,6 +1332,8 @@ VOIX = {
         ("en-US-RogerNeural", "Roger", "h", "usa"),
         ("en-US-SteffanNeural", "Steffan", "h", "usa"),
         ("en-US-AnaNeural", "Ana", "e", "usa"),
+        # Irlande — la voix officielle d'EdgeTX pour l'anglais
+        ("en-IE-EmilyNeural", "Emily", "f", "irlande"),
         # Royaume-Uni
         ("en-GB-SoniaNeural", "Sonia", "f", "uk"),
         ("en-GB-RyanNeural", "Ryan", "h", "uk"),
@@ -848,10 +1347,47 @@ VOIX = {
 # remet cette liste plutôt que de laisser un menu vide.
 VOIX_ORIGINE = {code: list(voix) for code, voix in VOIX.items()}
 
+# La voix choisie par l'équipe EdgeTX pour chaque langue : elle est marquée
+# d'une étoile dans le sélecteur, pour que l'on sache laquelle reproduit les
+# sons du constructeur.
+VOIX_OFFICIELLES = {"fr-FR-DeniseNeural", "en-IE-EmilyNeural"}
+
+# Réglages officiels de vitesse : EdgeTX ne fait pas parler toutes ses voix à
+# la même allure. Emily, la voix anglaise officielle, parle 10 % plus vite.
+REGLES_VOIX = {"en-IE-EmilyNeural": {"rate": "+10%"}}
+
+
+def reglage_voix(voice_id):
+    """Réglages edge-tts (vitesse…) pour coller à la voix officielle."""
+    return REGLES_VOIX.get(voice_id, {})
+
 
 # Marque la voix actuellement choisie dans la liste déroulante : sans
 # elle, on ne sait plus d'où l'on part quand on veut changer de voix.
 MARQUE_VOIX = "✓  "
+
+
+async def sauver_voix(texte, voice_id, chemin, pitch=None):
+    """Fabrique le MP3, avec un second essai si le service répond mal.
+
+    Le service de Microsoft renvoie parfois une réponse tronquée ou
+    illisible ; un nouvel essai suffit presque toujours.
+    """
+    derniere = None
+    for tentative in range(2):
+        try:
+            regle = reglage_voix(voice_id)
+            communicate = edge_tts.Communicate(
+                texte, voice_id, volume=VOLUME,
+                rate=regle.get("rate", "+0%"),
+                pitch=pitch or "+0Hz")
+            await communicate.save(chemin)
+            return
+        except Exception as e:
+            derniere = e
+            if tentative == 0:
+                await asyncio.sleep(0.8)
+    raise derniere
 
 
 def libelle_voix(entree, langue_ui=None):
@@ -870,8 +1406,11 @@ def libelle_voix(entree, langue_ui=None):
         origine = table.get("voix_multilingue", "Multilingue")
     else:
         origine = table.get('accent_' + accent, accent)
-    return (f"{prenom} ({table.get('genre_' + genre, genre)} - "
-            f"{origine})")
+    libelle = (f"{prenom} ({table.get('genre_' + genre, genre)} - "
+               f"{origine})")
+    if _identifiant in VOIX_OFFICIELLES:
+        libelle += "  ★"
+    return libelle
 
 
 def voix_de_la_langue(code):
@@ -1037,6 +1576,54 @@ TEXT_DIM = "#5A6A78"       # signature au repos
 
 # Lien de soutien (fenêtre ouverte en cliquant sur la signature)
 KO_FI_URL = "https://ko-fi.com/ritchy_lab"
+URL_RELEASES = "https://github.com/ritchy-lab/Vox-Pack/releases"
+
+
+def derniere_version_publiee():
+    """Dernière version publiée sur GitHub, ou None si indisponible."""
+    try:
+        requete = urllib.request.Request(
+            "https://api.github.com/repos/ritchy-lab/Vox-Pack/releases/latest",
+            headers={"User-Agent": f"Vox-Pack/{VERSION}",
+                     "Accept": "application/vnd.github+json"})
+        contexte = ssl.create_default_context(cafile=certifi.where())
+        with urllib.request.urlopen(requete, timeout=6,
+                                    context=contexte) as reponse:
+            donnees = json.load(reponse)
+        etiquette = str(donnees.get("tag_name", "")).strip()
+        if not etiquette:
+            return None
+        assets = []
+        for element in donnees.get("assets", []) or []:
+            nom = str(element.get("name", ""))
+            url = str(element.get("browser_download_url", ""))
+            if nom and url:
+                assets.append({"name": nom, "url": url})
+        return {"tag": etiquette, "assets": assets}
+    except Exception:
+        # Hors ligne, API limitée, dépôt injoignable : on ne dérange pas.
+        return None
+
+
+def version_plus_recente(etiquette, actuelle=VERSION):
+    """Vrai si l'étiquette (V1.4) est plus récente que la version actuelle."""
+    def morceaux(v):
+        return tuple(int(n) for n in re.findall(r"\d+", v))
+    return morceaux(etiquette) > morceaux(actuelle)
+
+
+def choisir_asset(assets):
+    """Choisit le fichier à télécharger pour ce système."""
+    if sys.platform == "darwin":
+        extension = ".zip"
+    elif sys.platform.startswith("win"):
+        extension = ".exe"
+    else:
+        return None
+    for asset in assets or []:
+        if str(asset.get("name", "")).lower().endswith(extension):
+            return asset
+    return None
 
 # Largeur unique de tous les boutons (homogènes)
 BTN_W = 170
@@ -1226,6 +1813,8 @@ def raison_lisible(erreur):
         return t("err_voix_absente")
     if "timeout" in bas or "timed out" in bas:
         return t("err_lent")
+    if any(mot in bas for mot in ("decompress", "incorrect header", "zlib")):
+        return t("err_illisible")
     if any(mot in bas for mot in ("connection", "network", "getaddrinfo",
                                   "unreachable", "ssl", "certificate")):
         return t("err_reseau")
@@ -1471,9 +2060,24 @@ class VoxPackApp(ctk.CTk):
 
         self.output_dir = None
         self.lignes = []
+        # Vrai tant qu'une génération tourne (liste ou sons système) : le menu
+        # permet de lancer les sons système même quand « Let's Go » est
+        # désactivé, deux générations ne doivent pas se mélanger.
+        self._genere = False
+        # Drapeau d'arrêt de la génération des sons système : None quand rien
+        # ne tourne (voir creer_sons_systeme).
+        self._sons_stop = None
         self._logo_image = None
         self._soutien = None
         self._reglages = lire_reglages()
+        # Effet robot mémorisé : 0 = aucun, 1 à 4 = Robot 1 à Robot 4.
+        try:
+            self._robot = int(self._reglages.get("robot", 0) or 0)
+        except (TypeError, ValueError):
+            self._robot = 0
+        if self._robot not in ROBOTS:
+            self._robot = 0
+        self._maj_version = None
         self._erreur_sauvegarde = False
         # Fichiers dont la copie de secours (.bak) a déjà été faite pendant
         # cette session (voir _ecrire_csv).
@@ -1567,6 +2171,39 @@ class VoxPackApp(ctk.CTk):
                 font=(FONT_MAIN, 32),
                 text_color=CYAN,
             ).pack(anchor="center", pady=(0, 4))
+
+        # ----- Les quatre pastilles robot, à droite du logo -----
+        # Aucune allumée = voix normale. Un clic choisit un preset ; un
+        # second clic sur la même pastille revient à la normale.
+        self.cadre_robot = ctk.CTkFrame(self.header, fg_color="transparent")
+        # La rangée est remontée sous le « ? ». Sur un petit écran, le logo
+        # est plus court : on la décale vers la gauche pour ne pas passer
+        # sous le « ? » et on la remonte moins.
+        petit = self.largeur_logo <= LARGEUR_LOGO_PETIT
+        x_robot = -62 if petit else -15
+        y_robot = 42 if petit else 130
+        self.cadre_robot.place(relx=1.0, rely=0.0, anchor="ne",
+                               x=x_robot, y=y_robot)
+        self.lbl_robot = ctk.CTkLabel(
+            self.cadre_robot, text="", font=(FONT_MAIN, 12),
+            text_color=TEXT_GREY,
+        )
+        self.lbl_robot.pack(anchor="center")
+        rangee_robot = ctk.CTkFrame(self.cadre_robot, fg_color="transparent")
+        rangee_robot.pack(anchor="center", pady=(4, 0))
+        self._boutons_robot = {}
+        for numero in ROBOTS:
+            bouton = ctk.CTkButton(
+                rangee_robot, text="", width=22, height=22, corner_radius=11,
+                fg_color="transparent", border_color=CYAN_DARK, border_width=1,
+                hover=False, command=lambda n=numero: self._choisir_robot(n),
+            )
+            bouton.configure(cursor=CURSEUR_MAIN)
+            bouton.pack(side="left", padx=4)
+            bouton.bind("<Enter>", lambda e, n=numero: self._survol_robot(n))
+            bouton.bind("<Leave>", lambda e: self._survol_robot(None))
+            self._boutons_robot[numero] = bouton
+        self._maj_robot()
 
         # ----- Ligne unique : Voix + 3 boutons (centrée) -----
         row_all = ctk.CTkFrame(self, fg_color="transparent")
@@ -1744,6 +2381,9 @@ class VoxPackApp(ctk.CTk):
         # On vérifie en arrière-plan que les voix proposées existent toujours
         # chez Microsoft (décalé : la fenêtre s'affiche d'abord).
         self.after(600, self._verifier_voix)
+        # Vérification des mises à jour, décalée : elle ne doit ni bloquer ni
+        # retarder l'affichage. Silencieuse si le réseau manque.
+        self.after(2500, self._verifier_maj)
 
         self._poser_icone()
         self._construire_menu()
@@ -1824,6 +2464,8 @@ class VoxPackApp(ctk.CTk):
                             command=self.importer_liste)
         fichier.add_command(label=t("menu_defaut"),
                             command=self.charger_liste_defaut)
+        fichier.add_command(label=t("menu_sons_systeme"),
+                            command=self.creer_sons_systeme)
         fichier.add_separator()
         fichier.add_command(label=t("menu_quitter"), command=self.destroy)
         barre.add_cascade(label=t("menu_fichier"), menu=fichier)
@@ -1887,7 +2529,11 @@ class VoxPackApp(ctk.CTk):
             self.btn_apercu.configure(text=t("arreter"))
         self.btn_tout.configure(text=t("tout"))
         self.btn_rien.configure(text=t("rien"))
-        self.btn_letsgo.configure(text=t("lets_go"))
+        # Pendant la création des sons système, ce bouton sert d'« Arrêter » :
+        # un changement de langue ne doit pas le rebaptiser « Let's Go ».
+        self.btn_letsgo.configure(
+            text=t("arreter") if self._sons_stop is not None else t("lets_go"))
+        self._maj_robot()
         self.lbl_col_nom.configure(text=t("colonne_nom", max=LIMITE_NOM))
         self.lbl_col_phrase.configure(text=t("colonne_phrase"))
         # Les libellés des voix changent aussi (« Femme » devient « Female »),
@@ -2024,6 +2670,200 @@ class VoxPackApp(ctk.CTk):
         )
         self._survol(bouton)
         return bouton
+
+    def _verifier_maj(self):
+        """Cherche la dernière version publiée sans bloquer la fenêtre."""
+        resultat = queue.Queue()
+
+        def travail():
+            try:
+                resultat.put(derniere_version_publiee())
+            except Exception:
+                resultat.put(None)
+
+        threading.Thread(target=travail, daemon=True).start()
+        self._attendre_maj(resultat)
+
+    def _attendre_maj(self, resultat):
+        """Vient chercher le résultat dès qu'il est prêt (sans bloquer)."""
+        try:
+            infos = resultat.get_nowait()
+        except queue.Empty:
+            self.after(150, lambda: self._attendre_maj(resultat))
+            return
+        if infos and version_plus_recente(infos["tag"], VERSION):
+            self._afficher_maj(infos)
+
+    def _afficher_maj(self, infos):
+        """Petite fenêtre au démarrage : une version plus récente existe."""
+        version = str(infos.get("tag", "")).lstrip("vV")
+        self._maj_version = version
+        self._maj_infos = infos
+        if getattr(self, "_popup_maj", None) is not None \
+                and self._popup_maj.winfo_exists():
+            self._popup_maj.lift()
+            return
+
+        popup = ctk.CTkToplevel(self)
+        self._popup_maj = popup
+        popup.title(t("maj_titre"))
+        popup.configure(fg_color=BG_MAIN)
+        popup.resizable(False, False)
+        popup.transient(self)
+        popup.protocol("WM_DELETE_WINDOW", popup.destroy)
+
+        largeur, hauteur = 480, 310
+        self.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() - largeur) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - hauteur) // 3
+        x = max(20, min(x, self.winfo_screenwidth() - largeur - 20))
+        y = max(20, min(y, self.winfo_screenheight() - hauteur - 60))
+        popup.geometry(f"{largeur}x{hauteur}+{x}+{y}")
+
+        cadre = ctk.CTkFrame(popup, fg_color="transparent")
+        cadre.pack(fill="both", expand=True, padx=24, pady=20)
+        ctk.CTkLabel(
+            cadre, text=t("maj_titre"), font=(FONT_MAIN, 20),
+            text_color=CYAN, anchor="w",
+        ).pack(fill="x")
+        ctk.CTkLabel(
+            cadre, text=t("maj_texte", version=version, actuelle=VERSION),
+            font=(FONT_MAIN, 14), text_color=TEXT_WHITE,
+            justify="left", anchor="w", wraplength=420,
+        ).pack(fill="x", pady=(10, 0))
+        statut = ctk.CTkLabel(
+            cadre, text="", font=(FONT_MAIN, 12), text_color=TEXT_GREY,
+            justify="left", anchor="w", wraplength=420,
+        )
+        statut.pack(fill="x", pady=(8, 0))
+
+        boutons = ctk.CTkFrame(cadre, fg_color="transparent")
+        boutons.pack(side="bottom", fill="x", pady=(14, 0))
+        btn_telecharger = ctk.CTkButton(
+            boutons, text=t("maj_telecharger"), font=(FONT_MAIN, 14),
+            height=34, corner_radius=17, fg_color=CYAN,
+            hover_color=CYAN_CLAIR, text_color=BG_MAIN,
+        )
+        btn_telecharger.pack(side="right")
+        btn_plus_tard = ctk.CTkButton(
+            boutons, text=t("maj_plus_tard"), font=(FONT_MAIN, 14),
+            height=34, corner_radius=17, fg_color="transparent",
+            border_color=CYAN, border_width=1, text_color=CYAN,
+            hover_color=CYAN_HOVER, command=popup.destroy,
+        )
+        btn_plus_tard.pack(side="right", padx=(0, 10))
+
+        def telecharger():
+            asset = choisir_asset(infos.get("assets", []))
+            if asset is None:
+                self._ouvrir_lien(URL_RELEASES)
+                popup.destroy()
+                return
+            btn_telecharger.configure(
+                state="disabled", text=t("maj_telechargement"))
+            btn_plus_tard.configure(state="disabled")
+            statut.configure(text=t("maj_telechargement"))
+            self._telecharger_asset(popup, asset, version, statut,
+                                    btn_telecharger, btn_plus_tard)
+
+        btn_telecharger.configure(command=telecharger)
+        popup.after(100, popup.grab_set)
+        popup.after(150, popup.focus_force)
+        popup.after(200, popup.lift)
+
+    def _telecharger_asset(self, popup, asset, version, statut,
+                           btn_telecharger, btn_plus_tard):
+        """Télécharge le fichier de la version, puis ouvre son dossier."""
+        resultat = queue.Queue()
+
+        def travail():
+            try:
+                dossier = os.path.join(os.path.expanduser("~"), "Downloads")
+                os.makedirs(dossier, exist_ok=True)
+                extension = os.path.splitext(asset["name"])[1] or ""
+                chemin = os.path.join(
+                    dossier, f"Vox-Pack-{version}{extension}")
+                contexte = ssl.create_default_context(cafile=certifi.where())
+                with urllib.request.urlopen(
+                        asset["url"], timeout=60,
+                        context=contexte) as reponse, \
+                        open(chemin, "wb") as sortie:
+                    shutil.copyfileobj(reponse, sortie)
+                if sys.platform == "darwin" and extension.lower() == ".zip":
+                    extrait = os.path.join(dossier, f"Vox-Pack-{version}")
+                    os.makedirs(extrait, exist_ok=True)
+                    subprocess.run(["ditto", "-x", "-k", chemin, extrait],
+                                   check=True, capture_output=True)
+                    chemin = extrait
+                resultat.put(("ok", chemin))
+            except Exception:
+                resultat.put(("erreur", None))
+
+        threading.Thread(target=travail, daemon=True).start()
+
+        def suivi():
+            try:
+                if not popup.winfo_exists():
+                    return
+            except Exception:
+                return
+            try:
+                etat, chemin = resultat.get_nowait()
+            except queue.Empty:
+                popup.after(150, suivi)
+                return
+            if etat == "ok":
+                self._maj_prete(popup, chemin, statut, btn_telecharger,
+                                btn_plus_tard)
+            else:
+                self._maj_echouee(popup, statut, btn_telecharger,
+                                  btn_plus_tard)
+
+        popup.after(150, suivi)
+
+    def _maj_prete(self, popup, chemin, statut, btn_telecharger,
+                   btn_plus_tard):
+        try:
+            if not popup.winfo_exists():
+                return
+        except Exception:
+            return
+        cle = ("maj_telecharge_mac" if sys.platform == "darwin"
+               else "maj_telecharge_win")
+        statut.configure(text=t(cle, chemin=chemin), text_color=TEXT_WHITE)
+        btn_telecharger.configure(
+            state="normal", text=t("maj_ouvrir_dossier"),
+            command=lambda: self._reveler(chemin))
+        btn_plus_tard.configure(
+            state="normal", text=t("maj_fermer"),
+            command=popup.destroy)
+
+    def _maj_echouee(self, popup, statut, btn_telecharger, btn_plus_tard):
+        try:
+            if not popup.winfo_exists():
+                return
+        except Exception:
+            return
+        statut.configure(text=t("maj_echec"), text_color=DANGER)
+        btn_telecharger.configure(
+            state="normal", text=t("maj_page"),
+            command=lambda: (self._ouvrir_lien(URL_RELEASES),
+                             popup.destroy()))
+        btn_plus_tard.configure(
+            state="normal", text=t("maj_fermer"),
+            command=popup.destroy)
+
+    def _reveler(self, chemin):
+        """Ouvre le dossier du fichier téléchargé."""
+        try:
+            if sys.platform == "darwin":
+                subprocess.Popen(["open", chemin])
+            elif sys.platform.startswith("win"):
+                subprocess.Popen(["explorer", "/select,", chemin])
+            else:
+                webbrowser.open(f"file://{chemin}")
+        except Exception:
+            pass
 
     def _survol(self, bouton):
         """Au survol : seul le texte et le cadre s'éclairent, pas le fond."""
@@ -2194,9 +3034,127 @@ class VoxPackApp(ctk.CTk):
         except Exception:
             pass
 
+    def _choisir_dossier(self, titre, initialdir=None):
+        """Demande un dossier d'arrivée.
+
+        Sur macOS, Tk affiche un sélecteur de dossier dont le bouton est écrit
+        « Choose » en dur, même quand le reste est traduit. On affiche donc le
+        MÊME panneau que « Importer une liste » (NSOpenPanel), en feuille
+        attachée à la fenêtre : bouton « Choisir », « Annuler », « Nouveau
+        dossier » et barre latérale, tout dans la langue du Mac.
+
+        Ailleurs (Windows), le sélecteur de Tk est déjà traduit par le système :
+        on le garde.
+        """
+        if sys.platform != "darwin":
+            return filedialog.askdirectory(parent=self, title=titre,
+                                           initialdir=initialdir)
+
+        try:
+            from AppKit import NSOpenPanel, NSApp, NSURL
+        except Exception:
+            # PyObjC absent (vieux paquet, exécution depuis les sources) :
+            # on retombe sur le sélecteur de Tk, quitte à afficher « Choose ».
+            return filedialog.askdirectory(parent=self, title=titre,
+                                           initialdir=initialdir)
+
+        panneau = NSOpenPanel.openPanel()
+        panneau.setCanChooseFiles_(False)
+        panneau.setCanChooseDirectories_(True)
+        panneau.setCanCreateDirectories_(True)
+        panneau.setAllowsMultipleSelection_(False)
+        panneau.setPrompt_(t("choisir"))
+        panneau.setMessage_(titre)
+        if initialdir and os.path.isdir(os.path.expanduser(initialdir)):
+            panneau.setDirectoryURL_(NSURL.fileURLWithPath_(
+                os.path.abspath(os.path.expanduser(initialdir))))
+
+        # La fenêtre Tk est une NSWindow : la feuille s'y accroche comme pour
+        # l'import d'une liste.
+        self.lift()
+        self.update_idletasks()
+        fenetre = NSApp.keyWindow() or NSApp.mainWindow()
+        if fenetre is None:
+            # Cas rare (application non active) : panneau seul, plutôt que rien.
+            return self._chemin_panneau(panneau, panneau.runModal())
+
+        etat = {"fini": False, "chemin": ""}
+
+        def termine(reponse):
+            etat["chemin"] = self._chemin_panneau(panneau, reponse)
+            etat["fini"] = True
+
+        panneau.beginSheetModalForWindow_completionHandler_(fenetre, termine)
+        # On fait tourner la boucle Tk pendant que la feuille est ouverte :
+        # l'application reste vivante, et la feuille se ferme normalement.
+        while not etat["fini"]:
+            try:
+                self.update()
+            except Exception:
+                return ""       # fenêtre en cours de fermeture
+            time.sleep(0.02)
+        return etat["chemin"]
+
+    @staticmethod
+    def _chemin_panneau(panneau, reponse):
+        """Chemin choisi dans un NSOpenPanel (1 = OK, 0 = annulé)."""
+        if reponse == 1:
+            url = panneau.URL()
+            if url is not None and url.path():
+                return os.path.normpath(url.path())
+        return ""
+
     # ------------------------------------------------------------------
     # Fenêtre d'aide
     # ------------------------------------------------------------------
+    def _robot_pitch(self):
+        """Hauteur à demander au service pour le preset choisi."""
+        reglage = ROBOTS.get(self._robot)
+        return reglage["pitch"] if reglage else None
+
+    def _appliquer_robot(self, chemin):
+        """Applique l'effet robot au WAV, si une pastille est allumée."""
+        if self._robot in ROBOTS:
+            appliquer_effet_robot(chemin, self._robot)
+
+    def _maj_libelle_robot(self):
+        if self._robot:
+            self.lbl_robot.configure(text=f"Robot {self._robot}",
+                                     text_color=CYAN)
+        else:
+            self.lbl_robot.configure(text=t("voix_normale"),
+                                     text_color=CYAN)
+
+    def _maj_robot(self):
+        for numero, bouton in self._boutons_robot.items():
+            actif = numero == self._robot
+            bouton.configure(
+                fg_color=CYAN if actif else "transparent",
+                border_color=CYAN if actif else CYAN_DARK,
+            )
+        self._maj_libelle_robot()
+
+    def _survol_robot(self, numero):
+        """Affiche le nom de la pastille survolée au-dessus de la rangée."""
+        if numero is None:
+            self._maj_libelle_robot()
+            for n, bouton in self._boutons_robot.items():
+                if n != self._robot:
+                    bouton.configure(border_color=CYAN_DARK)
+        else:
+            self.lbl_robot.configure(text=f"Robot {numero}", text_color=CYAN)
+            for n, bouton in self._boutons_robot.items():
+                if n != self._robot:
+                    bouton.configure(
+                        border_color=CYAN if n == numero else CYAN_DARK)
+
+    def _choisir_robot(self, numero):
+        """Allume un preset, ou l'éteint si c'est déjà le sien."""
+        self._robot = 0 if self._robot == numero else numero
+        self._reglages["robot"] = self._robot
+        ecrire_reglages(self._reglages)
+        self._maj_robot()
+
     def _ouvrir_aide(self):
         popup = ctk.CTkToplevel(self)
         popup.title(t("titre_aide"))
@@ -2208,8 +3166,6 @@ class VoxPackApp(ctk.CTk):
         self.update_idletasks()
         # La fenêtre d'aide ne doit jamais dépasser l'écran : sinon le bouton
         # « Fermer » passe sous la barre des tâches et devient inatteignable.
-        # Le texte de l'aide garde sa taille (c'est une fenêtre de lecture) :
-        # seule la fenêtre s'adapte, le contenu défile.
         # 160 px réservés : la barre des tâches et le Dock, pour que la fenêtre
         # ne vienne pas s'y coller.
         w_popup = min(620, self.winfo_screenwidth() - 80)
@@ -2218,119 +3174,155 @@ class VoxPackApp(ctk.CTk):
         y = self.winfo_y() + (self.winfo_height() - h_popup) // 2
         popup.geometry(f"{w_popup}x{h_popup}+{max(x, 0)}+{max(y, 0)}")
 
-        frame = ctk.CTkScrollableFrame(
-            popup,
-            fg_color=BG_CARD,
-            corner_radius=10,
+        cadre = ctk.CTkFrame(popup, fg_color=BG_CARD, corner_radius=10)
+        cadre.pack(fill="both", expand=True, padx=15, pady=(15, 8))
+
+        # Une vraie zone de texte, et non des blocs empilés : c'est ce qui
+        # permet un interligne franc (spacing2) et un espacement régulier
+        # entre paragraphes (spacing3), tout en laissant le texte se couper
+        # tout seul à la bonne largeur.
+        zone = ctk.CTkTextbox(
+            cadre, fg_color=BG_CARD, text_color=TEXT_WHITE,
+            border_width=0, corner_radius=0, wrap="word",
+            font=(FONT_MAIN, 14),
             scrollbar_button_color=CYAN_DARK,
             scrollbar_button_hover_color=CYAN,
         )
-        frame.pack(fill="both", expand=True, padx=15, pady=(15, 8))
+        zone.pack(fill="both", expand=True, padx=6, pady=6)
+        texte = zone._textbox
+        texte.configure(padx=12, pady=8, cursor="arrow",
+                        selectbackground=CYAN_HOVER,
+                        selectforeground=BG_MAIN)
 
-        # Le logo en haut de l'aide
+        # Les styles. Les puces et les avertissements ont un retrait
+        # (lmargin2) : quand ils passent à la ligne, la suite reste sous le
+        # texte, pas sous la puce.
+        styles = {
+            "title": dict(font=(FONT_MAIN, 19), foreground=CYAN,
+                          spacing1=6, spacing3=16),
+            "head": dict(font=(FONT_MAIN, 17), foreground=CYAN,
+                         spacing1=22, spacing3=8),
+            "body": dict(font=(FONT_MAIN, 14), foreground=TEXT_WHITE,
+                         spacing1=0, spacing2=8, spacing3=12),
+            "bullet": dict(font=(FONT_MAIN, 14), foreground=TEXT_WHITE,
+                           spacing1=0, spacing2=8, spacing3=10,
+                           lmargin1=0, lmargin2=18),
+            "warning": dict(font=(FONT_MAIN, 14), foreground="#FF6B6B",
+                            spacing1=2, spacing2=8, spacing3=12,
+                            lmargin1=0, lmargin2=26),
+            "code": dict(font=("Menlo", 13), foreground=LINK_COLOR,
+                         spacing1=2, spacing2=4, spacing3=14,
+                         lmargin1=22, lmargin2=22),
+            "sep": dict(font=(FONT_MAIN, 12), foreground=TEXT_DIM,
+                        justify="center", spacing1=14, spacing3=14),
+            "grand": dict(font=(FONT_MAIN, 18), foreground=CYAN,
+                          justify="center", spacing1=4, spacing3=4),
+            "lien": dict(font=(FONT_MAIN, 16), foreground=LINK_COLOR,
+                         justify="center", spacing3=10),
+            "petit": dict(font=(FONT_MAIN, 11), foreground=TEXT_DIM,
+                          justify="center", spacing3=6),
+            "italic": dict(font=(FONT_MAIN, 13, "italic"),
+                           foreground=TEXT_GREY, justify="center",
+                           spacing3=6),
+            "logo": dict(justify="center", spacing3=12),
+        }
+        for nom, options in styles.items():
+            texte.tag_configure(nom, **options)
+
+        # Le logo en tête : il fait partie du texte, donc il défile avec le
+        # reste (comme avant) au lieu de rester collé en haut.
         self._logo_aide = None
         if os.path.exists(LOGO_PATH):
             try:
                 img = Image.open(LOGO_PATH)
                 ratio = img.height / img.width
-                largeur_logo = self.largeur_logo
-                self._logo_aide = ctk.CTkImage(
-                    light_image=img, dark_image=img,
-                    size=(largeur_logo, int(largeur_logo * ratio)),
-                )
+                largeur = self.largeur_logo
+                img = img.resize((largeur, int(largeur * ratio)),
+                                 Image.Resampling.LANCZOS)
+                self._logo_aide = ImageTk.PhotoImage(img)
             except Exception:
                 self._logo_aide = None
 
-        # Le texte de l'aide, dans la langue de l'interface. Les genres
-        # (title, bullet, warning, code…) sont dessinés plus bas.
+        # Le texte de l'aide, dans la langue de l'interface.
         contenu = [
             ("logo", ""),
             ("title", t("aide_titre")),
             ("space", ""),
-            ("text", t("aide_1")),
-            ("bullet", t("aide_1a")),
-            ("bullet", t("aide_1b", nfr=len(VOIX["fr"]), nen=len(VOIX["en"]))),
-            ("bullet", t("aide_1c")),
-            ("bullet", t("aide_1d")),
-            ("bullet", t("aide_1e")),
+            ("title2", t("aide_1")),
+            ("text", t("aide_1a", nfr=len(VOIX["fr"]), nen=len(VOIX["en"]))),
+            ("bullet", t("aide_officielle")),
+            ("text", t("aide_1b")),
             ("space", ""),
-            ("text", t("aide_2")),
+            ("title2", t("aide_robot_titre")),
+            ("text", t("aide_robot1")),
+            ("text", t("aide_robot2")),
+            ("text", t("aide_robot3")),
+            ("space", ""),
+            ("title2", t("aide_2")),
             ("bullet", t("aide_2a")),
             ("bullet", t("aide_2b")),
             ("bullet", t("aide_2c")),
-            ("bullet", t("aide_2d")),
-            ("bullet", t("aide_2e")),
             ("space", ""),
             ("warning", t("aide_nom1")),
-            ("warning", t("aide_nom2")),
             ("space", ""),
-            ("text", t("aide_3")),
+            ("title2", t("aide_3")),
             ("bullet", t("aide_3a")),
             ("bullet", t("aide_3b")),
-            ("bullet", t("aide_3c")),
             ("space", ""),
-            ("text", t("aide_4")),
-            ("bullet", t("aide_4a")),
+            ("title2", t("aide_4")),
+            ("text", t("aide_4a")),
             ("space", ""),
-            ("text", t("aide_5")),
-            ("bullet", t("aide_5a")),
-            ("bullet", t("aide_5b")),
-            ("bullet", t("aide_5c")),
-            ("bullet", t("aide_5d")),
+            ("title2", t("aide_5")),
+            ("text", t("aide_5a")),
+            ("text", t("aide_5b")),
             ("space", ""),
             ("title2", t("aide_net_titre")),
             ("text", t("aide_net1")),
-            ("text", t("aide_net2")),
-            ("text", t("aide_net3")),
             ("space", ""),
             ("warning", t("aide_net4")),
-            ("warning", t("aide_net5")),
             ("space", ""),
             ("bullet", t("aide_net6")),
             ("bullet", t("aide_net7")),
-            ("bullet", t("aide_net8")),
             ("space", ""),
             ("title2", t("aide_sauv_titre")),
             ("text", t("aide_sauv1")),
             ("code", f"~/Documents/Vox-Pack/liste_{self.langue}.csv"),
             ("space", ""),
             ("title2", t("aide_def_titre")),
-            ("bullet", t("aide_def1")),
-            ("bullet", t("aide_def2",
-                         n=len(LISTE_PAR_DEFAUT.get(self.langue,
-                                                    LISTE_PAR_DEFAUT["fr"])))),
-            ("bullet", t("aide_def3")),
-            ("bullet", t("aide_def4")),
-            ("space", ""),
+            ("text", t("aide_def1",
+                       n=len(LISTE_PAR_DEFAUT.get(self.langue,
+                                                  LISTE_PAR_DEFAUT["fr"])))),
             ("text", t("aide_def5")),
-            ("text", t("aide_def6")),
-            ("text", t("aide_def7")),
-            ("text", t("aide_def8")),
+            ("text", t("aide_def3")),
             ("space", ""),
             ("title2", t("aide_exp_titre")),
             ("text", t("aide_exp1")),
-            ("text", t("aide_exp2")),
             ("bullet", t("aide_exp3")),
             ("bullet", t("aide_exp4")),
-            ("bullet", t("aide_exp5")),
-            ("bullet", t("aide_exp6")),
+            ("space", ""),
+            ("title2", t("aide_sys_titre")),
+            ("text", t("aide_sys1")),
+            ("text", t("aide_sys2")),
+            ("text", t("aide_sys3")),
+            ("text", t("aide_sys4")),
+            ("text", t("aide_sys5")),
             ("space", ""),
             ("title2", t("aide_edge_titre")),
             ("text", t("aide_edge1")),
-            ("text", t("aide_edge2")),
             ("space", ""),
             ("bullet", t("aide_edge3")),
-            ("bullet", t("aide_edge4")),
             ("bullet", t("aide_edge5")),
-            ("bullet", t("aide_edge6")),
-            ("bullet", t("aide_edge7")),
             ("space", ""),
             ("warning", t("aide_edge8")),
-            ("warning", t("aide_edge9")),
             ("space", ""),
             ("title2", t("aide_fmt_titre")),
             ("text", t("aide_fmt1")),
             ("code", t("aide_fmt2")),
+            ("space", ""),
+            ("space", ""),
+            ("title2", t("aide_maj_titre")),
+            ("text", t("aide_maj")),
+            ("lien_github", t("aide_github")),
             ("space", ""),
             ("sep", ""),
             ("grand", t("aide_soutien")),
@@ -2338,6 +3330,7 @@ class VoxPackApp(ctk.CTk):
             ("space", ""),
             ("sep", ""),
             ("petit", t("aide_ecran",
+                        version=VERSION,
                         ecran=f"{self.winfo_screenwidth()} × {self.winfo_screenheight()}",
                         fenetre=f"{self.winfo_width()} × {self.winfo_height()}")),
             ("italic", t("aide_credits")),
@@ -2346,90 +3339,61 @@ class VoxPackApp(ctk.CTk):
         for kind, txt in contenu:
             if kind == "logo":
                 if self._logo_aide is not None:
-                    # Le logo est détouré (fond transparent) : il se pose
-                    # directement sur le fond de la fenêtre d'aide.
-                    ctk.CTkLabel(
-                        frame, image=self._logo_aide, text=""
-                    ).pack(pady=(4, 10))
+                    # Un espace porte le style « logo » sur la ligne, pour que
+                    # l'image soit centrée.
+                    texte.insert("end", " ", "logo")
+                    texte.image_create("end", image=self._logo_aide,
+                                       padx=0, pady=4)
+                    texte.insert("end", "\n", "logo")
             elif kind == "space":
-                ctk.CTkLabel(frame, text="", height=6).pack()
+                continue          # l'espacement est dans les styles
             elif kind == "title":
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 18),
-                    text_color=CYAN, anchor="w", justify="left",
-                ).pack(fill="x", pady=(4, 2))
+                texte.insert("end", txt + "\n", "title")
             elif kind == "title2":
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 16),
-                    text_color=CYAN, anchor="w", justify="left",
-                ).pack(fill="x", pady=(6, 2))
-            elif kind == "grand":
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 19),
-                    text_color=CYAN, anchor="center", justify="center",
-                    wraplength=470,
-                ).pack(fill="x", pady=(2, 6))
+                texte.insert("end", txt + "\n", "head")
             elif kind == "bullet":
-                ctk.CTkLabel(
-                    frame, text="    " + txt,
-                    font=(FONT_MAIN, 14),
-                    text_color=TEXT_WHITE, anchor="w", justify="left",
-                    wraplength=LARGEUR_TEXTE_AIDE,
-                ).pack(fill="x")
+                texte.insert("end", "•  " + txt + "\n", "bullet")
             elif kind == "warning":
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 14),
-                    text_color="#FF6B6B", anchor="w", justify="left",
-                    wraplength=LARGEUR_TEXTE_AIDE,
-                ).pack(fill="x")
+                texte.insert("end", "⚠️  " + txt + "\n", "warning")
+            elif kind == "text":
+                texte.insert("end", txt + "\n", "body")
             elif kind == "code":
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=("Menlo", 13),
-                    text_color="#7FE0E8", anchor="w", justify="left",
-                ).pack(fill="x", padx=(20, 0))
-            elif kind == "petit":
-                # Information discrète (taille d'écran et de fenêtre) : utile
-                # le jour où quelque chose s'affiche mal sur une machine qu'on
-                # n'a pas sous la main.
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 11),
-                    text_color=TEXT_DIM, anchor="center", justify="center",
-                ).pack(fill="x", pady=(2, 0))
-            elif kind == "italic":
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 13, "italic"),
-                    text_color=TEXT_GREY, anchor="center", justify="center",
-                ).pack(fill="x", pady=(6, 0))
-            elif kind == "lien":
-                lien = ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 17),
-                    text_color=LINK_COLOR, anchor="center",
-                )
-                lien.pack(fill="x")
-                lien.bind("<Button-1>", lambda e: self._ouvrir_lien(KO_FI_URL))
-                lien.bind(
-                    "<Enter>", lambda e, w=lien: w.configure(text_color=CYAN))
-                lien.bind(
-                    "<Leave>", lambda e, w=lien: w.configure(text_color=LINK_COLOR))
+                texte.insert("end", txt + "\n", "code")
             elif kind == "sep":
-                ctk.CTkFrame(frame, height=1, fg_color="#2A3A48").pack(fill="x", pady=8)
-            else:
-                # Les lignes « text » : sans retour à la ligne, une phrase un
-                # peu longue était coupée au bord de la fenêtre.
-                ctk.CTkLabel(
-                    frame, text=txt,
-                    font=(FONT_MAIN, 13),
-                    text_color=TEXT_WHITE, anchor="w", justify="left",
-                    wraplength=LARGEUR_TEXTE_AIDE,
-                ).pack(fill="x")
+                texte.insert("end", "─" * 36 + "\n", "sep")
+            elif kind == "grand":
+                texte.insert("end", txt + "\n", "grand")
+            elif kind == "lien":
+                texte.insert("end", txt + "\n", "lien")
+            elif kind == "lien_github":
+                texte.insert("end", txt + "\n", ("lien", "lien_github"))
+            elif kind == "petit":
+                texte.insert("end", txt + "\n", "petit")
+            elif kind == "italic":
+                texte.insert("end", txt + "\n", "italic")
+
+        # Le lien de soutien reste cliquable, comme avant. On regarde le tag
+        # sous le curseur au moment du clic : plus fiable qu'un tag_bind sur
+        # un texte en lecture seule.
+        def clic_lien(event):
+            tags = texte.tag_names(texte.index(f"@{event.x},{event.y}"))
+            if "lien_github" in tags:
+                self._ouvrir_lien(URL_RELEASES)
+            elif "lien" in tags:
+                self._ouvrir_lien(KO_FI_URL)
+
+        texte.bind("<Button-1>", clic_lien, add="+")
+        texte.tag_bind(
+            "lien", "<Enter>",
+            lambda e: (texte.tag_configure("lien", foreground=CYAN),
+                       texte.configure(cursor=CURSEUR_MAIN)))
+        texte.tag_bind(
+            "lien", "<Leave>",
+            lambda e: (texte.tag_configure("lien", foreground=LINK_COLOR),
+                       texte.configure(cursor="arrow")))
+
+        texte.configure(state="disabled")
+        texte.yview_moveto(0.0)
 
         fermer = self._btn(popup, t("fermer"), popup.destroy, largeur=140)
         fermer.configure(height=36, corner_radius=18)
@@ -2465,7 +3429,12 @@ class VoxPackApp(ctk.CTk):
             # Windows : 120 par cran de molette (macOS : de petites valeurs).
             unites = -int(event.delta / 6)
         else:
-            unites = -event.delta
+            # macOS : la valeur dépend de la vitesse du geste. Un geste rapide
+            # envoie 20 ou 30 d'un coup ; à 8 px l'unité, la liste sautait
+            # alors de 160 à 240 px, soit plusieurs lignes. On borne à 3
+            # unités (24 px) par événement : le défilement reste rapide, mais
+            # ne saute plus.
+            unites = max(-3, min(3, -int(event.delta)))
         if unites:
             canvas.yview("scroll", unites, "units")
 
@@ -2922,8 +3891,8 @@ class VoxPackApp(ctk.CTk):
 
     async def _telecharger_voix(self, texte, voice_id, chemin):
         """Fabrique le fichier d'une phrase auprès du service de voix."""
-        communicate = edge_tts.Communicate(texte, voice_id, volume=VOLUME)
-        await communicate.save(chemin)
+        await sauver_voix(texte, voice_id, chemin,
+                          pitch=self._robot_pitch())
 
     async def _jouer_apercu(self, textes, voice_id, numero):
         """Lit les phrases l'une après l'autre, sans temps mort.
@@ -2934,12 +3903,17 @@ class VoxPackApp(ctk.CTk):
         """
         os.makedirs(DATA_DIR, exist_ok=True)
         total = len(textes)
+        robot = self._robot
 
         # Un nom de fichier différent pour chaque phrase : deux aperçus rapides
         # ne peuvent plus se supprimer mutuellement le fichier en cours.
         def chemin(rang):
             return os.path.join(DATA_DIR,
                                 f"apercu_{os.getpid()}_{numero}_{rang}.mp3")
+
+        def chemin_wav(rang):
+            return os.path.join(DATA_DIR,
+                                f"apercu_{os.getpid()}_{numero}_{rang}.wav")
 
         tache = asyncio.create_task(
             self._telecharger_voix(textes[0][1], voice_id, chemin(1)))
@@ -2963,7 +3937,20 @@ class VoxPackApp(ctk.CTk):
                                                chemin(rang + 1)))
                 if self._apercu_no != numero:
                     break
-                lecture = LectureAudio(chemin(rang))
+                source = chemin(rang)
+                if robot:
+                    wav = chemin_wav(rang)
+                    try:
+                        convertir_en_wav(source, wav)
+                        appliquer_effet_robot(wav, robot)
+                        source = wav
+                    except Exception as e:
+                        if self._apercu_no == numero:
+                            self.after(0, lambda err=e: self._message(
+                                t("msg_apercu_echec", err=err),
+                                icone="erreur"))
+                        break
+                lecture = LectureAudio(source)
                 self._lecture = lecture
                 # On attend la fin de la lecture SANS bloquer la boucle : c'est
                 # ce qui laisse le téléchargement de la suite avancer.
@@ -2972,12 +3959,12 @@ class VoxPackApp(ctk.CTk):
             if not tache.done():
                 tache.cancel()
             for rang in range(1, total + 1):
-                fichier = chemin(rang)
-                if os.path.exists(fichier):
-                    try:
-                        os.remove(fichier)
-                    except OSError:
-                        pass
+                for fichier in (chemin(rang), chemin_wav(rang)):
+                    if os.path.exists(fichier):
+                        try:
+                            os.remove(fichier)
+                        except OSError:
+                            pass
         if self._apercu_no != numero:
             # « Arrêter » a déjà tout remis en place, ou un autre aperçu a
             # pris le relais : ne pas toucher à son bouton ni à son message.
@@ -2994,6 +3981,9 @@ class VoxPackApp(ctk.CTk):
     # Génération
     # ------------------------------------------------------------------
     def start_generation(self):
+        if self._genere:
+            self._message(t("msg_genere_deja"), icone="attention")
+            return
         cochees = [l for l in self.lignes if l["var_check"].get()]
         if not cochees:
             self._message(t("msg_generer_rien"), icone="attention")
@@ -3025,10 +4015,9 @@ class VoxPackApp(ctk.CTk):
             self._message(t("msg_generer_aucune"), icone="attention")
             return
 
-        dossier = filedialog.askdirectory(
-            title=t("titre_dossier"),
-            initialdir=self._reglages.get("dernier_dossier")
-            or os.path.expanduser("~"),
+        dossier = self._choisir_dossier(
+            t("titre_dossier"),
+            self._reglages.get("dernier_dossier") or os.path.expanduser("~"),
         )
         if not dossier:
             return
@@ -3045,6 +4034,7 @@ class VoxPackApp(ctk.CTk):
         voice_id = identifiant_voix(self.langue, self.combo_voice.get())
 
         self.btn_letsgo.configure(state="disabled", fg_color="#0A5C66")
+        self._genere = True
         self.progress.set(0.0)
 
         threading.Thread(
@@ -3060,6 +4050,7 @@ class VoxPackApp(ctk.CTk):
             loop.run_until_complete(self._generer(taches, voice_id, refuses))
         finally:
             loop.close()
+            self._genere = False
             self.after(0, lambda: self.btn_letsgo.configure(state="normal", fg_color="#04C3D4"))
 
     async def _generer(self, taches, voice_id, refuses=None):
@@ -3083,11 +4074,12 @@ class VoxPackApp(ctk.CTk):
             try:
                 self._dire(t("etat_recherche_voix", fait=fait, total=total,
                              nom=nom))
-                communicate = edge_tts.Communicate(texte, voice_id, volume=VOLUME)
-                await communicate.save(temp_mp3)
+                await sauver_voix(texte, voice_id, temp_mp3,
+                                  pitch=self._robot_pitch())
                 self._dire(t("etat_generation_wav", fait=fait, total=total,
                              nom=nom))
                 convertir_en_wav(temp_mp3, final_wav)
+                self._appliquer_robot(final_wav)
             except Exception as e:
                 # On note l'échec et on passe à la ligne suivante : une phrase
                 # qui rate ne doit pas priver l'utilisateur de toutes les autres.
@@ -3126,6 +4118,255 @@ class VoxPackApp(ctk.CTk):
                 boutons=[(t("ouvrir_dossier"),
                           lambda: self._ouvrir_dossier(out)),
                          (t("fermer"), None)]))
+
+    # ------------------------------------------------------------------
+    # Sons système d'EdgeTX
+    # ------------------------------------------------------------------
+    def creer_sons_systeme(self):
+        """Refabrique les sons système de la radio avec la voix choisie.
+
+        Le circuit est volontairement SÉPARÉ de la liste : il lit la liste
+        officielle, écrit des fichiers, et « self.lignes » n'est jamais touché.
+        Richard a déjà perdu une liste une fois ; l'opération ne doit pas
+        pouvoir la mettre en danger.
+
+        La source est la liste officielle d'EdgeTX (voices/fr-FR.csv ou
+        voices/en-GB.csv), téléchargée au moment de l'usage : plus besoin de
+        brancher la carte, et la liste est à jour. Rien n'est embarqué dans
+        Vox-Pack. La voix est celle déjà choisie dans la fenêtre.
+        """
+        if self._genere:
+            self._message(t("msg_genere_deja"), icone="attention")
+            return
+
+        # La ligne d'état prévient pendant le téléchargement (moins d'une
+        # seconde en temps normal) : sans elle, on croirait que rien ne se
+        # passe. update_idletasks() la fait s'afficher tout de suite.
+        self._dire(t("etat_csv_telechargement"))
+        self.update_idletasks()
+        try:
+            lignes, langue_csv, depuis_cache = csv_officiel_sons_systeme(
+                self.langue)
+        except Exception as e:
+            self._dire("")
+            self._message(
+                t("msg_csv_officiel_echec", err=str(e)[:160]), icone="erreur")
+            return
+        if not lignes:
+            self._dire("")
+            self._message(t("msg_csv_aucun_systeme"), icone="attention")
+            return
+
+        taches, refuses = trier_sons_systeme(lignes)
+        self._dire("")
+        if not taches:
+            # Tous les noms ont été refusés : autant le dire tout de suite,
+            # avec les raisons, plutôt que de créer un dossier vide.
+            detail = "\n".join(f"• {nom} : {raison}"
+                               for nom, raison in refuses[:6])
+            if len(refuses) > 6:
+                detail += "\n" + t("msg_autres", n=len(refuses) - 6)
+            self._message(
+                t("msg_sons_bilan", reussis=0, s1="",
+                  total=len(refuses), problemes=len(refuses),
+                  s2="s" if len(refuses) > 1 else "", detail=detail),
+                icone="erreur")
+            return
+
+        dossier = self._choisir_dossier(
+            t("titre_dossier_systeme"),
+            self._reglages.get("dernier_dossier_systeme")
+            or self._reglages.get("dernier_dossier")
+            or os.path.expanduser("~"),
+        )
+        if not dossier:
+            self._dire("")
+            return
+        self._reglages["dernier_dossier_systeme"] = dossier
+        ecrire_reglages(self._reglages)
+
+        # On n'écrit jamais à la racine du dossier choisi : les sons système
+        # doivent arriver dans SYSTEM/, sinon la radio ne les trouvera pas. Et
+        # si l'utilisateur a déjà choisi un dossier nommé SYSTEM, on n'en crée
+        # pas un deuxième à l'intérieur.
+        if os.path.basename(dossier.rstrip("/\\")).upper() == "SYSTEM":
+            sortie = dossier
+        else:
+            sortie = os.path.join(dossier, "SYSTEM")
+
+        voice_id = identifiant_voix(self.langue, self.combo_voice.get())
+
+        # Le bouton « Let's Go » devient « Arrêter » : des centaines de
+        # fichiers, c'est plusieurs minutes, et on doit pouvoir renoncer.
+        self._genere = True
+        self._sons_stop = threading.Event()
+        self.btn_letsgo.configure(
+            text=t("arreter"), command=self._arreter_sons_systeme,
+            fg_color="#0A5C66")
+        self.progress.set(0.0)
+        self._dire(t("etat_recherche_service"))
+
+        threading.Thread(
+            target=self._lancer_sons_systeme,
+            args=(taches, refuses, sortie, langue_csv, voice_id, depuis_cache),
+            daemon=True,
+        ).start()
+
+    def _arreter_sons_systeme(self):
+        """Demande l'arrêt : le fichier en cours se termine, puis on s'arrête.
+
+        On ne coupe pas le téléchargement au milieu d'un fichier : un WAV
+        tronqué serait pire qu'un fichier de plus. Les fichiers déjà écrits,
+        eux, restent en place.
+        """
+        stop = self._sons_stop
+        if stop is not None:
+            stop.set()
+        try:
+            self.btn_letsgo.configure(state="disabled", fg_color="#0A5C66")
+        except Exception:
+            pass
+        self._dire(t("etat_sons_arret"))
+
+    def _lancer_sons_systeme(self, taches, refuses, sortie, langue_csv,
+                             voice_id, depuis_cache=False):
+        """Fil de travail : la boucle asyncio de la création des sons."""
+        try:
+            asyncio.run(self._generer_sons_systeme(
+                taches, refuses, sortie, langue_csv, voice_id, depuis_cache))
+        finally:
+            try:
+                self.after(0, self._fin_sons_systeme)
+            except Exception:
+                pass  # la fenêtre se ferme : tant pis pour le bouton
+
+    def _fin_sons_systeme(self):
+        """Le bouton redevient « Let's Go » une fois la génération terminée."""
+        self._sons_stop = None
+        self._genere = False
+        try:
+            self.btn_letsgo.configure(
+                state="normal", text=t("lets_go"),
+                command=self.start_generation, fg_color="#04C3D4")
+        except Exception:
+            pass
+
+    async def _generer_sons_systeme(self, taches, refuses, sortie,
+                                    langue_csv="", voice_id="",
+                                    depuis_cache=False):
+        """Fabrique un WAV par ligne du CSV, dans <dossier>/SYSTEM/.
+
+        Même pipeline que la génération normale (edge-tts puis conversion),
+        mais la liste affichée n'est jamais lue ni modifiée.
+        """
+        try:
+            os.makedirs(sortie, exist_ok=True)
+        except OSError as e:
+            self._dire("")
+            self.after(0, lambda err=e: self._message(
+                t("msg_dossier_echec", err=err), icone="erreur"))
+            return
+
+        total = len(taches)
+        echecs = list(refuses or [])       # noms refusés avant même d'essayer
+        nb_refuses = len(echecs)
+        faits = 0
+        arrete = False
+
+        # Les fichiers de travail vivent dans le dossier temporaire du système,
+        # jamais sur la carte SD. Le WAV n'est déplacé dans SYSTEM/ qu'une fois
+        # complet : une panne en cours de conversion ne peut donc pas laisser
+        # un fichier tronqué que la radio tenterait de lire.
+        travail = tempfile.mkdtemp(prefix="vox-pack-sons-")
+        try:
+            for idx, (nom, phrase) in enumerate(taches):
+                stop = self._sons_stop
+                if stop is not None and stop.is_set():
+                    arrete = True
+                    break
+                temp_mp3 = os.path.join(travail, f"{idx}.mp3")
+                temp_wav = os.path.join(travail, f"{idx}.wav")
+                final_wav = os.path.join(sortie, f"{nom}.wav")
+                traite = idx + 1
+                try:
+                    self._dire(t("etat_recherche_voix", fait=traite,
+                                 total=total, nom=nom))
+                    # Même volume que la génération normale : c'est le réglage
+                    # validé sur la radio.
+                    await sauver_voix(phrase, voice_id, temp_mp3,
+                                      pitch=self._robot_pitch())
+                    self._dire(t("etat_generation_wav", fait=traite,
+                                 total=total, nom=nom))
+                    convertir_en_wav(temp_mp3, temp_wav)
+                    self._appliquer_robot(temp_wav)
+                    os.replace(temp_wav, final_wav)
+                    faits += 1
+                except Exception as e:
+                    # Une phrase qui rate ne doit pas priver des 188 autres.
+                    echecs.append((nom, raison_lisible(e)))
+                finally:
+                    for reste in (temp_mp3, temp_wav):
+                        try:
+                            os.remove(reste)
+                        except OSError:
+                            pass
+
+                self.after(0, lambda v=traite / total: self.progress.set(v))
+                # Arrêt demandé : on garde « Arrêt demandé… » à l'écran plutôt
+                # que d'afficher gaiement une progression.
+                if stop is not None and stop.is_set():
+                    arrete = True
+                    break
+                self._dire(t("etat_avance", fait=traite, total=total, nom=nom,
+                             s="s" if traite > 1 else ""))
+        finally:
+            shutil.rmtree(travail, ignore_errors=True)
+
+        # On laisse la barre complète visible, comme la génération normale.
+        await asyncio.sleep(PAUSE_LEDS)
+        self.after(0, lambda: self.progress.reset())
+        self._dire("")
+
+        sortie_texte = chemin_lisible(sortie)
+        detail = "\n".join(f"• {nom} : {raison}"
+                           for nom, raison in echecs[:6])
+        if len(echecs) > 6:
+            detail += "\n" + t("msg_autres", n=len(echecs) - 6)
+
+        if arrete:
+            texte = t("msg_sons_arrete", n=faits,
+                      s="s" if faits > 1 else "", dossier=sortie_texte)
+            if echecs:
+                texte += "\n\n" + t("msg_sons_problemes",
+                                    problemes=len(echecs),
+                                    s2="s" if len(echecs) > 1 else "",
+                                    detail=detail)
+            icone = "attention"
+        elif echecs:
+            texte = t("msg_sons_bilan", reussis=faits,
+                      s1="s" if faits > 1 else "",
+                      total=total + nb_refuses,
+                      problemes=len(echecs),
+                      s2="s" if len(echecs) > 1 else "",
+                      detail=detail)
+            icone = "erreur"
+        else:
+            texte = t("msg_sons_succes", n=faits,
+                      s="s" if faits > 1 else "", dossier=sortie_texte)
+            if langue_csv:
+                texte += "\n\n" + t("msg_sons_copier", langue=langue_csv)
+            icone = "succes"
+
+        if depuis_cache:
+            # Dire la vérité : la liste n'a pas pu être rafraîchie, on a
+            # travaillé sur la copie enregistrée lors d'un précédent essai.
+            texte += "\n\n" + t("msg_sons_cache")
+
+        self.after(0, lambda: self._message(
+            texte, icone=icone,
+            boutons=[(t("ouvrir_dossier"),
+                      lambda: self._ouvrir_dossier(sortie)),
+                     (t("fermer"), None)]))
 
 
 if __name__ == "__main__":

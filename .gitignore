@@ -33,3 +33,6 @@ captures/non-utilisees/
 # Divers
 *.zip
 *.log
+
+# Notes de session (privées, gardées sur le Mac)
+docs/memo-session.md
