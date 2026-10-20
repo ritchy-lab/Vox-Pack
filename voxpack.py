@@ -182,6 +182,69 @@ def appliquer_effet_robot(chemin, numero):
                 pass
 
 
+def ameliorer_niveau_wav(chemin):
+    """Coupe les silences, limite et normalise un WAV EdgeTX.
+
+    Coupe + gain +6 dB + limiteur à avance de 5 ms, puis normalisation.
+    Pas de compression par blocs, pas de tanh : le limiteur seul donne le
+    niveau, sans le clic du compresseur.
+    """
+    import numpy as np
+    from numpy.lib.stride_tricks import sliding_window_view
+
+    with wave.open(chemin, "rb") as w:
+        if (w.getframerate() != FORMAT_EDGETX[0] or w.getnchannels() != 1
+                or w.getsampwidth() != 2):
+            return
+        sr = w.getframerate()
+        brut = w.readframes(w.getnframes())
+    if len(brut) < 64:
+        return
+    x = np.frombuffer(brut, dtype="<i2").astype(np.float32) / 32768.0
+
+    # 1. Silences au début et à la fin : seuil −46 dBFS, marge 20 ms.
+    actifs = np.where(np.abs(x) > 0.005)[0]
+    if len(actifs):
+        debut = max(0, actifs[0] - int(0.020 * sr))
+        fin = min(len(x), actifs[-1] + int(0.020 * sr))
+        x = x[debut:fin].copy()
+    if len(x) < 64:
+        return
+
+    # 2. Gain d'entrée +6 dB.
+    x = x * (10 ** (6.0 / 20.0))
+
+    # 3. Limiteur à gain avec avance de 5 ms (pas de tanh, pas de blocs).
+    avance = max(1, int(0.005 * sr))
+    besoin = np.minimum(1.0, 0.99 / (np.abs(x) + 1e-9))
+    pad_gain = np.pad(besoin, (0, avance), constant_values=1.0)
+    gain = sliding_window_view(pad_gain, avance + 1).min(axis=1)
+    gain = np.minimum(
+        gain, np.convolve(gain, np.ones(5) / 5, mode="same"))
+    x = x * gain
+
+    # 4. Normalisation au pic 1,0.
+    pic = np.max(np.abs(x))
+    if pic > 0:
+        x *= 1.0 / pic
+
+    temporaire = chemin + ".niveau"
+    try:
+        with wave.open(temporaire, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(
+                (np.clip(x, -1, 1) * 32767).astype("<i2").tobytes())
+        os.replace(temporaire, chemin)
+    finally:
+        if os.path.exists(temporaire):
+            try:
+                os.remove(temporaire)
+            except OSError:
+                pass
+
+
 def lire_lignes_csv(fichier):
     """Lit un CSV dont le séparateur est la virgule ou le point-virgule.
 
@@ -3938,18 +4001,19 @@ class VoxPackApp(ctk.CTk):
                 if self._apercu_no != numero:
                     break
                 source = chemin(rang)
-                if robot:
-                    wav = chemin_wav(rang)
-                    try:
-                        convertir_en_wav(source, wav)
+                wav = chemin_wav(rang)
+                try:
+                    convertir_en_wav(source, wav)
+                    if robot:
                         appliquer_effet_robot(wav, robot)
-                        source = wav
-                    except Exception as e:
-                        if self._apercu_no == numero:
-                            self.after(0, lambda err=e: self._message(
-                                t("msg_apercu_echec", err=err),
-                                icone="erreur"))
-                        break
+                    ameliorer_niveau_wav(wav)
+                    source = wav
+                except Exception as e:
+                    if self._apercu_no == numero:
+                        self.after(0, lambda err=e: self._message(
+                            t("msg_apercu_echec", err=err),
+                            icone="erreur"))
+                    break
                 lecture = LectureAudio(source)
                 self._lecture = lecture
                 # On attend la fin de la lecture SANS bloquer la boucle : c'est
@@ -4080,6 +4144,7 @@ class VoxPackApp(ctk.CTk):
                              nom=nom))
                 convertir_en_wav(temp_mp3, final_wav)
                 self._appliquer_robot(final_wav)
+                ameliorer_niveau_wav(final_wav)
             except Exception as e:
                 # On note l'échec et on passe à la ligne suivante : une phrase
                 # qui rate ne doit pas priver l'utilisateur de toutes les autres.
@@ -4299,6 +4364,7 @@ class VoxPackApp(ctk.CTk):
                                  total=total, nom=nom))
                     convertir_en_wav(temp_mp3, temp_wav)
                     self._appliquer_robot(temp_wav)
+                    ameliorer_niveau_wav(temp_wav)
                     os.replace(temp_wav, final_wav)
                     faits += 1
                 except Exception as e:

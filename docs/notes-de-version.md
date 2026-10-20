@@ -11,6 +11,16 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 1.4
+
+- **Des fichiers plus forts et plus courts** : les silences sont coupés et le
+  niveau est monté au maximum propre, avec un limiteur — comme les sons
+  officiels de la radio, sans le clic de l'ancien compresseur.
+- **L'aperçu** applique le même traitement : ce que tu entends est ce qui sera
+  écrit sur la carte.
+- La coupe et le niveau s'appliquent à la **liste**, aux **sons système** et à
+  l'**aperçu**.
+
 ## Nouveautés de la 1.3
 
 - **Les fichiers son système d'EdgeTX** — la grande nouveauté : les **186
@@ -54,6 +64,16 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 1.4
+
+- **Louder, shorter files**: silences are trimmed and the level is pushed to
+  its clean maximum with a limiter — like the radio's official sounds, without
+  the click of the old compressor.
+- **The preview** applies the same processing: what you hear is what gets
+  written to the card.
+- Trimming and levelling apply to the **list**, the **system sounds** and the
+  **preview**.
 
 ## What's new in 1.3
 
