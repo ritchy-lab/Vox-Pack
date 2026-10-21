@@ -60,9 +60,9 @@ files** in French (**212** in English) with the chosen voice, in a `SYSTEM/`
 folder to copy to the SD card. The list comes from the official EdgeTX
 repository and is not modified; your phrases, list and settings are untouched.
 
-## Robot voices
+## Robot voices and HAL 9000
 
-On the right of the window, **four dots Robot 1 to Robot 4** transform the
+On the right of the window, **three dots Robot 1 to 3 and the HAL 9000 dot** transform the
 chosen voice. None lit: the normal voice. Click a dot, then **Listen**; click
 the lit dot again to return to normal. The effect also applies to the list
 files and the system sounds.
@@ -114,6 +114,9 @@ The **File** menu lets you:
 - **An Internet connection**: the voices are synthesised by Microsoft Edge's
   online service. The text of your phrases is therefore sent to Microsoft when
   you generate. Without a connection, no voice can be created.
+- **The voices** come from the **Microsoft Edge service** via `edge-tts`
+  (unofficial). Vox-Pack does not distribute the voices; the text is sent to
+  Microsoft when you generate.
 - Python 3.10 or newer, only if you install from source.
 
 ## Installing

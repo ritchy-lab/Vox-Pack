@@ -11,6 +11,20 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 1.4.1
+
+- **Correction Windows** : la génération des **sons système** fonctionne
+  maintenant quand le dossier de sortie est sur un autre disque que le dossier
+  temporaire (par exemple `D:`). Le WAV est construit dans le dossier de
+  destination, puis renommé sur place.
+- **HAL 9000** : à la demande générale, une voix **librement inspirée de HAL
+  9000** a été ajoutée. Elle est construite avec les voix disponibles dans
+  l'application (service Microsoft Edge), qui ne permettent pas de reproduire
+  la voix du film : ce n'est pas la voix officielle, mais une inspiration.
+  En anglais, Christopher (débit +6 %, pitch −4 Hz) ; en français, Henri
+  (débit −25 %, pitch −10 Hz). Les deux passent par l'effet **carton + léger
+  écho**. **HAL impose sa propre voix**, indépendamment du menu.
+
 ## Nouveautés de la 1.4
 
 - **Des fichiers plus forts et plus courts** : les silences sont coupés et le
@@ -48,6 +62,9 @@ expliqués dans le [README](https://github.com/ritchy-lab/Vox-Pack#installation)
 - **Une connexion Internet est nécessaire** : les voix sont synthétisées par le
   service de Microsoft Edge. Le texte de tes phrases lui est envoyé au moment
   de la génération.
+- **Les voix** viennent du **service Microsoft Edge** via `edge-tts` (non
+  officiel). Vox-Pack ne distribue pas les voix ; le texte est envoyé à
+  Microsoft au moment de la génération.
 - L'application existe **en français et en anglais** (menu Fichier → Langue).
 - Les fichiers produits sont au format exact attendu par EdgeTX :
   **WAV, 16 bits, 32 kHz, mono**.
@@ -64,6 +81,18 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 1.4.1
+
+- **Windows fix**: **system sound** generation now works when the output
+  folder is on a different drive from the temporary folder (e.g., `D:`). The
+  WAV is built in the destination folder, then renamed in place.
+- **HAL 9000**: by popular request, a voice **freely inspired by HAL 9000**
+  has been added. It is built from the voices available in the app (Microsoft
+  Edge service), which cannot reproduce the film voice: it is not the official
+  voice, but an inspiration. In English, Christopher (+6% rate, −4 Hz pitch,
+  gentle EQ); in French, Henri (−25% rate, +30 Hz pitch, clear EQ).
+  **HAL forces its own voice**, regardless of the menu.
 
 ## What's new in 1.4
 
@@ -103,6 +132,9 @@ certificate): the two clicks to make are explained in the
 - **An Internet connection is required**: the voices are synthesised by
   Microsoft Edge's service. The text of your phrases is sent to it when you
   generate.
+- **The voices** come from the **Microsoft Edge service** via `edge-tts`
+  (unofficial). Vox-Pack does not distribute the voices; the text is sent to
+  Microsoft when you generate.
 - The app comes **in French and English** (File → Language menu).
 - The files it produces are exactly what EdgeTX expects:
   **WAV, 16-bit, 32 kHz, mono**.

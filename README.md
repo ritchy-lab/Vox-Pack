@@ -63,9 +63,9 @@ dans un dossier `SYSTEM/` à copier sur la carte SD. La liste vient du dépôt
 officiel EdgeTX et n'est pas modifiée ; tes phrases, ta liste et tes réglages
 ne sont pas touchés.
 
-## Les voix de robot
+## Les voix de robot et HAL 9000
 
-À droite de la fenêtre, **quatre pastilles Robot 1 à Robot 4** transforment
+À droite de la fenêtre, **trois pastilles Robot 1 à 3 et la pastille HAL 9000** transforment
 la voix choisie. Aucune allumée : la voix normale. Clique une pastille, puis
 **Écouter** ; reclique la pastille allumée pour revenir à la normale. L'effet
 s'applique aussi aux fichiers de la liste et aux sons système.
@@ -118,6 +118,9 @@ Le menu **Fichier** permet de :
 - **Une connexion Internet** : les voix sont synthétisées par le service en
   ligne de Microsoft Edge. Le texte de tes phrases est donc envoyé à Microsoft
   au moment de la génération. Sans connexion, aucune voix ne peut être créée.
+- **Les voix** viennent du **service Microsoft Edge** via `edge-tts` (non
+  officiel). Vox-Pack ne distribue pas les voix ; le texte est envoyé à
+  Microsoft au moment de la génération.
 - Python 3.10 ou supérieur uniquement si tu installes depuis les sources.
 
 ## Installation

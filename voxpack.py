@@ -110,7 +110,7 @@ def convertir_en_wav(source_mp3, destination_wav):
 # Voix de robot
 # ------------------------------------------------------------------
 # Quatre presets appliqués à la voix choisie. L'interface ne montre que
-# « Robot 1 » à « Robot 4 » : c'est l'oreille qui choisit.
+# « Robot 1 » à « Robot 3 » et « HAL 9000 » : c'est l'oreille qui choisit.
 # Rangés du plus grave au plus aigu (les réglages sont ceux de Richard).
 ROBOTS = {
     1: {"pitch": "-30Hz", "ring": 52, "dry": 0.40,
@@ -119,12 +119,13 @@ ROBOTS = {
         "echo": ((0.025, 0.35), (0.050, 0.20))},
     3: {"pitch": "+40Hz", "ring": 60, "dry": 0.18,
         "echo": ((0.025, 0.35), (0.050, 0.20))},
-    4: {"pitch": "+50Hz", "ring": 70, "dry": 0.50,
-        "echo": ((0.025, 0.30), (0.080, 0.40))},
+    4: {"pitch": "-4Hz", "rate": "+6%", "hal": "en",
+        "fr": {"pitch": "-10Hz", "rate": "-25%", "hal": "fr"},
+        "ring": 0, "dry": 1.0, "echo": ()},
 }
 
 
-def appliquer_effet_robot(chemin, numero):
+def appliquer_effet_robot(chemin, numero, langue="en"):
     """Applique un preset robot à un WAV EdgeTX (32 kHz, mono, 16 bits).
 
     Le fichier est réécrit dans un temporaire puis remplacé : une panne ne
@@ -144,6 +145,92 @@ def appliquer_effet_robot(chemin, numero):
     if len(brut) < 4:
         return
     x = np.frombuffer(brut, dtype="<i2").astype(np.float32) / 32768.0
+
+    if reglage.get("hal"):
+        def lfilter(b, a, sig):
+            y = np.zeros_like(sig)
+            x1 = x2 = y1 = y2 = 0.0
+            for i, v in enumerate(sig):
+                out = (b[0] * v + b[1] * x1 + b[2] * x2
+                       - a[1] * y1 - a[2] * y2)
+                x2, x1 = x1, v
+                y2, y1 = y1, out
+                y[i] = out
+            return y
+
+        def biquad(kind, f0, gain=0.0, Q=0.707):
+            w0 = 2 * np.pi * f0 / sr
+            al = np.sin(w0) / (2 * Q)
+            c = np.cos(w0)
+            if kind == "hp":
+                b = np.array([(1 + c) / 2, -(1 + c), (1 + c) / 2])
+                a = np.array([1 + al, -2 * c, 1 - al])
+            elif kind == "lp":
+                b = np.array([(1 - c) / 2, 1 - c, (1 - c) / 2])
+                a = np.array([1 + al, -2 * c, 1 - al])
+            elif kind == "peak":
+                A = 10 ** (gain / 40)
+                b = np.array([1 + al * A, -2 * c, 1 - al * A])
+                a = np.array([1 + al / A, -2 * c, 1 - al / A])
+            elif kind == "highshelf":
+                A = 10 ** (gain / 40)
+                sh = 2 * np.sqrt(A) * al
+                b = np.array([
+                    A * ((A + 1) + (A - 1) * c + sh),
+                    -2 * A * ((A - 1) + (A + 1) * c),
+                    A * ((A + 1) + (A - 1) * c - sh),
+                ])
+                a = np.array([
+                    (A + 1) - (A - 1) * c + sh,
+                    2 * ((A - 1) - (A + 1) * c),
+                    (A + 1) - (A - 1) * c - sh,
+                ])
+            else:  # lowshelf
+                A = 10 ** (gain / 40)
+                sh = 2 * np.sqrt(A) * al
+                b = np.array([
+                    A * ((A + 1) - (A - 1) * c + sh),
+                    2 * A * ((A - 1) - (A + 1) * c),
+                    A * ((A + 1) - (A - 1) * c - sh),
+                ])
+                a = np.array([
+                    (A + 1) + (A - 1) * c + sh,
+                    -2 * ((A - 1) + (A + 1) * c),
+                    (A + 1) + (A - 1) * c - sh,
+                ])
+            return b / a[0], a / a[0]
+
+        # Effet « haut-parleur carton » + léger écho, commun aux deux langues.
+        y = lfilter(*biquad("hp", 300), x)
+        y = lfilter(*biquad("peak", 950, 6.0), y)
+        y = lfilter(*biquad("peak", 1800, 3.0), y)
+        y = lfilter(*biquad("lp", 3200), y)
+        n = int(0.0025 * sr)
+        y[n:] += 0.18 * y[:-n]
+        y = np.tanh(1.4 * y) / np.tanh(1.4)
+        melange = y.copy()
+        for delai, gain in ((0.030, 0.15), (0.060, 0.08)):
+            n = int(delai * sr)
+            melange[n:] += gain * y[:-n]
+        y = melange
+        pic = np.max(np.abs(y)) or 1.0
+        y = 0.95 * y / pic
+        temporaire = chemin + ".robot"
+        try:
+            with wave.open(temporaire, "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(sr)
+                w.writeframes(
+                    (np.clip(y, -1, 1) * 32767).astype("<i2").tobytes())
+            os.replace(temporaire, chemin)
+        finally:
+            if os.path.exists(temporaire):
+                try:
+                    os.remove(temporaire)
+                except OSError:
+                    pass
+        return
 
     def passe_haut(sig, fc):
         n = max(1, int(sr / fc))
@@ -848,7 +935,8 @@ TEXTES = {
             "voix et même vitesse que sur la radio.",
         "aide_robot_titre": "🤖  Voix de robot",
         "aide_robot1":
-            "À droite de la fenêtre, quatre pastilles : Robot 1 à Robot 4. "
+            "À droite de la fenêtre, quatre pastilles : Robot 1 à 3 et HAL 9000. "
+            "HAL 9000 impose sa propre voix, indépendamment du menu. "
             "Aucune cochée : la voix normale.",
         "aide_robot2":
             "Cliquez une pastille, puis « Écouter » : l'effet s'applique à la "
@@ -1177,7 +1265,8 @@ TEXTES = {
             "voice and same speed as on the radio.",
         "aide_robot_titre": "🤖  Robot voices",
         "aide_robot1":
-            "On the right of the window, four dots: Robot 1 to Robot 4. "
+            "On the right of the window, four dots: Robot 1 to 3 and HAL 9000. "
+            "HAL 9000 uses its own voice, regardless of the menu. "
             "None ticked: the normal voice.",
         "aide_robot2":
             "Click a dot, then “Listen”: the effect applies to the chosen "
@@ -1430,7 +1519,7 @@ def reglage_voix(voice_id):
 MARQUE_VOIX = "✓  "
 
 
-async def sauver_voix(texte, voice_id, chemin, pitch=None):
+async def sauver_voix(texte, voice_id, chemin, pitch=None, rate=None):
     """Fabrique le MP3, avec un second essai si le service répond mal.
 
     Le service de Microsoft renvoie parfois une réponse tronquée ou
@@ -1442,7 +1531,7 @@ async def sauver_voix(texte, voice_id, chemin, pitch=None):
             regle = reglage_voix(voice_id)
             communicate = edge_tts.Communicate(
                 texte, voice_id, volume=VOLUME,
-                rate=regle.get("rate", "+0%"),
+                rate=rate or regle.get("rate", "+0%"),
                 pitch=pitch or "+0Hz")
             await communicate.save(chemin)
             return
@@ -2133,7 +2222,7 @@ class VoxPackApp(ctk.CTk):
         self._logo_image = None
         self._soutien = None
         self._reglages = lire_reglages()
-        # Effet robot mémorisé : 0 = aucun, 1 à 4 = Robot 1 à Robot 4.
+        # Effet robot mémorisé : 0 = aucun, 1 à 3 = Robot, 4 = HAL 9000.
         try:
             self._robot = int(self._reglages.get("robot", 0) or 0)
         except (TypeError, ValueError):
@@ -2775,14 +2864,6 @@ class VoxPackApp(ctk.CTk):
         popup.transient(self)
         popup.protocol("WM_DELETE_WINDOW", popup.destroy)
 
-        largeur, hauteur = 480, 310
-        self.update_idletasks()
-        x = self.winfo_rootx() + (self.winfo_width() - largeur) // 2
-        y = self.winfo_rooty() + (self.winfo_height() - hauteur) // 3
-        x = max(20, min(x, self.winfo_screenwidth() - largeur - 20))
-        y = max(20, min(y, self.winfo_screenheight() - hauteur - 60))
-        popup.geometry(f"{largeur}x{hauteur}+{x}+{y}")
-
         cadre = ctk.CTkFrame(popup, fg_color="transparent")
         cadre.pack(fill="both", expand=True, padx=24, pady=20)
         ctk.CTkLabel(
@@ -2829,8 +2910,20 @@ class VoxPackApp(ctk.CTk):
             self._telecharger_asset(popup, asset, version, statut,
                                     btn_telecharger, btn_plus_tard)
 
+        # Taille demandée par le contenu, pas une grande fenêtre vide.
+        popup.update_idletasks()
+        largeur = max(420, popup.winfo_reqwidth())
+        hauteur = popup.winfo_reqheight()
+        self.update_idletasks()
+        x = self.winfo_rootx() + (self.winfo_width() - largeur) // 2
+        y = self.winfo_rooty() + (self.winfo_height() - hauteur) // 2
+        x = max(20, min(x, self.winfo_screenwidth() - largeur - 20))
+        y = max(20, min(y, self.winfo_screenheight() - hauteur - 60))
+        popup.geometry(f"{largeur}x{hauteur}+{x}+{y}")
+
         btn_telecharger.configure(command=telecharger)
-        popup.after(100, popup.grab_set)
+        # Pas de grab_set : la popup ne bloque pas la fenêtre principale, donc
+        # macOS n'affiche plus le curseur « interdit » sur les champs.
         popup.after(150, popup.focus_force)
         popup.after(200, popup.lift)
 
@@ -2995,7 +3088,7 @@ class VoxPackApp(ctk.CTk):
         x = self.winfo_x() + (self.winfo_width() - largeur) // 2
         y = self.winfo_y() + (self.winfo_height() - hauteur) // 2
         popup.geometry(f"{largeur}x{hauteur}+{max(x, 0)}+{max(y, 0)}")
-        popup.after(150, lambda: self._saisir_popup(popup))
+        popup.lift()
 
     def _saisir_popup(self, popup):
         try:
@@ -3170,18 +3263,52 @@ class VoxPackApp(ctk.CTk):
     # ------------------------------------------------------------------
     # Fenêtre d'aide
     # ------------------------------------------------------------------
+    def _voix_francaise(self):
+        """Vrai si la voix utilisée est française (HAL ou voix du menu)."""
+        if self._robot == 4:
+            return self.langue == "fr"
+        try:
+            voix = identifiant_voix(self.langue, self.combo_voice.get())
+        except Exception:
+            return False
+        return voix.startswith("fr-")
+
+    def _robot_voice(self):
+        """Voix imposée par HAL 9000 (None pour les autres presets)."""
+        if self._robot != 4:
+            return None
+        return ("fr-FR-HenriNeural" if self.langue == "fr"
+                else "en-US-ChristopherNeural")
+
+    def _reglage_robot(self):
+        """Réglage du preset, avec la variante française si elle existe."""
+        reglage = ROBOTS.get(self._robot)
+        if not reglage:
+            return None
+        if self._voix_francaise() and "fr" in reglage:
+            return reglage["fr"]
+        return reglage
+
     def _robot_pitch(self):
         """Hauteur à demander au service pour le preset choisi."""
-        reglage = ROBOTS.get(self._robot)
-        return reglage["pitch"] if reglage else None
+        reglage = self._reglage_robot()
+        return reglage.get("pitch") if reglage else None
+
+    def _robot_rate(self):
+        """Débit à demander au service pour le preset choisi."""
+        reglage = self._reglage_robot()
+        return reglage.get("rate") if reglage else None
 
     def _appliquer_robot(self, chemin):
         """Applique l'effet robot au WAV, si une pastille est allumée."""
         if self._robot in ROBOTS:
-            appliquer_effet_robot(chemin, self._robot)
+            langue = "fr" if self._voix_francaise() else "en"
+            appliquer_effet_robot(chemin, self._robot, langue)
 
     def _maj_libelle_robot(self):
-        if self._robot:
+        if self._robot == 4:
+            self.lbl_robot.configure(text="HAL 9000", text_color=CYAN)
+        elif self._robot:
             self.lbl_robot.configure(text=f"Robot {self._robot}",
                                      text_color=CYAN)
         else:
@@ -3205,7 +3332,8 @@ class VoxPackApp(ctk.CTk):
                 if n != self._robot:
                     bouton.configure(border_color=CYAN_DARK)
         else:
-            self.lbl_robot.configure(text=f"Robot {numero}", text_color=CYAN)
+            libelle = "HAL 9000" if numero == 4 else f"Robot {numero}"
+            self.lbl_robot.configure(text=libelle, text_color=CYAN)
             for n, bouton in self._boutons_robot.items():
                 if n != self._robot:
                     bouton.configure(
@@ -3223,7 +3351,6 @@ class VoxPackApp(ctk.CTk):
         popup.title(t("titre_aide"))
         popup.resizable(False, False)
         popup.transient(self)
-        popup.after(150, lambda: self._saisir_popup(popup))
         popup.configure(fg_color=BG_MAIN)
 
         self.update_idletasks()
@@ -3955,7 +4082,7 @@ class VoxPackApp(ctk.CTk):
     async def _telecharger_voix(self, texte, voice_id, chemin):
         """Fabrique le fichier d'une phrase auprès du service de voix."""
         await sauver_voix(texte, voice_id, chemin,
-                          pitch=self._robot_pitch())
+                          pitch=self._robot_pitch(), rate=self._robot_rate())
 
     async def _jouer_apercu(self, textes, voice_id, numero):
         """Lit les phrases l'une après l'autre, sans temps mort.
@@ -3964,6 +4091,7 @@ class VoxPackApp(ctk.CTk):
         cours est lue. Sans cela, on entendait une pause entre chaque phrase :
         le temps d'aller chercher la voix chez Microsoft.
         """
+        voice_id = self._robot_voice() or voice_id
         os.makedirs(DATA_DIR, exist_ok=True)
         total = len(textes)
         robot = self._robot
@@ -4005,7 +4133,7 @@ class VoxPackApp(ctk.CTk):
                 try:
                     convertir_en_wav(source, wav)
                     if robot:
-                        appliquer_effet_robot(wav, robot)
+                        appliquer_effet_robot(wav, robot, "fr" if voice_id.startswith("fr-") else "en")
                     ameliorer_niveau_wav(wav)
                     source = wav
                 except Exception as e:
@@ -4118,6 +4246,7 @@ class VoxPackApp(ctk.CTk):
             self.after(0, lambda: self.btn_letsgo.configure(state="normal", fg_color="#04C3D4"))
 
     async def _generer(self, taches, voice_id, refuses=None):
+        voice_id = self._robot_voice() or voice_id
         try:
             os.makedirs(self.output_dir, exist_ok=True)
         except OSError as e:
@@ -4139,7 +4268,7 @@ class VoxPackApp(ctk.CTk):
                 self._dire(t("etat_recherche_voix", fait=fait, total=total,
                              nom=nom))
                 await sauver_voix(texte, voice_id, temp_mp3,
-                                  pitch=self._robot_pitch())
+                                  pitch=self._robot_pitch(), rate=self._robot_rate())
                 self._dire(t("etat_generation_wav", fait=fait, total=total,
                              nom=nom))
                 convertir_en_wav(temp_mp3, final_wav)
@@ -4324,6 +4453,7 @@ class VoxPackApp(ctk.CTk):
         Même pipeline que la génération normale (edge-tts puis conversion),
         mais la liste affichée n'est jamais lue ni modifiée.
         """
+        voice_id = self._robot_voice() or voice_id
         try:
             os.makedirs(sortie, exist_ok=True)
         except OSError as e:
@@ -4338,10 +4468,10 @@ class VoxPackApp(ctk.CTk):
         faits = 0
         arrete = False
 
-        # Les fichiers de travail vivent dans le dossier temporaire du système,
-        # jamais sur la carte SD. Le WAV n'est déplacé dans SYSTEM/ qu'une fois
-        # complet : une panne en cours de conversion ne peut donc pas laisser
-        # un fichier tronqué que la radio tenterait de lire.
+        # Le MP3 de travail vit dans le dossier temporaire du système ; le WAV
+        # est construit directement dans le dossier de destination. Ainsi le
+        # remplacement final reste sur le même disque (Windows échoue avec
+        # WinError 17 quand la sortie est sur D: et le temporaire sur C:).
         travail = tempfile.mkdtemp(prefix="vox-pack-sons-")
         try:
             for idx, (nom, phrase) in enumerate(taches):
@@ -4350,8 +4480,8 @@ class VoxPackApp(ctk.CTk):
                     arrete = True
                     break
                 temp_mp3 = os.path.join(travail, f"{idx}.mp3")
-                temp_wav = os.path.join(travail, f"{idx}.wav")
                 final_wav = os.path.join(sortie, f"{nom}.wav")
+                temp_wav = final_wav + ".tmp"
                 traite = idx + 1
                 try:
                     self._dire(t("etat_recherche_voix", fait=traite,
@@ -4359,7 +4489,7 @@ class VoxPackApp(ctk.CTk):
                     # Même volume que la génération normale : c'est le réglage
                     # validé sur la radio.
                     await sauver_voix(phrase, voice_id, temp_mp3,
-                                      pitch=self._robot_pitch())
+                                      pitch=self._robot_pitch(), rate=self._robot_rate())
                     self._dire(t("etat_generation_wav", fait=traite,
                                  total=total, nom=nom))
                     convertir_en_wav(temp_mp3, temp_wav)
