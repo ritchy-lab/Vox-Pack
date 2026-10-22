@@ -54,6 +54,24 @@ Légende : `[ ]` à faire · `[x]` fait
   blanche. Le robot accepte aussi un lancement à la main avec l'option
   « réécrire le texte », pour rattraper une page déjà publiée.
 
+### Après la 1.4.2 (dans `main`, pas encore publié)
+
+- [x] **Fenêtre « Mise à jour disponible » : texte et boutons sortaient de la
+  fenêtre.** Repéré par Richard le 22 octobre sur la 1.4.1 : la dernière phrase
+  était coupée à droite, et les deux boutons dépassaient en bas. Deux causes :
+  les libellés s'enroulent à **420 px**, mais la largeur minimale de la fenêtre
+  était **420 px marges comprises** (il restait 372 px pour le texte) ; et la
+  taille n'était calculée **qu'une fois**, à l'ouverture, alors que le dossier
+  affiché après le téléchargement et les nouveaux libellés de boutons
+  demandaient **28 px de plus**. Correctif : largeur minimale **468 px**
+  (420 + 24 de chaque côté) et `_ajuster_maj` recalcule la fenêtre à chaque
+  changement de texte (téléchargement, réussite, échec). Mesuré : contenu
+  demandé 420 × 222, fenêtre 468 × 222.
+- [x] **La fenêtre de mise à jour était impossible à essayer.** Elle n'apparaît
+  que si une version plus récente existe, donc elle disparaît dès qu'on
+  l'installe. `VOXPACK_MAJ_TEST=1.0 venv/bin/python voxpack.py` la fait
+  apparaître pour la regarder (aucun effet si la variable est absente).
+
 - [x] **edge-tts renvoyait une erreur 403 : plus aucune voix générée.**
   Microsoft a durci son contrôle d'accès (le jeton `Sec-MS-GEC-Version`
   est passé de `1-` à `2-`). Correctif : `edge-tts` 7.3.1, désormais exigé

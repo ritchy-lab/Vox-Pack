@@ -1782,6 +1782,19 @@ def version_plus_recente(etiquette, actuelle=VERSION):
     return morceaux(etiquette) > morceaux(actuelle)
 
 
+def version_de_reference():
+    """Version à laquelle se comparer au démarrage.
+
+    Normalement celle du programme. La variable d'environnement
+    VOXPACK_MAJ_TEST permet de regarder la fenêtre « Mise à jour disponible »
+    sans publier une version plus récente — elle est sinon presque impossible
+    à voir, puisque la nouvelle version la fait disparaître :
+
+        VOXPACK_MAJ_TEST=1.0 venv/bin/python voxpack.py
+    """
+    return os.environ.get("VOXPACK_MAJ_TEST") or VERSION
+
+
 def choisir_asset(assets):
     """Choisit le fichier à télécharger pour ce système."""
     if sys.platform == "darwin":
@@ -1862,6 +1875,14 @@ def regler_echelle(hauteur_ecran):
 # est plus petit (voir VoxPackApp.__init__).
 LARGEUR_FENETRE = 820
 HAUTEUR_FENETRE = 813
+
+# Fenêtre « Mise à jour disponible ». Les textes s'enroulent à LARGEUR_TEXTE :
+# la fenêtre doit donc être plus large que ça, sinon le texte est coupé au lieu
+# de passer à la ligne. La fenêtre est ensuite redimensionnée sur son contenu,
+# à chaque fois que le texte change (voir VoxPackApp._ajuster_maj).
+LARGEUR_TEXTE_MAJ = 420
+MARGE_MAJ = 24
+LARGEUR_MAJ = LARGEUR_TEXTE_MAJ + 2 * MARGE_MAJ
 
 # Écran « confortable » : au-delà de cette hauteur, l'application garde son
 # allure d'origine. En dessous (portable 1080 réglé à 150 % : Windows annonce
@@ -2882,7 +2903,7 @@ class VoxPackApp(ctk.CTk):
         except queue.Empty:
             self.after(150, lambda: self._attendre_maj(resultat))
             return
-        if infos and version_plus_recente(infos["tag"], VERSION):
+        if infos and version_plus_recente(infos["tag"], version_de_reference()):
             self._afficher_maj(infos)
 
     def _afficher_maj(self, infos):
@@ -2904,19 +2925,20 @@ class VoxPackApp(ctk.CTk):
         popup.protocol("WM_DELETE_WINDOW", popup.destroy)
 
         cadre = ctk.CTkFrame(popup, fg_color="transparent")
-        cadre.pack(fill="both", expand=True, padx=24, pady=20)
+        cadre.pack(fill="both", expand=True, padx=MARGE_MAJ, pady=20)
         ctk.CTkLabel(
             cadre, text=t("maj_titre"), font=(FONT_MAIN, 20),
             text_color=CYAN, anchor="w",
         ).pack(fill="x")
         ctk.CTkLabel(
-            cadre, text=t("maj_texte", version=version, actuelle=VERSION),
+            cadre, text=t("maj_texte", version=version,
+                          actuelle=version_de_reference()),
             font=(FONT_MAIN, 14), text_color=TEXT_WHITE,
-            justify="left", anchor="w", wraplength=420,
+            justify="left", anchor="w", wraplength=LARGEUR_TEXTE_MAJ,
         ).pack(fill="x", pady=(10, 0))
         statut = ctk.CTkLabel(
             cadre, text="", font=(FONT_MAIN, 12), text_color=TEXT_GREY,
-            justify="left", anchor="w", wraplength=420,
+            justify="left", anchor="w", wraplength=LARGEUR_TEXTE_MAJ,
         )
         statut.pack(fill="x", pady=(8, 0))
 
@@ -2946,12 +2968,34 @@ class VoxPackApp(ctk.CTk):
                 state="disabled", text=t("maj_telechargement"))
             btn_plus_tard.configure(state="disabled")
             statut.configure(text=t("maj_telechargement"))
+            self._ajuster_maj(popup)
             self._telecharger_asset(popup, asset, version, statut,
                                     btn_telecharger, btn_plus_tard)
 
         # Taille demandée par le contenu, pas une grande fenêtre vide.
+        self._ajuster_maj(popup)
+
+        btn_telecharger.configure(command=telecharger)
+        # Pas de grab_set : la popup ne bloque pas la fenêtre principale, donc
+        # macOS n'affiche plus le curseur « interdit » sur les champs.
+        popup.after(150, popup.focus_force)
+        popup.after(200, popup.lift)
+
+    def _ajuster_maj(self, popup):
+        """Redimensionne la fenêtre de mise à jour sur son contenu, et la recentre.
+
+        Appelée à chaque changement de texte : après le téléchargement, la
+        fenêtre affiche le dossier et les boutons changent de libellé. Sans ce
+        recalcul, le texte sortait par la droite et les boutons passaient sous
+        la fenêtre (vu par Richard le 22 octobre).
+        """
+        try:
+            if not popup.winfo_exists():
+                return
+        except Exception:
+            return
         popup.update_idletasks()
-        largeur = max(420, popup.winfo_reqwidth())
+        largeur = max(LARGEUR_MAJ, popup.winfo_reqwidth())
         hauteur = popup.winfo_reqheight()
         self.update_idletasks()
         x = self.winfo_rootx() + (self.winfo_width() - largeur) // 2
@@ -2959,12 +3003,6 @@ class VoxPackApp(ctk.CTk):
         x = max(20, min(x, self.winfo_screenwidth() - largeur - 20))
         y = max(20, min(y, self.winfo_screenheight() - hauteur - 60))
         popup.geometry(f"{largeur}x{hauteur}+{x}+{y}")
-
-        btn_telecharger.configure(command=telecharger)
-        # Pas de grab_set : la popup ne bloque pas la fenêtre principale, donc
-        # macOS n'affiche plus le curseur « interdit » sur les champs.
-        popup.after(150, popup.focus_force)
-        popup.after(200, popup.lift)
 
     def _telecharger_asset(self, popup, asset, version, statut,
                            btn_telecharger, btn_plus_tard):
@@ -3032,6 +3070,8 @@ class VoxPackApp(ctk.CTk):
         btn_plus_tard.configure(
             state="normal", text=t("maj_fermer"),
             command=popup.destroy)
+        # Le dossier affiché et les nouveaux libellés prennent plus de place.
+        self._ajuster_maj(popup)
 
     def _maj_echouee(self, popup, statut, btn_telecharger, btn_plus_tard):
         try:
@@ -3047,6 +3087,7 @@ class VoxPackApp(ctk.CTk):
         btn_plus_tard.configure(
             state="normal", text=t("maj_fermer"),
             command=popup.destroy)
+        self._ajuster_maj(popup)
 
     def _reveler(self, chemin):
         """Ouvre le dossier du fichier téléchargé."""
