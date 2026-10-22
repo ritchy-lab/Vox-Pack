@@ -46,6 +46,13 @@ Légende : `[ ]` à faire · `[x]` fait
   commençait par un titre « page de version » et une note d'auteur en italique,
   reprise telle quelle sur les pages de la 1.3, 1.4 et 1.4.2. Remplacés par un
   commentaire HTML, invisible pour les visiteurs.
+- [x] **Tout l'historique sur chaque page** : la page d'une version reprenait le
+  fichier de notes en entier — un visiteur de la 1.4.2 y lisait les nouveautés
+  de la 1.3. `docs/page-de-version.py` découpe maintenant : introduction,
+  « Nouveautés de la <version> », à télécharger / à savoir, puis l'anglais.
+  Si une section manque, il imprime le fichier entier au lieu d'une page
+  blanche. Le robot accepte aussi un lancement à la main avec l'option
+  « réécrire le texte », pour rattraper une page déjà publiée.
 
 - [x] **edge-tts renvoyait une erreur 403 : plus aucune voix générée.**
   Microsoft a durci son contrôle d'accès (le jeton `Sec-MS-GEC-Version`
