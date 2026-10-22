@@ -30,6 +30,13 @@ Légende : `[ ]` à faire · `[x]` fait
   d'aligner des centaines d'erreurs.
 - [x] **Lien ☕ Ko-fi** sous la signature « ritchy-lab », cliquable ; la fenêtre
   gagne 18 px en bas pour lui faire de la place.
+- [x] **Page de version muette** : une page créée depuis l'interface GitHub
+  arrive sans texte — constaté sur la 1.4.1, titre **vide** et corps de
+  **0 caractère**, alors que les 1.3 et 1.4 avaient leur texte (créées par le
+  robot). Le robot de publication remplit maintenant les notes de
+  `docs/notes-de-version.md` quand la page est vide, **seulement** pour la
+  version qu'il vient de fabriquer, et **jamais** par-dessus un texte écrit à
+  la main. Éprouvé sur quatre cas avec un faux `gh`.
 
 - [x] **edge-tts renvoyait une erreur 403 : plus aucune voix générée.**
   Microsoft a durci son contrôle d'accès (le jeton `Sec-MS-GEC-Version`

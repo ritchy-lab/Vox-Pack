@@ -147,8 +147,11 @@ jobs:
       #   * la page n'existe pas encore (on a poussé une étiquette à la main) :
       #     on la crée, avec le texte de docs/notes-de-version.md ;
       #   * la page existe déjà (Richard l'a créée depuis l'interface GitHub,
-      #     ce qui est le chemin le plus simple) : on se contente d'y déposer
-      #     les deux fichiers, sans toucher à son texte.
+      #     ce qui est le chemin le plus simple) : on y dépose les deux
+      #     fichiers, et si cette page est arrivée SANS texte — c'est le cas de
+      #     la 1.4.1, titre vide et corps vide — on y met les notes. On ne
+      #     remplit que la version qu'on vient de fabriquer, et seulement si le
+      #     texte est vide : jamais par-dessus un texte écrit à la main.
       - name: Déposer les fichiers dans la version
         env:
           GH_TOKEN: ${{ github.token }}
@@ -160,6 +163,19 @@ jobs:
             gh release upload "${ETIQUETTE}" \
               "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
               "fichiers/Vox-Pack-Windows/Vox-Pack.exe" --clobber
+            corps="$(gh release view "${ETIQUETTE}" --json body -q .body)"
+            locale="$(python3 -c 'import version; print(version.VERSION)' 2>/dev/null || echo "")"
+            # Comparaison en minuscules : « V1.4.2 » et « v1.4.2 » sont la même
+            # version. Avec tr, et non ${VAR,,} : cette écriture n'existe qu'à
+            # partir de bash 4, et le Mac de Richard en est resté à bash 3.2.
+            visee="$(printf '%s' "${ETIQUETTE}" | tr 'A-Z' 'a-z')"
+            courante="$(printf 'v%s' "${locale}" | tr 'A-Z' 'a-z')"
+            if [ -z "${corps}" ] && [ -n "${locale}" ] \
+               && [ "${visee}" = "${courante}" ]; then
+              echo "Page sans texte : on y met docs/notes-de-version.md."
+              gh release edit "${ETIQUETTE}" \
+                --notes-file docs/notes-de-version.md
+            fi
           else
             echo "La page n'existe pas : on la crée."
             gh release create "${ETIQUETTE}" \
