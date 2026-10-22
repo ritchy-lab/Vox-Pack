@@ -114,6 +114,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
+      # Une publication ne doit pas partir avec un défaut que seule la machine
+      # d'un utilisateur révélerait (les trois cas d'octobre 2026).
+      - name: Vérifier le code avant de fabriquer
+        run: python tests/fumee_windows.py
+
       - name: Compiler l'application
         run: python -m PyInstaller Vox-Pack.spec --noconfirm
 

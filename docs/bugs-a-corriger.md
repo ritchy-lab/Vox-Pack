@@ -54,6 +54,33 @@ Légende : `[ ]` à faire · `[x]` fait
   blanche. Le robot accepte aussi un lancement à la main avec l'option
   « réécrire le texte », pour rattraper une page déjà publiée.
 
+### Version 1.4.4 (22 octobre)
+
+- [x] **La fin des phrases était coupée à l'écoute, sur Windows.** Signalé dans
+  le fil RCGroups : la 1.4.3 « clips off the end of the phrase ». Richard a tout
+  de suite dit que son Mac ne coupait pas, et que le PC si — **il avait raison**.
+  Deux fausses pistes ont été écartées par la mesure, pas à l'œil :
+  - la chaîne audio est la même sur les deux systèmes : mêmes durées, et le
+    fichier WAV décodé est identique (0 ms d'écart sur six phrases) ;
+  - la coupe des silences n'enlève pas de contenu audible : sur **16 phrases**,
+    0 ms perdu au-dessus de −35 dBFS.
+  **Vraie cause** : dans `LectureAudio.wait`, la lecture était arrêtée
+  (`sd.stop()`) dès que le flux n'était plus « actif », sans attendre que le
+  pilote Windows ait joué son tampon de 50 à 200 ms. La fin disparaissait donc
+  **à l'écoute seulement**. `wait()` appelle maintenant `sd.wait()`, qui attend
+  la fin réelle ; `terminate()` débloque cet appel par `sd.stop()`.
+- [x] **Fins de phrases plus naturelles** (même si aucun phonème ne manquait) :
+  la coupe s'arrêtait à −46 dBFS et le gain remontait cette fin à −43 dBFS, donc
+  un fichier qui se termine en pleine parole. Seuil à **−50 dBFS**, marge de
+  **50 ms à la fin** (20 ms au début, inchangée : c'est la fin qui s'entend), et
+  **fondu de sortie de 10 ms**. Sur cinq phrases, la fin passe de −43 dBFS à
+  −61/−67 dBFS, pour une **quarantaine** de millisecondes de plus : 822 ms de
+  moyenne contre 1 932 ms sans traitement, et 783 ms en 1.4.3. Les fichiers
+  restent courts.
+- **Méthode à retenir** : deux hypothèses ont été fausses aujourd'hui (le PC,
+  puis le seuil). La mesure a chaque fois tranché — empreintes du code,
+  durées comparées, énergie perdue. Le faire **avant** d'annoncer une cause.
+
 ### Version 1.4.3 (22 octobre)
 
 - [x] **« The list could not be saved. » sur PC (WinError 5, 22 octobre).**

@@ -295,11 +295,21 @@ def ameliorer_niveau_wav(chemin):
         return
     x = np.frombuffer(brut, dtype="<i2").astype(np.float32) / 32768.0
 
-    # 1. Silences au début et à la fin : seuil −46 dBFS, marge 20 ms.
-    actifs = np.where(np.abs(x) > 0.005)[0]
+    # 1. Silences au début et à la fin.
+    #
+    # Le seuil était à −46 dBFS, et c'est trop haut : une fin de mot ne
+    # s'arrête pas net, elle s'éteint. Le gain qui suit (+6 dB puis
+    # normalisation) remontait cette fin à −43 dBFS, donc un fichier qui se
+    # termine en pleine parole. Signalé le 22 octobre 2026. Seuil à −50 dBFS.
+    #
+    # La marge est plus large à la fin qu'au début (50 ms contre 20) : c'est
+    # la fin qui s'entend. Un fondu de sortie ferme le fichier juste après
+    # (point 5). Ces 30 ms de plus ne nous ramènent pas aux fichiers d'avant :
+    # on reste à 822 ms de moyenne contre 1 932 ms sans traitement.
+    actifs = np.where(np.abs(x) > 0.003)[0]
     if len(actifs):
         debut = max(0, actifs[0] - int(0.020 * sr))
-        fin = min(len(x), actifs[-1] + int(0.020 * sr))
+        fin = min(len(x), actifs[-1] + int(0.050 * sr))
         x = x[debut:fin].copy()
     if len(x) < 64:
         return
@@ -320,6 +330,14 @@ def ameliorer_niveau_wav(chemin):
     pic = np.max(np.abs(x))
     if pic > 0:
         x *= 1.0 / pic
+
+    # 5. Fondu de sortie de 10 ms. Après la normalisation, la fin du fichier
+    #    touche encore à −36 dBFS : la radio s'arrête en pleine parole. Dix
+    #    millisecondes suffisent à supprimer le claquement, sans qu'on entende
+    #    la voix disparaître.
+    fondu = max(1, int(0.010 * sr))
+    if len(x) > fondu:
+        x[-fondu:] *= np.linspace(1.0, 0.0, fondu)
 
     temporaire = chemin + ".niveau"
     try:
@@ -572,13 +590,20 @@ class LectureAudio:
         if self._processus is not None:
             self._processus.wait()
             return
-        while not self._arret.is_set():
-            flux = self._sd.get_stream()
-            if flux is None or not flux.active:
-                break
-            time.sleep(0.05)
+        # sd.wait() attend que le périphérique ait réellement joué tout ce
+        # qu'on lui a donné. L'ancienne boucle sortait dès que le flux
+        # n'était plus « actif », puis appelait sd.stop() : or le pilote
+        # Windows garde un tampon de 50 à 200 ms, et cette coupure tronquait
+        # la fin de la phrase — à l'ÉCOUTE seulement, le fichier écrit étant
+        # intact. Signalé par un utilisateur le 22 octobre 2026, et cohérent
+        # avec ce que Richard entend : son Mac ne coupe pas (afplay attend la
+        # fin), son PC si.
+        # terminate() appelle sd.stop() depuis l'autre fil : c'est ce qui
+        # débloque cet appel quand on appuie sur « Arrêter ».
         try:
-            self._sd.stop()
+            if self._sd.get_stream() is None:
+                return
+            self._sd.wait()
         except Exception:
             pass
 

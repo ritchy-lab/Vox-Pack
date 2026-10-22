@@ -40,6 +40,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
+      # Les trois défauts d'octobre 2026 ne se voyaient que sur PC : écriture
+      # d'un WAV en « .tmp », réécriture de la liste, traitement du niveau.
+      # Mieux vaut les attraper ici que chez un utilisateur.
+      - name: Vérifier le code avant de fabriquer
+        run: python tests/fumee_windows.py
+
       - name: Compiler l'application
         run: python -m PyInstaller Vox-Pack.spec --noconfirm
 
