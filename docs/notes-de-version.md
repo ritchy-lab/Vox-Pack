@@ -1,10 +1,10 @@
-# Vox-Pack — page de version
-
-*(Ce texte est celui qu'une étiquette de version dépose automatiquement sur la
-page « Releases » du dépôt. Il est écrit dans les deux langues : la page n'a
-qu'une seule zone de texte, et l'application est bilingue.)*
-
----
+<!--
+Ce fichier EST le texte de la page « Releases » : il est repris tel quel par le
+robot de publication, et il est bilingue parce que la page n'a qu'une zone de
+texte. Tout ce qui s'écrit ici est donc visible du public — d'où ce commentaire
+HTML, invisible pour les visiteurs, pour laisser les consignes aux auteurs.
+Ne pas remettre de titre « page de version » : la page en a déjà un.
+-->
 
 Fait parler ta radiocommande.
 

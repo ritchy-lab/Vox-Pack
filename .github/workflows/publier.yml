@@ -23,6 +23,11 @@ on:
       # on accepte donc les deux, sinon la publication reste sans fichier.
       - 'v*'
       - 'V*'
+      # Et sans lettre du tout. Le 22 octobre, l'étiquette « 1.4.2 » (V
+      # oublié) n'a réveillé aucun robot : la page est restée sans fichiers,
+      # et il a fallu la supprimer et la recréer. Une majuscule manquante ne
+      # doit pas pouvoir bloquer une publication.
+      - '[0-9]*'
   workflow_dispatch:
     inputs:
       etiquette:
@@ -165,11 +170,12 @@ jobs:
               "fichiers/Vox-Pack-Windows/Vox-Pack.exe" --clobber
             corps="$(gh release view "${ETIQUETTE}" --json body -q .body)"
             locale="$(python3 -c 'import version; print(version.VERSION)' 2>/dev/null || echo "")"
-            # Comparaison en minuscules : « V1.4.2 » et « v1.4.2 » sont la même
-            # version. Avec tr, et non ${VAR,,} : cette écriture n'existe qu'à
-            # partir de bash 4, et le Mac de Richard en est resté à bash 3.2.
-            visee="$(printf '%s' "${ETIQUETTE}" | tr 'A-Z' 'a-z')"
-            courante="$(printf 'v%s' "${locale}" | tr 'A-Z' 'a-z')"
+            # Comparaison sans la lettre de tête : « V1.4.2 », « v1.4.2 » et
+            # « 1.4.2 » désignent la même version. Avec tr et sed, et non
+            # ${VAR,,} : cette écriture n'existe qu'à partir de bash 4, et le
+            # Mac de Richard en est resté à bash 3.2.
+            visee="$(printf '%s' "${ETIQUETTE}" | tr 'A-Z' 'a-z' | sed 's/^v//')"
+            courante="$(printf '%s' "${locale}" | tr 'A-Z' 'a-z' | sed 's/^v//')"
             if [ -z "${corps}" ] && [ -n "${locale}" ] \
                && [ "${visee}" = "${courante}" ]; then
               echo "Page sans texte : on y met docs/notes-de-version.md."

@@ -37,6 +37,15 @@ Légende : `[ ]` à faire · `[x]` fait
   `docs/notes-de-version.md` quand la page est vide, **seulement** pour la
   version qu'il vient de fabriquer, et **jamais** par-dessus un texte écrit à
   la main. Éprouvé sur quatre cas avec un faux `gh`.
+- [x] **Étiquette sans `V`** : le 22 octobre, la version d'abord publiée sous
+  `1.4.2` (V oublié) n'a réveillé **aucun** robot — le déclencheur n'écoutait
+  que `v*` / `V*` — et la page est restée sans fichiers. Le déclencheur accepte
+  désormais aussi `[0-9]*`, et la comparaison avec le numéro de version ignore
+  la lettre de tête.
+- [x] **Note interne visible sur les pages publiques** : `notes-de-version.md`
+  commençait par un titre « page de version » et une note d'auteur en italique,
+  reprise telle quelle sur les pages de la 1.3, 1.4 et 1.4.2. Remplacés par un
+  commentaire HTML, invisible pour les visiteurs.
 
 - [x] **edge-tts renvoyait une erreur 403 : plus aucune voix générée.**
   Microsoft a durci son contrôle d'accès (le jeton `Sec-MS-GEC-Version`
