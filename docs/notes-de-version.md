@@ -11,6 +11,16 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 1.4.3
+
+- **Enregistrer la liste, même quand Windows s'y oppose** : un antivirus, OneDrive
+  ou la protection « Contrôle des dossiers » de Windows peut refuser la
+  réécriture du fichier de liste. L'application réessaie maintenant trois fois,
+  et le message dit la vraie cause — avant, il parlait d'espace disque, ce qui
+  envoyait sur une fausse piste.
+- **Fenêtre « Mise à jour disponible »** : le texte et les boutons ne sortent
+  plus de la fenêtre. Elle se redimensionne sur son contenu.
+
 ## Nouveautés de la 1.4.2
 
 - **Correction Windows, la vraie** : depuis la 1.4.1, la génération des **sons
@@ -97,6 +107,16 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 1.4.3
+
+- **Saving the list, even when Windows says no**: an antivirus, OneDrive or
+  Windows' "Controlled folder access" can refuse to let the list file be
+  rewritten. The app now retries three times, and the message gives the real
+  cause — before, it mentioned disk space, which sent people down the wrong
+  path.
+- **"Update available" window**: the text and the buttons no longer spill out
+  of the window. It resizes to fit its content.
 
 ## What's new in 1.4.2
 

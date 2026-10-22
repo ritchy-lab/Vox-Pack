@@ -902,7 +902,10 @@ TEXTES = {
             "Attendez qu'elle se termine.",
         "msg_sauvegarde_echec":
             "La liste n'a pas pu être enregistrée.\n\n"
-            "{err}\n\nVérifie l'espace libre de ton disque.",
+            "{err}\n\n"
+            "Un autre programme utilise peut-être ce fichier (antivirus, "
+            "OneDrive), ou Windows protège le dossier Documents : dans "
+            "Sécurité Windows → « Contrôle des dossiers », autorise Vox-Pack.",
         "msg_bilan_echecs":
             "{reussis} fichier{s1} créé{s1} sur {total}.\n\n"
             "{problemes} problème{s2} :\n{detail}",
@@ -1240,7 +1243,10 @@ TEXTES = {
             "Wait for it to finish.",
         "msg_sauvegarde_echec":
             "The list could not be saved.\n\n"
-            "{err}\n\nCheck the free space on your disk.",
+            "{err}\n\n"
+            "Another program may be using this file (antivirus, OneDrive), "
+            "or Windows is protecting the Documents folder: in Windows "
+            "Security → \"Controlled folder access\", allow Vox-Pack.",
         "msg_bilan_echecs":
             "{reussis} file{s1} created out of {total}.\n\n"
             "{problemes} problem{s2}:\n{detail}",
@@ -4090,7 +4096,21 @@ class VoxPackApp(ctk.CTk):
                 self._bak_faits.add(fichier)
                 if os.path.exists(fichier) and os.path.getsize(fichier) > 0:
                     shutil.copy2(fichier, fichier + ".bak")
-            os.replace(temporaire, fichier)
+            # Windows refuse parfois le renommage pendant quelques dixièmes de
+            # seconde : l'antivirus vient de lire le fichier temporaire, ou
+            # OneDrive le synchronise. Deux essais de plus règlent ce cas.
+            # Après un échec déjà signalé, on n'insiste plus : cette fonction
+            # tourne à chaque frappe, et une attente répétée rendrait la saisie
+            # pâteuse.
+            essais = 1 if self._erreur_sauvegarde else 3
+            for essai in range(essais):
+                try:
+                    os.replace(temporaire, fichier)
+                    break
+                except OSError:
+                    if essai == essais - 1:
+                        raise
+                    time.sleep(0.1)
             self._erreur_sauvegarde = False
         except Exception as e:
             # Une seule alerte par session : sinon chaque frappe en ouvrirait une

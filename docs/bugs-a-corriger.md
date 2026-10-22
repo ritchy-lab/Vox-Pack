@@ -54,7 +54,21 @@ Légende : `[ ]` à faire · `[x]` fait
   blanche. Le robot accepte aussi un lancement à la main avec l'option
   « réécrire le texte », pour rattraper une page déjà publiée.
 
-### Après la 1.4.2 (dans `main`, pas encore publié)
+### Version 1.4.3 (22 octobre)
+
+- [x] **« The list could not be saved. » sur PC (WinError 5, 22 octobre).**
+  Signalé par un utilisateur : `os.replace` refusé sur
+  `Documents\Vox-Pack\liste_en.csv`. Trois causes possibles côté Windows —
+  antivirus ou OneDrive qui tient le fichier une fraction de seconde, fichier
+  mis en **lecture seule**, ou **Windows protège le dossier** (« Contrôle des
+  dossiers » / Controlled folder access, qui bloque les exécutables non
+  signés dans Documents). Notre message disait « vérifie l'espace libre du
+  disque », ce qui envoyait l'utilisateur sur la mauvaise piste. Correctif :
+  trois essais espacés de 0,1 s (l'échec transitoire passe), une fois par
+  session ; et un message qui nomme les vraies causes. Après un échec déjà
+  signalé, on n'insiste plus : `_ecrire_csv` tourne à chaque frappe.
+  Éprouvé sur trois cas (deux échecs puis réussite, échec permanent, frappe
+  suivante : 3, 3 puis 1 essai).
 
 - [x] **Fenêtre « Mise à jour disponible » : texte et boutons sortaient de la
   fenêtre.** Repéré par Richard le 22 octobre sur la 1.4.1 : la dernière phrase
