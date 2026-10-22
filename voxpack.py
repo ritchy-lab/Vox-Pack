@@ -103,7 +103,13 @@ def convertir_en_wav(source_mp3, destination_wav):
     cible = FORMAT_EDGETX[0]
     if taux != cible:
         donnees = soxr.resample(donnees, taux, cible, quality="VHQ")
-    sf.write(destination_wav, donnees, cible, subtype="PCM_16")
+    # Le format est dit explicitement : sans cela, soundfile le devine d'après
+    # l'extension, et refuse tout ce qui ne finit pas par .wav. Or les sons
+    # système s'écrivent d'abord en « 0000.wav.tmp » (le temporaire doit rester
+    # sur le même disque pour os.replace). Avec un nom en .tmp, les 212 sons
+    # échouaient sur PC — « No format specified and unable to get format from
+    # file extension » — alors que macOS passait par afconvert, qui s'en moque.
+    sf.write(destination_wav, donnees, cible, subtype="PCM_16", format="WAV")
 
 
 # ------------------------------------------------------------------
@@ -819,6 +825,12 @@ TEXTES = {
             "Le service de voix a renvoyé une réponse illisible. "
             "Réessayez dans un instant.",
         "err_reseau": "pas de connexion Internet",
+        "err_reseau_detail":
+            "Impossible de joindre le service de voix Microsoft. Vérifie ta "
+            "connexion Internet (VPN, pare-feu, DNS), puis réessaie.",
+        "msg_reseau_coupe":
+            "Connexion Internet interrompue : la génération a été arrêtée. "
+            "Vérifie ta connexion, puis relance.",
 
         # ----- Menu -----
         "menu_fichier": "Fichier",
@@ -1151,6 +1163,12 @@ TEXTES = {
             "The voice service returned an unreadable response. "
             "Try again in a moment.",
         "err_reseau": "no Internet connection",
+        "err_reseau_detail":
+            "Cannot reach Microsoft's voice service. Check your Internet "
+            "connection (VPN, firewall, DNS), then try again.",
+        "msg_reseau_coupe":
+            "Internet connection lost: generation was stopped. Check your "
+            "connection, then try again.",
 
         # ----- Menu -----
         "menu_fichier": "File",
@@ -1843,7 +1861,7 @@ def regler_echelle(hauteur_ecran):
 # Taille souhaitée de la fenêtre. Elle se réduit automatiquement si l'écran
 # est plus petit (voir VoxPackApp.__init__).
 LARGEUR_FENETRE = 820
-HAUTEUR_FENETRE = 795
+HAUTEUR_FENETRE = 813
 
 # Écran « confortable » : au-delà de cette hauteur, l'application garde son
 # allure d'origine. En dessous (portable 1080 réglé à 150 % : Windows annonce
@@ -2204,7 +2222,9 @@ class VoxPackApp(ctk.CTk):
         ecran_l = self.winfo_screenwidth()
         ecran_h = self.winfo_screenheight()
         x = max((ecran_l - largeur) // 2, 0)
-        y = max((ecran_h - hauteur) // 2 - 15, 0)
+        # On garde le bas de la fenêtre à sa place : les 18 px ajoutés
+        # servent uniquement au lien Ko-fi sous la signature.
+        y = max((ecran_h - hauteur) // 2 - 15 - 9, 0)
         self.geometry(f"{largeur}x{hauteur}+{x}+{y}")
         self.minsize(min(LARGEUR_FENETRE, largeur), min(620, hauteur))
         self.resizable(True, True)
@@ -2514,12 +2534,31 @@ class VoxPackApp(ctk.CTk):
             fg_color="transparent",
         )
         self.signature.configure(cursor=CURSEUR_MAIN)
-        self.signature.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-10)
+        self.signature.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-16)
         self.signature.bind("<Button-1>", lambda e: self._ouvrir_soutien())
+
+        # Lien Ko-fi visible sous la signature.
+        self.kofi = ctk.CTkLabel(
+            self.bottom,
+            text="☕ Ko-fi",
+            font=(FONT_MAIN, 10),
+            text_color=TEXT_DIM,
+            fg_color="transparent",
+            height=16,
+            width=56,
+        )
+        self.kofi.configure(cursor=CURSEUR_MAIN)
+        self.kofi.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-0)
+        self.kofi.bind("<Button-1>", lambda e: self._ouvrir_lien(KO_FI_URL))
+        self.kofi.bind("<Enter>",
+                       lambda e: self.kofi.configure(text_color=CYAN))
+        self.kofi.bind("<Leave>",
+                       lambda e: self.kofi.configure(text_color=TEXT_DIM))
         self.signature.bind(
             "<Enter>", lambda e: self.signature.configure(text_color=CYAN))
         self.signature.bind(
             "<Leave>", lambda e: self.signature.configure(text_color=TEXT_DIM))
+        self.signature.lift()
 
         # La liste est empilée en dernier, avec « expand » : elle prend toute la
         # place restante et se réduit la première si la fenêtre rapetisse.
@@ -4073,6 +4112,9 @@ class VoxPackApp(ctk.CTk):
 
     def _fin_apercu(self):
         """Le bouton redevient « Écouter »."""
+        # L'aperçu est fini : sans ça, un changement de langue croit encore
+        # qu'une lecture est en cours et affiche « Arrêter ».
+        self._lecture = None
         try:
             self.btn_apercu.configure(text=t("ecouter"),
                                       command=self.ecouter_selection)
@@ -4118,8 +4160,11 @@ class VoxPackApp(ctk.CTk):
                     await tache              # la voix de CETTE phrase
                 except Exception as e:
                     if self._apercu_no == numero:
-                        self.after(0, lambda err=e: self._message(
-                            t("msg_apercu_echec", err=err), icone="erreur"))
+                        raison = raison_lisible(e)
+                        if raison == t("err_reseau"):
+                            raison = t("err_reseau_detail")
+                        self.after(0, lambda r=raison: self._message(
+                            t("msg_apercu_echec", err=r), icone="erreur"))
                     break
                 # Pendant la lecture qui suit, la phrase suivante se prépare.
                 if rang < total:
@@ -4257,6 +4302,8 @@ class VoxPackApp(ctk.CTk):
         total = len(taches)
         echecs = list(refuses or [])       # noms refusés avant même d'essayer
         nb_refuses = len(echecs)
+        reseau_suite = 0
+        coupe_reseau = False
 
         self._dire(t("etat_recherche_service"))
 
@@ -4277,7 +4324,15 @@ class VoxPackApp(ctk.CTk):
             except Exception as e:
                 # On note l'échec et on passe à la ligne suivante : une phrase
                 # qui rate ne doit pas priver l'utilisateur de toutes les autres.
-                echecs.append((nom, raison_lisible(e)))
+                raison = raison_lisible(e)
+                echecs.append((nom, raison))
+                if raison == t("err_reseau"):
+                    reseau_suite += 1
+                    if reseau_suite >= 3:
+                        coupe_reseau = True
+                        break
+                else:
+                    reseau_suite = 0
             finally:
                 if os.path.exists(temp_mp3):
                     os.remove(temp_mp3)
@@ -4298,6 +4353,8 @@ class VoxPackApp(ctk.CTk):
             detail = "\n".join(f"• {nom} : {raison}" for nom, raison in echecs[:6])
             if len(echecs) > 6:
                 detail += "\n" + t("msg_autres", n=len(echecs) - 6)
+            if coupe_reseau:
+                detail = t("msg_reseau_coupe") + "\n" + detail
             self.after(0, lambda: self._message(
                 t("msg_bilan_echecs", reussis=reussis,
                   s1="s" if reussis > 1 else "", total=total + nb_refuses,
@@ -4473,6 +4530,8 @@ class VoxPackApp(ctk.CTk):
         # remplacement final reste sur le même disque (Windows échoue avec
         # WinError 17 quand la sortie est sur D: et le temporaire sur C:).
         travail = tempfile.mkdtemp(prefix="vox-pack-sons-")
+        reseau_suite = 0
+        coupe_reseau = False
         try:
             for idx, (nom, phrase) in enumerate(taches):
                 stop = self._sons_stop
@@ -4498,8 +4557,17 @@ class VoxPackApp(ctk.CTk):
                     os.replace(temp_wav, final_wav)
                     faits += 1
                 except Exception as e:
-                    # Une phrase qui rate ne doit pas priver des 188 autres.
-                    echecs.append((nom, raison_lisible(e)))
+                    # Une phrase qui rate ne doit pas priver des 188 autres,
+                    # sauf si le réseau est coupé : là, inutile d'insister.
+                    raison = raison_lisible(e)
+                    echecs.append((nom, raison))
+                    if raison == t("err_reseau"):
+                        reseau_suite += 1
+                        if reseau_suite >= 3:
+                            coupe_reseau = True
+                            break
+                    else:
+                        reseau_suite = 0
                 finally:
                     for reste in (temp_mp3, temp_wav):
                         try:
@@ -4528,6 +4596,8 @@ class VoxPackApp(ctk.CTk):
                            for nom, raison in echecs[:6])
         if len(echecs) > 6:
             detail += "\n" + t("msg_autres", n=len(echecs) - 6)
+        if coupe_reseau:
+            detail = t("msg_reseau_coupe") + "\n" + detail
 
         if arrete:
             texte = t("msg_sons_arrete", n=faits,

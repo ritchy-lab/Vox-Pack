@@ -7,6 +7,30 @@ Légende : `[ ]` à faire · `[x]` fait
 
 ## Fait
 
+### Version 1.4.2 (22 octobre)
+
+- [x] **La 1.4.1 cassait tous les sons système sur PC.** Signalé par un
+  utilisateur, captures à l'appui : « 0 système créé sur 212 », avec 212 fois le
+  même message « No format specified and unable to get format from file
+  extension ». **C'était notre régression**, introduite dans `a54c426` : la
+  1.4.1 a déplacé le fichier temporaire dans le dossier de destination (pour
+  éviter l'échec de Windows, qui ne sait pas renommer d'un disque à l'autre) et
+  l'a nommé `0000.wav.tmp`. Or `soundfile`, qui écrit le WAV sur PC, devine le
+  format d'après **l'extension** et refuse un `.tmp`. Sur macOS, `afconvert`
+  reçoit le format par `-f WAVE` et se moque du nom : Richard ne pouvait donc
+  pas le voir. Correctif d'une ligne : `convertir_en_wav` annonce le format
+  (`format="WAV"`) au lieu de le laisser deviner — la correction « autre
+  disque » de la 1.4.1 est conservée. Vérifié en simulant le chemin Windows sur
+  un nom en `.wav.tmp` : 32 kHz, mono, 16 bits, aucun temporaire laissé.
+- [x] **Bouton « Écouter »** : après un changement de langue, il restait sur
+  « Arrêter ». `_fin_apercu` remet `self._lecture` à `None`.
+- [x] **Erreur réseau lisible** : l'aperçu affiche `err_reseau_detail` au lieu
+  du message technique d'edge-tts, et la génération (liste et sons système)
+  s'arrête après **3 échecs réseau consécutifs** (`msg_reseau_coupe`) au lieu
+  d'aligner des centaines d'erreurs.
+- [x] **Lien ☕ Ko-fi** sous la signature « ritchy-lab », cliquable ; la fenêtre
+  gagne 18 px en bas pour lui faire de la place.
+
 - [x] **edge-tts renvoyait une erreur 403 : plus aucune voix générée.**
   Microsoft a durci son contrôle d'accès (le jeton `Sec-MS-GEC-Version`
   est passé de `1-` à `2-`). Correctif : `edge-tts` 7.3.1, désormais exigé

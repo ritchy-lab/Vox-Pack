@@ -11,6 +11,22 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 1.4.2
+
+- **Correction Windows, la vraie** : depuis la 1.4.1, la génération des **sons
+  système** échouait **en entier** sur PC (« 0 fichier créé sur 212 »). Le
+  fichier temporaire porte un nom en `.tmp`, et la bibliothèque d'écriture
+  devinait le format d'après ce nom : elle refusait. Le format est maintenant
+  annoncé explicitement. La correction de la 1.4.1 (dossier de sortie sur un
+  autre disque) reste en place.
+- **Bouton « Écouter »** : après un changement de langue, il redevient
+  « Écouter » au lieu de rester sur « Arrêter ».
+- **Connexion Internet** : un message clair quand le service de voix est
+  injoignable, au lieu d'une erreur technique. Et si le réseau tombe vraiment,
+  la génération s'arrête après **trois échecs d'affilée** au lieu d'empiler
+  des centaines d'erreurs.
+- **Lien ☕ Ko-fi** sous la signature, en bas à droite de la fenêtre.
+
 ## Nouveautés de la 1.4.1
 
 - **Correction Windows** : la génération des **sons système** fonctionne
@@ -81,6 +97,21 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 1.4.2
+
+- **Windows fix, the real one**: since 1.4.1, **system sound** generation failed
+  **completely** on Windows ("0 file created out of 212"). The temporary file
+  has a `.tmp` name, and the writing library guessed the format from that name:
+  it refused. The format is now stated explicitly. The 1.4.1 fix (output folder
+  on another drive) stays in place.
+- **"Listen" button**: after a language change, it goes back to "Listen"
+  instead of staying on "Stop".
+- **Internet connection**: a clear message when the voice service cannot be
+  reached, instead of a technical error. And if the network really drops,
+  generation stops after **three failures in a row** instead of piling up
+  hundreds of errors.
+- **☕ Ko-fi link** under the signature, bottom right of the window.
 
 ## What's new in 1.4.1
 
