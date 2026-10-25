@@ -1,6 +1,6 @@
 <img src="assets/logo-fond-sombre.png" alt="Vox-Pack" width="760">
 
-🇬🇧 **[English version](README.en.md)**
+🇬🇧 **[English version](README.en.md)** · 🇩🇪 **[Deutsche Fassung](README.de.md)**
 
 # Vox-Pack
 

@@ -7,6 +7,42 @@ Légende : `[ ]` à faire · `[x]` fait
 
 ## Fait
 
+### Version 1.5.0 (25 octobre) — chantier, non publiée
+
+- [x] **Troisième langue : l'allemand.** 180 textes (176 de l'interface + 3 clés
+  propres à l'allemand + le paragraphe des pauses), corrigés par **Ralf (RWR)**
+  sur 88 d'entre eux ; les 91 autres acceptés tels quels. 4 voix (Katja ★
+  officielle, Conrad, Amala, Killian), liste de 28 phrases, **211 sons système**
+  (`de-DE.csv`), aide et fenêtres macOS en allemand. HAL 9000 parle avec Conrad
+  (réglage provisoire, −8 Hz / −15 %).
+- [x] **Silences dans une phrase.** `>` = 0,5 s, `>>` = 1 s, plafond 10 s, au
+  début comme entre deux mots. Posés **après** le traitement du niveau (qui
+  coupe les bords), et les bords de chaque morceau sont coupés avant collage :
+  sinon le service ajoutait près d'une seconde. Aide `aide_2d` dans les trois
+  langues.
+- [x] **Fenêtre de soutien à la fermeture**, avec la case **« Ne plus demander »
+  retenue dans les réglages**. Le bouton rouge, Fichier → Quitter et Cmd+Q y
+  passent tous ; « Oui, avec plaisir » ouvre Ko-fi et arrête les questions.
+- [x] **Logo Ko-fi** (version sombre, 321 × 258) dans le lien du bas, au début de
+  la ligne de soutien de l'aide et dans la fenêtre de soutien — plus d'émoji ☕.
+  Le clic sur « ritchy-lab » ouvre la page des applications ; le Ko-fi ouvre la
+  fenêtre de soutien.
+- [x] **Aide** : Échap ferme toutes les fenêtres ; chaque lien a son propre
+  survol (les deux lignes ne s'allument plus ensemble) ; `aide_sys3` parle bien
+  de la création des sons système de la langue ; `aide_1a` dit que le menu ne
+  montre que les voix de la langue choisie.
+- [x] **README allemand** (`README.de.md`) avec ses captures, et liens croisés
+  dans les trois README.
+- [x] **Validé par Ralf** (25 octobre au soir) : page principale, menu Fichier
+  (Langue, Exporter, Importer, Générer les annonces système), fenêtre de choix
+  du dossier `SYSTEM`, **les 211 sons système en allemand** et l'aide.
+  « Tout est correct et prêt à être publié. »
+- [x] **HAL 9000 en allemand : gardé tel quel** (décision de Richard). Les
+  extraits du film fournis (voix seule, 30 s) donnent un HAL à **82–103 Hz**,
+  timbre sombre. Les essais de hauteur (−40 à −65 Hz) et de filtre plus sombre
+  n'ont pas convaincu : « une voix, c'est un ensemble, pas juste une vitesse ».
+  **Aucun changement dans le code.**
+
 ### Version 1.4.2 (22 octobre)
 
 - [x] **La 1.4.1 cassait tous les sons système sur PC.** Signalé par un

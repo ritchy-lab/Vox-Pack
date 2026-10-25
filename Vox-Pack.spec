@@ -18,6 +18,7 @@ from PyInstaller.utils.hooks import collect_all
 # a qu'une seule langue.)
 datas = [
     ('logo.png', '.'),
+    ('ko-fi.png', '.'),
     # L'icône de la fenêtre : Windows ne prend pas celle de l'exécutable.
     ('icon.ico', '.'),
     ('icon.png', '.'),
@@ -115,7 +116,7 @@ if sys.platform == 'darwin':
             # l'application déclare, et PyInstaller n'en déclare aucune.
             # C'est le même correctif que Python a appliqué à son propre
             # lanceur (Python.app) en 3.12.
-            'CFBundleLocalizations': ['fr', 'en'],
+            'CFBundleLocalizations': ['fr', 'en', 'de'],
             'CFBundleAllowMixedLocalizations': True,
         },
     )

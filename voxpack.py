@@ -127,8 +127,15 @@ ROBOTS = {
         "echo": ((0.025, 0.35), (0.050, 0.20))},
     4: {"pitch": "-4Hz", "rate": "+6%", "hal": "en",
         "fr": {"pitch": "-10Hz", "rate": "-25%", "hal": "fr"},
+        "de": {"pitch": "-8Hz", "rate": "-15%", "hal": "de"},
         "ring": 0, "dry": 1.0, "echo": ()},
 }
+
+# La voix que HAL 9000 impose, par langue. HAL n'a pas encore de voix
+# allemande de cinéma : Conrad fait l'affaire en attendant (Richard, le
+# 25 octobre 2026). Le réglage allemand est provisoire, à écouter.
+VOIX_ROBOT = {"fr": "fr-FR-HenriNeural", "en": "en-US-ChristopherNeural",
+              "de": "de-DE-ConradNeural"}
 
 
 def appliquer_effet_robot(chemin, numero, langue="en"):
@@ -414,10 +421,10 @@ def chemin_liste(langue):
 URL_CSV_OFFICIEL = ("https://raw.githubusercontent.com/EdgeTX/"
                     "edgetx-sdcard-sounds/master/voices/{}.csv")
 
-# La langue de l'interface commande celle des voix : il n'y a donc que deux
-# fichiers utiles. « en » correspond à en-GB, le paquet anglais d'EdgeTX (le
+# La langue de l'interface commande celle des voix : il y a donc un fichier
+# utile par langue. « en » correspond à en-GB, le paquet anglais d'EdgeTX (le
 # dépôt ne se sert que de celui-là pour construire SOUNDS/en).
-CSV_OFFICIEL = {"fr": "fr-FR", "en": "en-GB"}
+CSV_OFFICIEL = {"fr": "fr-FR", "en": "en-GB", "de": "de-DE"}
 
 
 def csv_officiel_sons_systeme(langue):
@@ -653,7 +660,7 @@ def place_hors_liste():
     return (ESPACE_HAUT + ESPACE_LOGO_BOUTONS + BTN_H + ESPACE_BOUTONS_LISTE
             + 40                      # en-tête du tableau : Nom / Phrase
             + ESPACE_LISTE_LEDS + HAUTEUR_INFO + ESPACE_LEDS_BOUTONS
-            + 50                      # rangée du bas (bouton « Let's Go »)
+            + 66                      # rangée du bas + les liens empilés
             + ESPACE_BAS + 26)        # marges internes de la liste
 
 
@@ -726,14 +733,14 @@ LOGO_PATH = trouver_logo()
 # avec des voix et une liste françaises.
 LANGUE_UI = "fr"
 
-LANGUES = ["fr", "en"]
+LANGUES = ["fr", "en", "de"]
 
 
 def langue_du_systeme():
     """Langue d'interface au tout premier lancement : celle du système.
 
-    Seuls le français et l'anglais sont proposés. Toute autre langue donne
-    l'anglais, qui a le plus de chances d'être comprise.
+    Trois langues sont proposées : français, anglais et allemand. Toute
+    autre langue donne l'anglais, qui a le plus de chances d'être comprise.
 
     Attention : lancée depuis un terminal ou un éditeur, l'application hérite
     d'un LANG qui vaut souvent « C.UTF-8 » même sur un Mac en français. Sous
@@ -753,7 +760,8 @@ def langue_du_systeme():
                 trouve = re.search(r'[\(\s]"?([A-Za-z]{2,3})[-_"\s,)]',
                                    sortie.stdout)
                 if trouve:
-                    return "fr" if trouve.group(1).lower() == "fr" else "en"
+                    code = trouve.group(1).lower()
+                    return code if code in ("fr", "de") else "en"
         except Exception:
             pass
         try:
@@ -774,13 +782,14 @@ def langue_du_systeme():
     essais.append(os.environ.get("LANG", ""))
     essais.append(os.environ.get("LC_ALL", ""))
     for essai in essais:
-        if (essai or "").lower().startswith("fr"):
-            return "fr"
+        debut = (essai or "").lower()[:2]
+        if debut in ("fr", "de"):
+            return debut
     return "en"
 
 
-# Tous les textes de l'application, dans les deux langues. Les clés sont les
-# mêmes dans les deux tables : c'est ce qui garantit qu'aucun texte n'est
+# Tous les textes de l'application, dans les trois langues. Les clés sont les
+# mêmes dans les trois tables : c'est ce qui garantit qu'aucun texte n'est
 # oublié d'un côté (voir cles_manquantes).
 #
 # Les champs entre accolades ({nom}, {max}…) sont remplis par t().
@@ -810,10 +819,12 @@ TEXTES = {
         "accent_usa": "USA",
         "accent_uk": "Royaume-Uni",
         "accent_irlande": "Irlande",
+        "accent_allemagne": "Allemagne",
 
         # ----- Noms des langues -----
         "langue_fr": "Français",
         "langue_en": "English",
+        "langue_de": "Deutsch",
 
         # ----- Ligne d'état (sous la barre de leds) -----
         "etat_recherche_service": "Recherche des voix sur le service TTS…",
@@ -891,6 +902,7 @@ TEXTES = {
         "oui_remplacer": "Oui, remplacer",
         "adjectif_fr": "françaises",
         "adjectif_en": "anglaises",
+        "adjectif_de": "allemandes",
         "msg_import_ok": "{n} ligne{s} importée{s}.",
         "msg_csv_aucun_systeme":
             "La liste officielle d'EdgeTX ne contient aucun son système.\n\n"
@@ -956,9 +968,10 @@ TEXTES = {
         # ----- Fenêtre de soutien -----
         "titre_soutien": "Soutenir le projet",
         "soutien_question": "Mon application te sert ou te plaît ?",
-        "soutien_cafe": "Offre-moi un café  ☕",
+        "soutien_cafe": "Offre-moi un café",
         "soutien_oui": "Oui, avec plaisir !",
         "soutien_plus_tard": "Une prochaine fois",
+        "soutien_ne_plus": "Ne plus demander",
 
         # ----- Fenêtre d'aide -----
         "titre_aide": "Aide — Vox-Pack",
@@ -967,9 +980,9 @@ TEXTES = {
         "aide_1": "1. Choisissez une voix",
         "aide_1a":
             "Les voix proposées sont celles de la langue de l'application : "
-            "{nfr} en français et {nen} en anglais. Le menu indique le genre "
-            "et l'accent — « Denise (Femme - France) », « Ryan (Homme - "
-            "Royaume-Uni) » — et la voix en cours est cochée.",
+            "{nfr} en français, {nen} en anglais et {nde} en allemand. Le "
+            "menu indique le genre et l'accent — « Denise (Femme - France) », "
+            "« Ryan (Homme - Royaume-Uni) » — et la voix en cours est cochée.",
         "aide_officielle":
             "La ★ marque la voix officielle d'EdgeTX pour cette langue : même "
             "voix et même vitesse que sur la radio.",
@@ -998,6 +1011,12 @@ TEXTES = {
         "aide_2c":
             "Pour cocher plusieurs lignes d'un coup : cliquez sur la "
             "première case, puis Majuscule + clic sur la dernière.",
+        "aide_2d":
+            "Pour laisser un silence, tapez un « > » ou plus dans la phrase : "
+            "chaque « > » vaut une demi-seconde. « Moteur armé >> Moteur "
+            "coupé » laisse une seconde entre les deux, et « >>> Moteur armé "
+            "» retarde l'annonce d'une seconde et demie. Dix secondes au "
+            "maximum.",
         "aide_nom1":
             "Le nom du fichier ne doit pas dépasser 8 caractères et ne doit "
             "contenir ni accent ni espace.",
@@ -1067,8 +1086,8 @@ TEXTES = {
             "crée un dossier SYSTEM/ dans le dossier que vous indiquez.",
         "aide_sys3":
             "Comptez environ 1,2 seconde par son, soit près de 4 minutes pour "
-            "la liste française. Ce temps dépend de l'occupation du service "
-            "de voix et de votre connexion Internet.",
+            "les 186 annonces françaises. Ce temps dépend de l'occupation du "
+            "service de voix et de votre connexion Internet.",
         "aide_sys4":
             "Pendant l'opération, « Let's Go » devient « ■ Arrêter » : le "
             "fichier en cours se termine, et les fichiers déjà créés restent.",
@@ -1095,7 +1114,7 @@ TEXTES = {
         "aide_fmt1": "Les WAV générés sont au format EdgeTX :",
         "aide_fmt2": "16 bits, 32 kHz, mono.",
         # ----- Bas de page -----
-        "aide_soutien": "☕  Mon application vous sert ou vous plaît ?",
+        "aide_soutien": "Mon application vous sert ou vous plaît ?",
         "aide_lien": "Offrez-moi un café  ·  ko-fi.com/ritchy_lab",
         "aide_maj_titre": "🔄  Mises à jour",
         "aide_maj":
@@ -1125,6 +1144,7 @@ TEXTES = {
         "aide_github":
             "Nouvelles versions  ·  github.com/ritchy-lab/Vox-Pack/releases",
         "aide_credits": "Créé avec un brainstorming avec une IA",
+        "aide_merci": "Merci à Ralf pour la traduction allemande.",
         "aide_ecran": "Version {version} — écran {ecran} — fenêtre {fenetre}",
     },
 
@@ -1153,10 +1173,12 @@ TEXTES = {
         "accent_usa": "USA",
         "accent_uk": "United Kingdom",
         "accent_irlande": "Ireland",
+        "accent_allemagne": "Germany",
 
         # ----- Language names -----
         "langue_fr": "French",
         "langue_en": "English",
+        "langue_de": "German",
 
         # ----- Status line (under the LED bar) -----
         "etat_recherche_service": "Looking for voices on the TTS service…",
@@ -1232,6 +1254,7 @@ TEXTES = {
         "oui_remplacer": "Yes, replace",
         "adjectif_fr": "French",
         "adjectif_en": "English",
+        "adjectif_de": "German",
         "msg_import_ok": "{n} line{s} imported.",
         "msg_csv_aucun_systeme":
             "The official EdgeTX list contains no system sound.\n\n"
@@ -1295,9 +1318,10 @@ TEXTES = {
         # ----- Support window -----
         "titre_soutien": "Support the project",
         "soutien_question": "Do you find my application useful?",
-        "soutien_cafe": "Buy me a coffee  ☕",
+        "soutien_cafe": "Buy me a coffee",
         "soutien_oui": "Yes, with pleasure!",
         "soutien_plus_tard": "Maybe next time",
+        "soutien_ne_plus": "Don't ask again",
 
         # ----- Help window -----
         "titre_aide": "Help — Vox-Pack",
@@ -1306,9 +1330,10 @@ TEXTES = {
         "aide_1": "1. Choose a voice",
         "aide_1a":
             "The voices offered are those of the application's language: "
-            "{nfr} in French and {nen} in English. The menu shows the gender "
-            "and the accent — “Denise (Female - France)”, “Ryan (Male - "
-            "United Kingdom)” — and the current voice is ticked.",
+            "{nfr} in French, {nen} in English and {nde} in German. The menu "
+            "shows the gender and the accent — “Denise (Female - France)”, "
+            "“Ryan (Male - United Kingdom)” — and the current voice is "
+            "ticked.",
         "aide_officielle":
             "The ★ marks EdgeTX's official voice for that language: same "
             "voice and same speed as on the radio.",
@@ -1334,6 +1359,11 @@ TEXTES = {
         "aide_2c":
             "To tick several lines at once: click the first box, then Shift + "
             "click the last one.",
+        "aide_2d":
+            "To leave a silence, type one “>” sign or more in the phrase: "
+            "each “>” is half a second. “Motor armed >> Motor off” leaves a "
+            "second between the two, and “>>> Motor armed” delays the "
+            "announcement by a second and a half. Ten seconds at most.",
         "aide_nom1":
             "The file name must not be longer than 8 characters and must not "
             "contain accents or spaces.",
@@ -1401,9 +1431,9 @@ TEXTES = {
             "SYSTEM sounds with the voice chosen at the top of the window, "
             "and creates a SYSTEM/ folder inside the folder you choose.",
         "aide_sys3":
-            "Allow about 1.2 seconds per sound, i.e. nearly 4 minutes for the "
-            "French list. This time depends on how busy the voice service is "
-            "and on your Internet connection.",
+            "Allow about 1.2 seconds per sound, so about 4 minutes for the "
+            "212 English sounds. This time depends on how busy the voice "
+            "service is and on your Internet connection.",
         "aide_sys4":
             "While it runs, “Let's Go” becomes “■ Stop”: the current file "
             "finishes, and the files already created stay.",
@@ -1428,7 +1458,7 @@ TEXTES = {
         "aide_fmt1": "The generated WAV files use the EdgeTX format:",
         "aide_fmt2": "16-bit, 32 kHz, mono.",
         # ----- Footer -----
-        "aide_soutien": "☕  Do you find my application useful?",
+        "aide_soutien": "Do you find my application useful?",
         "aide_lien": "Buy me a coffee  ·  ko-fi.com/ritchy_lab",
         "aide_maj_titre": "🔄  Updates",
         "aide_maj":
@@ -1457,8 +1487,229 @@ TEXTES = {
         "aide_github":
             "New versions  ·  github.com/ritchy-lab/Vox-Pack/releases",
         "aide_credits": "Created with AI brainstorming",
+        "aide_merci": "Thanks to Ralf for the German translation.",
         "aide_ecran": "Version {version} — screen {ecran} — window {fenetre}",
     },
+}
+
+
+# ------------------------------------------------------------------
+# Allemand
+# ------------------------------------------------------------------
+# Corrigé par Ralf (RWR) le 24 octobre 2026 sur les 88 textes qu'il a
+# relus : vocabulaire « Ansage » pour ce que la radio prononce, et
+# « Vox-Pack » plutôt que « die Anwendung ». Les 91 autres étaient déjà
+# cohérents et n'ont pas été touchés (décision de Richard).
+TEXTES["de"] = {
+        # ----- Boutons de la fenêtre principale -----
+        "ajouter": "Hinzufügen",
+        "supprimer": "Löschen",
+        "ecouter": "Anhören",
+        "arreter": "■  Stopp",
+        "tout": "Alle",
+        "rien": "Keine",
+        "lets_go": "Let's Go",
+        # ----- Colonnes de la liste -----
+        "colonne_nom": "WAV-Name (max. {max} Zeichen)",
+        "colonne_phrase": "Text der Ansage",
+        # ----- Voix : genre et accent -----
+        "genre_f": "Weiblich",
+        "genre_h": "Männlich",
+        "genre_e": "Kind",
+        "accent_france": "Frankreich",
+        "accent_suisse": "Schweiz",
+        "accent_belgique": "Belgien",
+        "accent_quebec": "Québec",
+        "accent_usa": "USA",
+        "accent_uk": "Großbritannien",
+        "accent_irlande": "Irland",
+        "accent_allemagne": "Deutschland",
+        # ----- Noms des langues -----
+        "langue_fr": "Französisch",
+        "langue_en": "Englisch",
+        "langue_de": "Deutsch",
+        # ----- Ligne d'état (sous la barre de leds) -----
+        "etat_recherche_service": "Suche Stimmen beim TTS-Dienst…",
+        "etat_recherche_voix": "Stimme wird geladen ({fait}/{total}) — {nom}…",
+        "etat_generation_wav": "WAV-Datei wird erzeugt ({fait}/{total}) — {nom}…",
+        "etat_avance": "{fait} von {total} Dateien — {nom}",
+        "etat_voix_retirees": "{n} Stimme(n) vom Dienst entfernt — Liste aktualisiert",
+        "etat_voix_remises": "Stimmen nicht verfügbar: Liste auf Standard zurückgesetzt",
+        "etat_langue_voix": "Sprache: {langue} — {n} Stimmen verfügbar",
+        "etat_sons_arret": "Stopp angefordert — aktuelle Datei wird beendet…",
+        "etat_csv_telechargement": "Offizielle EdgeTX-Liste wird geladen…",
+        # ----- Noms de fichiers refusés -----
+        "pb_vide": "leerer Name",
+        "pb_long": "{n} Zeichen (max. {max})",
+        "pb_espace": "keine Leerzeichen erlaubt",
+        "pb_accent": "keine Akzente erlaubt",
+        "pb_caractere": "Zeichen „{c}“ nicht erlaubt",
+        "pb_doublon": "bereits verwendet (Zeile {n})",
+        # ----- Ligne ajoutée à la main -----
+        "nouvelle_ligne": "neu",
+        "texte_a_dire": "Zu sprechender Text",
+        # ----- Pannes du service de voix -----
+        "err_refus": "Dienst abgelehnt (Stimme nicht verfügbar oder Update nötig)",
+        "err_voix_absente": "Stimme vom Dienst entfernt: bitte eine andere wählen",
+        "err_lent": "Dienst hat nicht rechtzeitig geantwortet (langsame Verbindung?)",
+        "err_illisible": "Der Sprachdienst hat eine unlesbare Antwort geliefert. Bitte gleich noch einmal versuchen.",
+        "err_reseau": "keine Internetverbindung",
+        "err_reseau_detail": "Der Sprachdienst von Microsoft ist nicht erreichbar. Prüfen Sie Ihre Internetverbindung (VPN, Firewall, DNS) und versuchen Sie es erneut.",
+        "msg_reseau_coupe": "Internetverbindung verloren: Die Erzeugung wurde gestoppt. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+        # ----- Menu -----
+        "menu_fichier": "Datei",
+        "menu_exporter": "Liste exportieren…",
+        "menu_importer": "Liste importieren…",
+        "menu_defaut": "Standardliste laden",
+        "menu_sons_systeme": "System-Ansagen erzeugen…",
+        "menu_quitter": "Beenden",
+        "menu_langue": "Sprache",
+        # ----- Exporter / Importer -----
+        "titre_export": "Liste exportieren",
+        "titre_import": "Liste importieren",
+        "titre_dossier": "Ordner für die erzeugten WAV-Dateien",
+        "titre_dossier_systeme": "Ordner, in dem der SYSTEM-Ordner erstellt wird",
+        "nom_export": "meine-vox-pack-liste.csv",
+        "type_csv": "CSV-Datei",
+        "type_txt": "Textdatei",
+        "type_tous": "Alle Dateien",
+        "entete_nom": "Name",
+        "entete_phrase": "Ansage",
+        "msg_export_echec": "Der Export ist fehlgeschlagen.\n\n{err}",
+        "msg_export_ok": "{n} Zeile(n) exportiert nach:\n\n{chemin}",
+        "msg_import_illisible": "Diese Datei kann nicht gelesen werden.\n\n{err}",
+        "msg_import_vide": "Diese Datei enthält keine Zeile.",
+        "msg_import_confirmer": "Aktuelle Liste ({avant} Zeile(n)) durch diese {apres} Zeile(n) ersetzen?",
+        "msg_import_oui": "Ja, ersetzen",
+        "question_defaut": "Ihre Liste durch die {n} mitgelieferten Ansagen auf {langue} ersetzen?",
+        "oui_remplacer": "Ja, ersetzen",
+        "adjectif_fr": "Französisch",
+        "adjectif_en": "Englisch",
+        "adjectif_de": "Deutsch",
+        "msg_import_ok": "{n} Zeile(n) importiert.",
+        "msg_csv_aucun_systeme": "Die offizielle EdgeTX-Liste enthält keine System-Ansage.\n\nVersuchen Sie es später erneut: Die Datei wurde vielleicht geändert.",
+        "msg_csv_officiel_echec": "Die offizielle EdgeTX-Liste konnte nicht geladen werden.\n\nPrüfen Sie die Internetverbindung und versuchen Sie es erneut.\n\n{err}",
+        # ----- Boutons et messages courants -----
+        "annuler": "Abbrechen",
+        "compris": "Verstanden",
+        "fermer": "Schließen",
+        "choisir": "Auswählen",
+        "voix_normale": "Normale Stimme",
+        "ouvrir_dossier": "Ordner öffnen",
+        "btn_supprimer": "Löschen",
+        # ----- Suppression, aperçu, génération -----
+        "msg_supprimer_rien": "Markieren Sie mindestens eine Zeile zum Löschen.",
+        "msg_supprimer_tout": "Sie sind dabei, die GANZE Liste zu löschen.\n\nSie wird beim nächsten Start der Anwendung automatisch neu erstellt.\n\nMöchten Sie fortfahren?",
+        "msg_ecouter_rien": "Markieren Sie eine Zeile zum Anhören.",
+        "etat_ecoute": "Wiedergabe {rang}/{total} — {nom}",
+        "msg_apercu_echec": "Die Vorschau konnte nicht abgespielt werden.\n\n{err}",
+        "msg_generer_rien": "Markieren Sie mindestens eine Zeile zum Erzeugen.",
+        "msg_generer_aucune": "Keine gültige Zeile zum Erzeugen.\n\nJede Zeile braucht einen korrekten Dateinamen UND einen Ansage-Text.",
+        "msg_genere_deja": "Es läuft bereits eine Erzeugung.\n\nWarten Sie, bis sie beendet ist.",
+        "msg_sauvegarde_echec": "Die Liste konnte nicht gespeichert werden.\n\n{err}\n\nEin anderes Programm verwendet die Datei vielleicht (Antivirus, OneDrive), oder Windows schützt den Ordner „Dokumente“: Erlauben Sie Vox-Pack unter Windows-Sicherheit → „Überwachter Ordnerzugriff“.",
+        "msg_bilan_echecs": "{reussis} von {total} Datei(en) erstellt.\n\n{problemes} Problem(e):\n{detail}",
+        "msg_autres": "• … und {n} weitere",
+        "msg_succes": "Ihre Stimmen sind fertig.\n\n{dossier}",
+        "msg_sons_succes": "{n} Systemdatei(en) erstellt in:\n\n{dossier}",
+        "msg_sons_copier": "Kopieren Sie diesen SYSTEM-Ordner nach SOUNDS/{langue}/ auf Ihrer Karte und ersetzen Sie den alten.",
+        "msg_sons_bilan": "{reussis} von {total} Systemdatei(en) erstellt.\n\n{problemes} Problem(e):\n{detail}",
+        "msg_sons_problemes": "{problemes} Problem(e):\n{detail}",
+        "msg_sons_arrete": "Erzeugung gestoppt.\n\n{n} Datei(en) erstellt in:\n\n{dossier}",
+        "msg_sons_cache": "Offizielle Liste nicht geladen: Die gespeicherte Kopie wurde verwendet.",
+        "msg_dossier_echec": "Der Zielordner konnte nicht erstellt werden.\n\n{err}",
+        # ----- Fenêtre de soutien -----
+        "titre_soutien": "Unterstützen Sie das Projekt",
+        "soutien_question": "Finden Sie meine Anwendung nützlich?",
+        "soutien_cafe": "Kaufen Sie mir einen Kaffee",
+        "soutien_oui": "Ja, sehr gerne!",
+        "soutien_plus_tard": "Vielleicht nächstes Mal",
+        "soutien_ne_plus": "Nicht mehr fragen",
+        # ----- Fenêtre d'aide -----
+        "titre_aide": "Hilfe — Vox-Pack",
+        "aide_titre": "So bedienen Sie Vox-Pack",
+        # ----- 1. Voix -----
+        "aide_1": "1. Stimme wählen",
+        "aide_1a": "Das Menü bietet nur die Stimmen der gewählten Sprache: {nde} deutsche Stimmen. Es zeigt Geschlecht und Akzent — „Katja (Weiblich - Deutschland)“, „Conrad (Männlich - Deutschland)“ — und die aktuelle Stimme ist markiert.",
+        "aide_officielle": "Der ★ kennzeichnet die offizielle EdgeTX-Stimme dieser Sprache: gleiche Stimme und gleiches Tempo wie auf der Fernsteuerung.",
+        "aide_robot_titre": "🤖  Roboterstimmen",
+        "aide_robot1": "Rechts im Fenster vier Punkte: Roboter 1 bis 3 und HAL 9000. HAL 9000 nutzt seine eigene Stimme, unabhängig vom Menü. Kein Punkt markiert: die normale Stimme.",
+        "aide_robot2": "Klicken Sie auf einen Punkt und dann auf „Anhören“: Der Effekt gilt für die gewählte Stimme. Klicken Sie erneut auf den leuchtenden Punkt, um zur normalen Stimme zurückzukehren.",
+        "aide_robot3": "Der Effekt gilt auch für die Listendateien und die System-Ansagen.",
+        "aide_1b": "Zum Sprachwechsel: Menü „Datei“, dann „Sprache“. Texte, Stimmen und Liste ändern sich gemeinsam, und Ihre Stimme wird beim nächsten Start wiederverwendet.",
+        # ----- 2. Liste -----
+        "aide_2": "2. Liste verwalten",
+        "aide_2a": "„Hinzufügen“ erstellt eine Zeile; „Löschen“ entfernt die markierten Zeilen.",
+        "aide_2b": "Bearbeiten Sie eine Zeile, indem Sie direkt in ihre Felder tippen.",
+        "aide_2c": "Mehrere Zeilen auf einmal markieren: Klicken Sie auf das erste Kästchen, dann mit Umschalt + Klick auf das letzte.",
+        "aide_2d": "Für eine Pause tippen Sie ein „>“ oder mehr in den Satz: jedes „>“ zählt eine halbe Sekunde. „Motor an >> Motor aus“ lässt eine Sekunde zwischen beiden, und „>>> Motor an“ verzögert die Ansage um eineinhalb Sekunden. Höchstens zehn Sekunden.",
+        "aide_nom1": "Der Dateiname darf höchstens 8 Zeichen lang sein und keine Akzente oder Leerzeichen enthalten.",
+        # ----- 3. Cocher -----
+        "aide_3": "3. Zeilen zum Erzeugen markieren",
+        "aide_3a": "„Alle“ markiert jede Zeile; „Keine“ hebt die Markierung auf.",
+        "aide_3b": "Für eine einzelne Zeile nur diese markieren.",
+        # ----- 4. Écouter -----
+        "aide_4": "4. Auswahl anhören",
+        "aide_4a": "Markieren Sie eine oder mehrere Zeilen und klicken Sie auf „Anhören“: Sie werden nacheinander abgespielt.",
+        # ----- 5. Générer -----
+        "aide_5": "5. Dateien erzeugen",
+        "aide_5a": "Klicken Sie auf „Let's Go“ und wählen Sie einen Ordner.",
+        "aide_5b": "Unter der LED-Leiste zeigt eine Zeile jederzeit, was Vox-Pack gerade tut: Stimme laden, dann WAV-Datei erzeugen.",
+        # ----- Internet -----
+        "aide_net_titre": "🌐  Internetverbindung erforderlich",
+        "aide_net1": "Die Stimmen sind nicht in Vox-Pack enthalten: Sie kommen vom Sprachdienst von Microsoft. Eine Internetverbindung ist daher zum Erzeugen der Dateien unerlässlich.",
+        "aide_net4": "Der Text Ihrer Sätze wird an Microsoft gesendet, um gesprochen zu werden: Halten Sie ihn frei von Privatem.",
+        "aide_net6": "Ohne Internet sagt Ihnen die Anwendung das deutlich.",
+        "aide_net7": "Existiert eine Stimme bei Microsoft nicht mehr, verschwindet sie beim Start von Vox-Pack von selbst aus dem Menü.",
+        # ----- Sauvegarde -----
+        "aide_sauv_titre": "💾  Automatisches Speichern",
+        "aide_sauv1": "Ihre Änderungen werden gespeichert in:",
+        # ----- Liste par défaut -----
+        "aide_def_titre": "♻️  Standardliste",
+        "aide_def1": "Wenn Sie die GANZE Liste löschen, wird sie beim nächsten Start automatisch neu erstellt ({n} Zeilen).",
+        "aide_def5": "Jede Sprache hat IHRE EIGENE Liste: Französisch, Englisch und Deutsch sind unabhängig. Ein Sprachwechsel im Menü wechselt daher auch die Liste, und Ihre Arbeit in der anderen Sprache bleibt unverändert.",
+        "aide_def3": "Wenn Sie mindestens 1 Zeile behalten, bauen Sie Ihre eigene Liste mit deren Einstellungen auf.",
+        # ----- Export / import -----
+        "aide_exp_titre": "📂  Liste exportieren / importieren",
+        "aide_exp1": "Das Menü „Datei“ liegt auf dem Mac in der Systemmenüleiste, auf dem PC oben im Fenster.",
+        "aide_exp3": "„Liste exportieren…“ speichert die Liste, damit Sie sie aufbewahren oder weitergeben können.",
+        "aide_exp4": "„Liste importieren…“ ersetzt die aktuelle Liste durch eine Datei: ein Name und eine Ansage pro Zeile, durch ein Komma getrennt. Vox-Pack fragt vorher nach.",
+        # ----- Sons système -----
+        "aide_sys_titre": "📻  System-Ansagen der Fernsteuerung erzeugen",
+        "aide_sys1": "Das Menü „Datei“ bietet „System-Ansagen erzeugen…“.",
+        "aide_sys2": "Vox-Pack lädt die offizielle Liste von EdgeTX, erzeugt die SYSTEM-Ansagen mit der oben gewählten Stimme neu und legt im gewählten Ordner einen SYSTEM-Ordner an.",
+        "aide_sys3": "Rechnen Sie mit etwa 1,2 Sekunden pro Ansage, also gut 4 Minuten für die 211 deutschen System-Ansagen. Diese Zeit hängt von der Auslastung des Sprachdienstes und Ihrer Internetverbindung ab.",
+        "aide_sys4": "Während des Laufs wird aus „Let's Go“ ein „■ Stopp“: Die aktuelle Datei wird beendet, die bereits erzeugten Dateien bleiben erhalten.",
+        "aide_sys5": "Kopieren Sie anschließend den SYSTEM-Ordner nach SOUNDS/<Sprache>/ auf Ihrer SD-Karte. Dabei ersetzen Sie den alten. Ihre eigenen Ansagen und die Skript-Ansagen bleiben unberührt.",
+        # ----- Longueur des noms -----
+        "aide_edge_titre": "📏  Namenslänge je nach EdgeTX-Version",
+        "aide_edge1": "Die Fernsteuerung liest den Dateinamen: Er darf nicht zu lang sein, sonst findet sie die Datei nicht.",
+        "aide_edge3": "EdgeTX 2.11 und neuer: 8 Zeichen, auf jeder Fernsteuerung.",
+        "aide_edge5": "EdgeTX 2.10 und älter: 6 Zeichen bei Farb-Fernsteuerungen und kleinen Schwarz-Weiß-Geräten. X9D und X9E akzeptieren 8 Zeichen.",
+        "aide_edge8": "Im Zweifel bei 6 Zeichen bleiben: Sie werden auf jeder Fernsteuerung und in jeder Version gelesen.",
+        # ----- Format -----
+        "aide_fmt_titre": "🎵  Dateiformat",
+        "aide_fmt1": "Die erzeugten WAV-Dateien haben das EdgeTX-Format:",
+        "aide_fmt2": "16 Bit, 32 kHz, mono.",
+        # ----- Bas de page -----
+        "aide_soutien": "Finden Sie meine Anwendung nützlich?",
+        "aide_lien": "Kaufen Sie mir einen Kaffee  ·  ko-fi.com/ritchy_lab",
+        "aide_maj_titre": "🔄  Updates",
+        "aide_maj": "Neue Versionen erscheinen auf der Releases-Seite. Vox-Pack prüft beim Start automatisch: Gibt es eine neuere Version, bietet ein kleines Fenster den Download in Ihren Downloads-Ordner an.",
+        "maj_titre": "Update verfügbar",
+        "maj_texte": "Version {version} ist verfügbar.\nSie verwenden Version {actuelle}.",
+        "maj_telecharger": "Herunterladen",
+        "maj_plus_tard": "Später",
+        "maj_telechargement": "Wird heruntergeladen…",
+        "maj_telecharge_mac": "Heruntergeladen nach:\n{chemin}\n\nÖffnen Sie den Ordner und ersetzen Sie die alte Anwendung durch die neue.",
+        "maj_telecharge_win": "Heruntergeladen nach:\n{chemin}\n\nSchließen Sie Vox-Pack und starten Sie dann die neue Datei.",
+        "maj_ouvrir_dossier": "Ordner öffnen",
+        "maj_page": "Seite ansehen",
+        "maj_fermer": "Schließen",
+        "maj_echec": "Der Download ist fehlgeschlagen. Sie können die Releases-Seite öffnen.",
+        "aide_github": "Neue Versionen  ·  github.com/ritchy-lab/Vox-Pack/releases",
+        "aide_credits": "Mit KI-Unterstützung erstellt",
+        "aide_merci": "Danke an Ralf für die deutsche Übersetzung.",
+        "aide_ecran": "Version {version} — Bildschirm {ecran} — Fenster {fenetre}",
 }
 
 
@@ -1481,11 +1732,17 @@ def definir_langue_ui(code):
 
 
 def cles_manquantes():
-    """Clés présentes dans une langue et pas dans l'autre.
+    """Clés présentes dans une langue et pas dans une autre.
 
     Sert de filet : une clé oubliée s'afficherait telle quelle à l'écran.
+    La comparaison se fait avec le français, langue de référence, mais
+    couvre les trois tables.
     """
-    return sorted(set(TEXTES["fr"]) ^ set(TEXTES["en"]))
+    reference = set(TEXTES["fr"])
+    ecarts = set()
+    for table in TEXTES.values():
+        ecarts |= reference ^ set(table)
+    return sorted(ecarts)
 
 
 # ------------------------------------------------------------------
@@ -1542,6 +1799,13 @@ VOIX = {
         ("en-GB-MaisieNeural", "Maisie", "e", "uk"),
         ("en-GB-ThomasNeural", "Thomas", "h", "uk"),
     ],
+    "de": [
+        # Allemagne — Katja est la voix officielle d'EdgeTX pour l'allemand
+        ("de-DE-KatjaNeural", "Katja", "f", "allemagne"),
+        ("de-DE-ConradNeural", "Conrad", "h", "allemagne"),
+        ("de-DE-AmalaNeural", "Amala", "f", "allemagne"),
+        ("de-DE-KillianNeural", "Killian", "h", "allemagne"),
+    ],
 }
 
 # Copie de secours : si le service retire toutes les voix d'une langue, on
@@ -1551,10 +1815,12 @@ VOIX_ORIGINE = {code: list(voix) for code, voix in VOIX.items()}
 # La voix choisie par l'équipe EdgeTX pour chaque langue : elle est marquée
 # d'une étoile dans le sélecteur, pour que l'on sache laquelle reproduit les
 # sons du constructeur.
-VOIX_OFFICIELLES = {"fr-FR-DeniseNeural", "en-IE-EmilyNeural"}
+VOIX_OFFICIELLES = {"fr-FR-DeniseNeural", "en-IE-EmilyNeural",
+                    "de-DE-KatjaNeural"}
 
 # Réglages officiels de vitesse : EdgeTX ne fait pas parler toutes ses voix à
 # la même allure. Emily, la voix anglaise officielle, parle 10 % plus vite.
+# Katja (allemand) garde l'allure normale, comme dans la recette d'EdgeTX.
 REGLES_VOIX = {"en-IE-EmilyNeural": {"rate": "+10%"}}
 
 
@@ -1589,6 +1855,175 @@ async def sauver_voix(texte, voice_id, chemin, pitch=None, rate=None):
             if tentative == 0:
                 await asyncio.sleep(0.8)
     raise derniere
+
+
+# ------------------------------------------------------------------
+# Silences dans une phrase
+# ------------------------------------------------------------------
+# Un « > » ou plus, dans la phrase, marque une pause : chaque « > » vaut
+# une demi-seconde, donc « >> » vaut une seconde et « >>> » une seconde et
+# demie. On n'a pas choisi « + » : il apparaît légitimement dans une phrase
+# (« Klappen +10 Grad », « Kanal + 2 ») et le signe disparaîtrait sans
+# prévenir, alors que « > » ne s'écrit jamais dans une annonce.
+#
+# Ces silences sont posés APRÈS ameliorer_niveau_wav. Ce traitement coupe
+# les silences du début et de la fin de chaque fichier (c'est ce qui a
+# raccourci les annonces en 1.4.4) : posé avant, le silence d'attente
+# disparaîtrait. Mesuré le 25 octobre 2026 — deux secondes ajoutées avant
+# le traitement, il ne restait que la voix.
+DUREE_SIGNE = 0.5         # secondes par « > »
+SILENCE_MAX = 10.0        # plafond d'une pause, en secondes
+MOTIF_SILENCE = re.compile(r">+")
+
+
+def decouper_phrase(texte):
+    """Découpe une phrase en morceaux : (« texte », …) ou (« silence », s).
+
+    « Motor an >>> Motor aus » donne le texte, une seconde et demie de
+    silence, puis le texte. Les morceaux de texte vides sont ignorés.
+    """
+    texte = texte or ""
+    morceaux, position = [], 0
+    for trouve in MOTIF_SILENCE.finditer(texte):
+        avant = texte[position:trouve.start()].strip()
+        if avant:
+            morceaux.append(("texte", avant))
+        morceaux.append(
+            ("silence", min(len(trouve.group()) * DUREE_SIGNE, SILENCE_MAX)))
+        position = trouve.end()
+    reste = texte[position:].strip()
+    if reste:
+        morceaux.append(("texte", reste))
+    return morceaux
+
+
+def phrase_sans_silences(texte):
+    """La phrase débarrassée de ses marqueurs : vide s'il n'y a rien à dire."""
+    return " ".join(valeur for genre, valeur in decouper_phrase(texte)
+                    if genre == "texte")
+
+
+def _effacer(*chemins):
+    """Supprime des fichiers temporaires sans jamais faire échouer l'appel."""
+    for chemin in chemins:
+        try:
+            os.remove(chemin)
+        except OSError:
+            pass
+
+
+def _lire_pcm(chemin):
+    """Contenu brut d'un WAV EdgeTX, format vérifié."""
+    with wave.open(chemin, "rb") as w:
+        if (w.getframerate(), w.getnchannels(), w.getsampwidth()) != (
+                FORMAT_EDGETX[0], 1, 2):
+            raise ValueError("format inattendu dans le WAV")
+        return w.readframes(w.getnframes())
+
+
+def _pcm_sans_bords(brut, sr=FORMAT_EDGETX[0]):
+    """Retire les silences du début et de la fin d'un PCM 16 bits mono.
+
+    Mêmes seuil et marges que ameliorer_niveau_wav. C'est indispensable
+    avant de coller deux morceaux : le service ajoute près d'une seconde de
+    silence après chaque phrase, et cette seconde s'ajouterait à la pause
+    demandée (mesuré le 25 octobre : 2,5 s au lieu de 1,5 s).
+    """
+    import numpy as np
+
+    x = np.frombuffer(brut, dtype="<i2")
+    actifs = np.where(np.abs(x.astype(np.int32)) > 98)[0]   # ≈ −50 dBFS
+    if not len(actifs):
+        return brut
+    debut = max(0, actifs[0] - int(0.020 * sr))
+    fin = min(len(x), actifs[-1] + int(0.050 * sr))
+    return x[debut:fin].tobytes()
+
+
+def _ecrire_pcm(chemin, brut, sr=FORMAT_EDGETX[0]):
+    """Écrit un WAV EdgeTX par un temporaire, puis le met en place."""
+    temporaire = chemin + ".tmp"
+    try:
+        with wave.open(temporaire, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(sr)
+            w.writeframes(brut)
+        os.replace(temporaire, chemin)
+    finally:
+        _effacer(temporaire)
+
+
+async def fabriquer_wav(texte, voice_id, destination, pitch=None, rate=None,
+                        robot=0, langue_effet="en", annoncer=None):
+    """Fabrique le WAV d'une phrase, silences compris.
+
+    Sans marqueur — le cas de presque toutes les phrases — le chemin est
+    celui d'avant, au détail près : un MP3, une conversion, l'effet, le
+    niveau. Avec des marqueurs, chaque morceau de texte est demandé
+    séparément, les morceaux sont collés, puis le niveau est appliqué et les
+    silences des bords sont posés en dernier : c'est le seul ordre où une
+    attente devant l'annonce survit au traitement.
+    """
+    morceaux = decouper_phrase(texte)
+    if not any(genre == "texte" for genre, _ in morceaux):
+        raise ValueError("phrase sans texte")
+
+    if len(morceaux) == 1 and morceaux[0][0] == "texte":
+        mp3 = destination + ".voix.mp3"
+        try:
+            await sauver_voix(morceaux[0][1], voice_id, mp3,
+                              pitch=pitch, rate=rate)
+            if annoncer:
+                annoncer()
+            convertir_en_wav(mp3, destination)
+        finally:
+            _effacer(mp3)
+        if robot:
+            appliquer_effet_robot(destination, robot, langue_effet)
+        ameliorer_niveau_wav(destination)
+        return
+
+    sr = FORMAT_EDGETX[0]
+    parties = {}
+    for rang, (genre, valeur) in enumerate(morceaux):
+        if genre != "texte":
+            continue
+        mp3 = f"{destination}.partie{rang}.mp3"
+        wav = f"{destination}.partie{rang}.wav"
+        try:
+            await sauver_voix(valeur, voice_id, mp3, pitch=pitch, rate=rate)
+            if annoncer:
+                annoncer()
+                annoncer = None            # une fois suffit
+            convertir_en_wav(mp3, wav)
+            parties[rang] = _pcm_sans_bords(_lire_pcm(wav))
+        finally:
+            _effacer(mp3, wav)
+
+    premier = next(i for i, (g, _) in enumerate(morceaux) if g == "texte")
+    dernier = max(i for i, (g, _) in enumerate(morceaux) if g == "texte")
+    avant = sum(v for g, v in morceaux[:premier] if g == "silence")
+    apres = sum(v for g, v in morceaux[dernier + 1:] if g == "silence")
+
+    joint = bytearray()
+    for rang in range(premier, dernier + 1):
+        genre, valeur = morceaux[rang]
+        if genre == "texte":
+            joint += parties[rang]
+        else:
+            joint += b"\x00\x00" * int(valeur * sr)
+    _ecrire_pcm(destination, bytes(joint), sr)
+
+    if robot:
+        appliquer_effet_robot(destination, robot, langue_effet)
+    ameliorer_niveau_wav(destination)
+
+    if avant or apres:
+        brut = _lire_pcm(destination)
+        _ecrire_pcm(destination,
+                    b"\x00\x00" * int(avant * sr) + brut
+                    + b"\x00\x00" * int(apres * sr), sr)
 
 
 def libelle_voix(entree, langue_ui=None):
@@ -1759,6 +2194,39 @@ LISTE_PAR_DEFAUT = {
         ("tx-mid", "Medium rate"),
         ("tx-lo", "Low rate"),
     ],
+    "de": [
+        # 13 noms officiels du jeu allemand d'EdgeTX (traduction identique au
+        # mot près) ; les autres sont nos noms, comme pour la liste française,
+        # qui est entièrement la nôtre.
+        ("engon", "Motor an"),
+        ("engoff", "Motor aus"),
+        ("gearup", "Fahrwerk eingefahren"),
+        ("geardn", "Fahrwerk ausgefahren"),
+        ("flapup", "Klappen eingefahren"),
+        ("flapdn", "Klappen ausgefahren"),
+        ("crowon", "Butterfly ein"),
+        ("crowof", "Butterfly aus"),
+        ("lnding", "Lande-Modus"),
+        ("fm-nrm", "Normal-Modus"),
+        ("fm-thm", "Thermik-Modus"),
+        ("fm-spd", "Geschwindigkeits-Modus"),
+        ("acro", "Akro-Modus"),
+        ("abscfrei", "Schleppkupplung offen"),
+        ("gross", "Großer Ausschlag"),
+        ("mittel", "Mittlerer Ausschlag"),
+        ("klein", "Kleiner Ausschlag"),
+        ("flperon", "Flapperon"),
+        ("snapflap", "Snapflap"),
+        ("luftbrem", "Luftbremsen"),
+        ("panik", "Panik"),
+        ("timer-st", "Timer gestartet"),
+        ("timer-sp", "Timer gestoppt"),
+        ("timovr1", "Timer eins abgelaufen"),
+        ("timovr2", "Timer zwei abgelaufen"),
+        ("stab-an", "Stabilisierung an"),
+        ("stabauto", "Automatische Stabilisierung"),
+        ("stab-aus", "Stabilisierung aus"),
+    ],
 }
 
 # Palette
@@ -1775,7 +2243,9 @@ TEXT_WHITE = "#DBDBDB"
 TEXT_GREY = "#8A9AA9"
 TEXT_DIM = "#5A6A78"       # signature au repos
 
-# Lien de soutien (fenêtre ouverte en cliquant sur la signature)
+# Signature : la page des applications de Richard. Le soutien s'ouvre par le
+# lien Ko-fi, juste en dessous.
+URL_SITE = "https://ritchy-lab.github.io/"
 KO_FI_URL = "https://ko-fi.com/ritchy_lab"
 URL_RELEASES = "https://github.com/ritchy-lab/Vox-Pack/releases"
 
@@ -1905,7 +2375,7 @@ def regler_echelle(hauteur_ecran):
 # Taille souhaitée de la fenêtre. Elle se réduit automatiquement si l'écran
 # est plus petit (voir VoxPackApp.__init__).
 LARGEUR_FENETRE = 820
-HAUTEUR_FENETRE = 813
+HAUTEUR_FENETRE = 829
 
 # Fenêtre « Mise à jour disponible ». Les textes s'enroulent à LARGEUR_TEXTE :
 # la fenêtre doit donc être plus large que ça, sinon le texte est coupé au lieu
@@ -2280,6 +2750,15 @@ class VoxPackApp(ctk.CTk):
         self.geometry(f"{largeur}x{hauteur}+{x}+{y}")
         self.minsize(min(LARGEUR_FENETRE, largeur), min(620, hauteur))
         self.resizable(True, True)
+
+        # Fermeture : le bouton rouge, le menu Quitter et Cmd+Q passent tous
+        # par _fermer, sinon la fenêtre de soutien apparaîtrait au hasard.
+        self.protocol("WM_DELETE_WINDOW", self._fermer)
+        if sys.platform == "darwin":
+            try:
+                self.createcommand("::tk::mac::Quit", self._fermer)
+            except Exception:
+                pass
         self.configure(fg_color=BG_MAIN)
 
         self.output_dir = None
@@ -2552,7 +3031,9 @@ class VoxPackApp(ctk.CTk):
 
         # Conteneur centré
         center_frame = ctk.CTkFrame(self.bottom, fg_color="transparent")
-        center_frame.pack(fill="x", expand=True)
+        # 8 px au-dessus et 8 px en dessous : la rangée est centrée entre la
+        # ligne d'état (qui finit à 32 px) et le bas du cadre (86 px).
+        center_frame.pack(fill="x", expand=True, pady=(8, 8))
 
         row_gen = ctk.CTkFrame(center_frame, fg_color="transparent")
         row_gen.pack(anchor="center")
@@ -2581,27 +3062,43 @@ class VoxPackApp(ctk.CTk):
         self.signature = ctk.CTkLabel(
             self.bottom,
             text="ritchy-lab",
-            font=(FONT_MAIN, 12),
+            font=(FONT_MAIN, 14),
             text_color=TEXT_DIM,
             fg_color="transparent",
         )
         self.signature.configure(cursor=CURSEUR_MAIN)
-        self.signature.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-16)
-        self.signature.bind("<Button-1>", lambda e: self._ouvrir_soutien())
+        # Empilée au-dessus du Ko-fi, et au niveau de la rangée des boutons.
+        self.signature.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-26)
+        # La signature mène à la page des applications, pas au soutien : c'est
+        # ce qu'on attend en cliquant sur un nom d'auteur.
+        self.signature.bind("<Button-1>", lambda e: self._ouvrir_lien(URL_SITE))
 
-        # Lien Ko-fi visible sous la signature.
+        # Lien Ko-fi sous la signature : il ouvre la petite fenêtre de soutien,
+        # qui propose ensuite d'aller sur Ko-fi.
+        #
+        # On utilise le logo officiel de Ko-fi plutôt que l'émoji ☕ : la taille
+        # d'un émoji dépend de la police du système, celle d'une image non.
+        try:
+            self._image_kofi = ctk.CTkImage(
+                light_image=Image.open(trouver_ressource("ko-fi.png")),
+                dark_image=Image.open(trouver_ressource("ko-fi.png")),
+                size=(22, 18))
+        except Exception:
+            self._image_kofi = None
         self.kofi = ctk.CTkLabel(
             self.bottom,
-            text="☕ Ko-fi",
-            font=(FONT_MAIN, 10),
+            text="  Ko-fi",
+            image=self._image_kofi,
+            compound="left",
+            font=(FONT_MAIN, 14),
             text_color=TEXT_DIM,
             fg_color="transparent",
-            height=16,
-            width=56,
+            height=23,
+            width=86,
         )
         self.kofi.configure(cursor=CURSEUR_MAIN)
         self.kofi.place(relx=1.0, rely=1.0, anchor="se", x=-15, y=-0)
-        self.kofi.bind("<Button-1>", lambda e: self._ouvrir_lien(KO_FI_URL))
+        self.kofi.bind("<Button-1>", lambda e: self._ouvrir_soutien())
         self.kofi.bind("<Enter>",
                        lambda e: self.kofi.configure(text_color=CYAN))
         self.kofi.bind("<Leave>",
@@ -2710,7 +3207,7 @@ class VoxPackApp(ctk.CTk):
         fichier.add_command(label=t("menu_sons_systeme"),
                             command=self.creer_sons_systeme)
         fichier.add_separator()
-        fichier.add_command(label=t("menu_quitter"), command=self.destroy)
+        fichier.add_command(label=t("menu_quitter"), command=self._fermer)
         barre.add_cascade(label=t("menu_fichier"), menu=fichier)
         self._menu_fichier = fichier
         if sys.platform == "darwin":
@@ -2831,7 +3328,7 @@ class VoxPackApp(ctk.CTk):
         # Un en-tête est ignoré : c'est ce que produit l'export, dans l'une ou
         # l'autre langue (« nom » / « name »).
         if brut and brut[0][0].strip().lower() in ("nom", "name", "fichier",
-                                                   "file"):
+                                                   "file", "nom_fichier"):
             brut = brut[1:]
         if not brut:
             self._message(t("msg_import_vide"), icone="attention")
@@ -2954,6 +3451,8 @@ class VoxPackApp(ctk.CTk):
         popup.resizable(False, False)
         popup.transient(self)
         popup.protocol("WM_DELETE_WINDOW", popup.destroy)
+        # Échap ferme la fenêtre, comme partout ailleurs (équivaut à « Plus tard »).
+        popup.bind("<Escape>", lambda e: popup.destroy())
 
         cadre = ctk.CTkFrame(popup, fg_color="transparent")
         cadre.pack(fill="both", expand=True, padx=MARGE_MAJ, pady=20)
@@ -3144,9 +3643,42 @@ class VoxPackApp(ctk.CTk):
         webbrowser.open(url)
 
     # ------------------------------------------------------------------
-    # Mini fenêtre de soutien (clic sur la signature)
+    # Mini fenêtre de soutien (clic sur le logo Ko-fi)
     # ------------------------------------------------------------------
-    def _ouvrir_soutien(self):
+    def _fermer(self):
+        """Fermeture demandée : un dernier mot, puis on quitte.
+
+        Le bouton rouge de la fenêtre, Fichier > Quitter et Cmd+Q passent
+        tous par ici. Si la fenêtre de soutien est déjà ouverte, inutile de
+        la montrer une seconde fois : l'utilisateur vient de la voir.
+        """
+        if self._soutien is not None and self._soutien.winfo_exists():
+            self._quitter()
+            return
+        if self._reglages.get("soutien_fermeture", True):
+            self._ouvrir_soutien(fermeture=True)
+            return
+        self._quitter()
+
+    def _quitter(self):
+        """Quitte pour de bon, sans perdre la liste ni les réglages."""
+        try:
+            self._ecrire_csv()
+        except Exception:
+            pass
+        try:
+            ecrire_reglages(self._reglages)
+        except Exception:
+            pass
+        self.destroy()
+
+    def _ouvrir_soutien(self, fermeture=False):
+        """La petite fenêtre de soutien.
+
+        Ouverte par le lien « Ko-fi » (fermeture=False), ou par la fermeture
+        de l'application (fermeture=True) : dans ce cas elle propose en plus de
+        ne plus jamais reposer la question.
+        """
         if self._soutien is not None and self._soutien.winfo_exists():
             self._soutien.lift()
             self._soutien.focus_force()
@@ -3158,7 +3690,24 @@ class VoxPackApp(ctk.CTk):
         popup.resizable(False, False)
         popup.transient(self)
         popup.configure(fg_color=BG_MAIN)
-        popup.bind("<Escape>", lambda e: popup.destroy())
+
+        # Ce que fait « Une prochaine fois » : refermer, ou quitter si c'est la
+        # fermeture de l'application qui a ouvert cette fenêtre. La case cochée
+        # est retenue pour de bon dans les réglages.
+        def fin(demander_encore=None):
+            if fermeture:
+                if demander_encore is None:
+                    demander_encore = not bool(var.get()) if var else True
+                self._reglages["soutien_fermeture"] = demander_encore
+            try:
+                popup.destroy()
+            except Exception:
+                pass
+            if fermeture:
+                self._quitter()
+
+        popup.protocol("WM_DELETE_WINDOW", lambda: fin())
+        popup.bind("<Escape>", lambda e: fin())
 
         largeur = LARGEUR_SOUTIEN
         ctk.CTkLabel(
@@ -3167,27 +3716,51 @@ class VoxPackApp(ctk.CTk):
             wraplength=largeur - 50, justify="center",
         ).pack(padx=25, pady=(26, 6))
 
+        # Le logo Ko-fi remplace l'émoji ☕, comme dans l'aide et le bas de
+        # page : la taille d'un émoji dépend de la police du système.
+        if getattr(self, "_image_kofi_fenetre", None) is None:
+            try:
+                self._image_kofi_fenetre = ctk.CTkImage(
+                    light_image=Image.open(trouver_ressource("ko-fi.png")),
+                    dark_image=Image.open(trouver_ressource("ko-fi.png")),
+                    size=(30, 24))
+            except Exception:
+                self._image_kofi_fenetre = None
         cafe = ctk.CTkLabel(
             popup, text=t("soutien_cafe"),
+            image=self._image_kofi_fenetre, compound="left",
             font=(FONT_MAIN, 16), text_color=LINK_COLOR,
         )
         cafe.pack()
         cafe.bind("<Button-1>", lambda e: self._ouvrir_lien(KO_FI_URL))
 
+        # La case n'apparaît que sur la fermeture : c'est la porte de sortie de
+        # ceux que la question agace.
+        var = None
+        if fermeture:
+            var = ctk.BooleanVar(value=False)
+            ctk.CTkCheckBox(
+                popup, text=t("soutien_ne_plus"), variable=var,
+                font=(FONT_MAIN, 12), text_color=TEXT_GREY,
+                fg_color=CYAN, hover_color=CYAN_DARK,
+                border_color=CYAN_DARK, checkmark_color=BG_MAIN,
+                corner_radius=4,
+            ).pack(pady=(14, 0))
+
         boutons = ctk.CTkFrame(popup, fg_color="transparent")
-        boutons.pack(pady=(24, 26))
+        boutons.pack(pady=(20, 26))
         # Le « Oui » est nettement plus gros que l'autre : c'est le bouton
         # qu'on a envie de cliquer (léger avantage déloyal, assumé).
         oui = self._btn(
             boutons, t("soutien_oui"),
-            lambda: (self._ouvrir_lien(KO_FI_URL), popup.destroy()),
+            lambda: (self._ouvrir_lien(KO_FI_URL), fin(False)),
             largeur=OUI_LARGEUR, hauteur=OUI_HAUTEUR, typo=OUI_TYPO,
         )
         oui.configure(fg_color="transparent", text_color=CYAN,
                       border_color=CYAN, corner_radius=OUI_HAUTEUR // 2,
                       hover_color=CYAN_DARK)
         oui.pack(side="left", padx=7)
-        self._btn(boutons, t("soutien_plus_tard"), popup.destroy,
+        self._btn(boutons, t("soutien_plus_tard"), fin,
                   small=True, largeur=150).pack(side="left", padx=7)
 
         popup.update_idletasks()
@@ -3374,31 +3947,34 @@ class VoxPackApp(ctk.CTk):
     # ------------------------------------------------------------------
     # Fenêtre d'aide
     # ------------------------------------------------------------------
-    def _voix_francaise(self):
-        """Vrai si la voix utilisée est française (HAL ou voix du menu)."""
+    def _variante_robot(self):
+        """Variante de l'effet selon la langue : « fr », « de » ou « en ».
+
+        C'est elle qui choisit la voix de HAL 9000 et son réglage. HAL n'a
+        pas encore de voix allemande de cinéma : Conrad fait l'affaire en
+        attendant (décision de Richard, 25 octobre 2026).
+        """
         if self._robot == 4:
-            return self.langue == "fr"
+            return self.langue if self.langue in VOIX_ROBOT else "en"
         try:
             voix = identifiant_voix(self.langue, self.combo_voice.get())
         except Exception:
-            return False
-        return voix.startswith("fr-")
+            return "en"
+        return ("fr" if voix.startswith("fr-")
+                else "de" if voix.startswith("de-") else "en")
 
     def _robot_voice(self):
         """Voix imposée par HAL 9000 (None pour les autres presets)."""
         if self._robot != 4:
             return None
-        return ("fr-FR-HenriNeural" if self.langue == "fr"
-                else "en-US-ChristopherNeural")
+        return VOIX_ROBOT[self._variante_robot()]
 
     def _reglage_robot(self):
-        """Réglage du preset, avec la variante française si elle existe."""
+        """Réglage du preset, avec la variante de la langue si elle existe."""
         reglage = ROBOTS.get(self._robot)
         if not reglage:
             return None
-        if self._voix_francaise() and "fr" in reglage:
-            return reglage["fr"]
-        return reglage
+        return reglage.get(self._variante_robot(), reglage)
 
     def _robot_pitch(self):
         """Hauteur à demander au service pour le preset choisi."""
@@ -3413,8 +3989,7 @@ class VoxPackApp(ctk.CTk):
     def _appliquer_robot(self, chemin):
         """Applique l'effet robot au WAV, si une pastille est allumée."""
         if self._robot in ROBOTS:
-            langue = "fr" if self._voix_francaise() else "en"
-            appliquer_effet_robot(chemin, self._robot, langue)
+            appliquer_effet_robot(chemin, self._robot, self._variante_robot())
 
     def _maj_libelle_robot(self):
         if self._robot == 4:
@@ -3463,6 +4038,9 @@ class VoxPackApp(ctk.CTk):
         popup.resizable(False, False)
         popup.transient(self)
         popup.configure(fg_color=BG_MAIN)
+        # Échap ferme l'aide, comme toutes les autres fenêtres. La liaison est
+        # posée sur la fenêtre : Tk la fait suivre aux enfants (le texte).
+        popup.bind("<Escape>", lambda e: popup.destroy())
 
         self.update_idletasks()
         # La fenêtre d'aide ne doit jamais dépasser l'écran : sinon le bouton
@@ -3544,13 +4122,29 @@ class VoxPackApp(ctk.CTk):
             except Exception:
                 self._logo_aide = None
 
+        # La petite tasse Ko-fi, pour la ligne de soutien : même image que le
+        # lien du bas de page, à la taille du texte de l'aide.
+        self._logo_kofi_aide = None
+        chemin_kofi = trouver_ressource("ko-fi.png")
+        if os.path.exists(chemin_kofi):
+            try:
+                img = Image.open(chemin_kofi)
+                ratio = img.height / img.width
+                hauteur = 26
+                img = img.resize((int(hauteur / ratio), hauteur),
+                                 Image.Resampling.LANCZOS)
+                self._logo_kofi_aide = ImageTk.PhotoImage(img)
+            except Exception:
+                self._logo_kofi_aide = None
+
         # Le texte de l'aide, dans la langue de l'interface.
         contenu = [
             ("logo", ""),
             ("title", t("aide_titre")),
             ("space", ""),
             ("title2", t("aide_1")),
-            ("text", t("aide_1a", nfr=len(VOIX["fr"]), nen=len(VOIX["en"]))),
+            ("text", t("aide_1a", nfr=len(VOIX["fr"]), nen=len(VOIX["en"]),
+                       nde=len(VOIX["de"]))),
             ("bullet", t("aide_officielle")),
             ("text", t("aide_1b")),
             ("space", ""),
@@ -3563,6 +4157,7 @@ class VoxPackApp(ctk.CTk):
             ("bullet", t("aide_2a")),
             ("bullet", t("aide_2b")),
             ("bullet", t("aide_2c")),
+            ("text", t("aide_2d")),
             ("space", ""),
             ("warning", t("aide_nom1")),
             ("space", ""),
@@ -3626,7 +4221,7 @@ class VoxPackApp(ctk.CTk):
             ("lien_github", t("aide_github")),
             ("space", ""),
             ("sep", ""),
-            ("grand", t("aide_soutien")),
+            ("grand_logo", t("aide_soutien")),
             ("lien", t("aide_lien")),
             ("space", ""),
             ("sep", ""),
@@ -3635,6 +4230,7 @@ class VoxPackApp(ctk.CTk):
                         ecran=f"{self.winfo_screenwidth()} × {self.winfo_screenheight()}",
                         fenetre=f"{self.winfo_width()} × {self.winfo_height()}")),
             ("italic", t("aide_credits")),
+            ("italic", t("aide_merci")),
         ]
 
         for kind, txt in contenu:
@@ -3664,8 +4260,14 @@ class VoxPackApp(ctk.CTk):
                 texte.insert("end", "─" * 36 + "\n", "sep")
             elif kind == "grand":
                 texte.insert("end", txt + "\n", "grand")
+            elif kind == "grand_logo":
+                if self._logo_kofi_aide is not None:
+                    texte.image_create("end", image=self._logo_kofi_aide,
+                                       align="center")
+                    texte.insert("end", "  ", "grand")
+                texte.insert("end", txt + "\n", "grand")
             elif kind == "lien":
-                texte.insert("end", txt + "\n", "lien")
+                texte.insert("end", txt + "\n", ("lien", "lien_kofi"))
             elif kind == "lien_github":
                 texte.insert("end", txt + "\n", ("lien", "lien_github"))
             elif kind == "petit":
@@ -3684,14 +4286,17 @@ class VoxPackApp(ctk.CTk):
                 self._ouvrir_lien(KO_FI_URL)
 
         texte.bind("<Button-1>", clic_lien, add="+")
-        texte.tag_bind(
-            "lien", "<Enter>",
-            lambda e: (texte.tag_configure("lien", foreground=CYAN),
-                       texte.configure(cursor=CURSEUR_MAIN)))
-        texte.tag_bind(
-            "lien", "<Leave>",
-            lambda e: (texte.tag_configure("lien", foreground=LINK_COLOR),
-                       texte.configure(cursor="arrow")))
+        # Chaque lien a SON tag de survol : avec un tag commun, éclairer un
+        # lien éclairait aussi l'autre (les deux lignes sont voisines).
+        for tag in ("lien_kofi", "lien_github"):
+            texte.tag_bind(
+                tag, "<Enter>",
+                lambda e, t=tag: (texte.tag_configure(t, foreground=CYAN),
+                                  texte.configure(cursor=CURSEUR_MAIN)))
+            texte.tag_bind(
+                tag, "<Leave>",
+                lambda e, t=tag: (texte.tag_configure(t, foreground=LINK_COLOR),
+                                  texte.configure(cursor="arrow")))
 
         texte.configure(state="disabled")
         texte.yview_moveto(0.0)
@@ -3754,7 +4359,7 @@ class VoxPackApp(ctk.CTk):
             # Un en-tête « nom,phrase » (nos fichiers exportés en ont un) est
             # ignoré : sinon il deviendrait une ligne de la liste.
             if lignes_lues and lignes_lues[0] \
-                    and lignes_lues[0][0].strip().lower() in ("nom", "name", "fichier"):
+                    and lignes_lues[0][0].strip().lower() in ("nom", "name", "fichier", "nom_fichier"):
                 lignes_lues = lignes_lues[1:]
             for ligne_lue in lignes_lues:
                 if len(ligne_lue) >= 2:
@@ -4207,35 +4812,38 @@ class VoxPackApp(ctk.CTk):
         except Exception:
             pass
 
-    async def _telecharger_voix(self, texte, voice_id, chemin):
-        """Fabrique le fichier d'une phrase auprès du service de voix."""
-        await sauver_voix(texte, voice_id, chemin,
-                          pitch=self._robot_pitch(), rate=self._robot_rate())
+    def _langue_effet(self, voice_id):
+        """Langue de la voix utilisée, pour les variantes de l'effet robot."""
+        return ("fr" if voice_id.startswith("fr-")
+                else "de" if voice_id.startswith("de-") else "en")
+
+    async def _fabriquer_apercu(self, texte, voice_id, wav):
+        """Fabrique le WAV d'aperçu d'une phrase, silences compris."""
+        await fabriquer_wav(texte, voice_id, wav,
+                            pitch=self._robot_pitch(),
+                            rate=self._robot_rate(),
+                            robot=self._robot,
+                            langue_effet=self._langue_effet(voice_id))
 
     async def _jouer_apercu(self, textes, voice_id, numero):
         """Lit les phrases l'une après l'autre, sans temps mort.
 
-        La voix de la phrase suivante est téléchargée PENDANT que la phrase en
+        Le WAV de la phrase suivante est fabriqué PENDANT que la phrase en
         cours est lue. Sans cela, on entendait une pause entre chaque phrase :
         le temps d'aller chercher la voix chez Microsoft.
         """
         voice_id = self._robot_voice() or voice_id
         os.makedirs(DATA_DIR, exist_ok=True)
         total = len(textes)
-        robot = self._robot
 
         # Un nom de fichier différent pour chaque phrase : deux aperçus rapides
         # ne peuvent plus se supprimer mutuellement le fichier en cours.
-        def chemin(rang):
-            return os.path.join(DATA_DIR,
-                                f"apercu_{os.getpid()}_{numero}_{rang}.mp3")
-
         def chemin_wav(rang):
             return os.path.join(DATA_DIR,
                                 f"apercu_{os.getpid()}_{numero}_{rang}.wav")
 
         tache = asyncio.create_task(
-            self._telecharger_voix(textes[0][1], voice_id, chemin(1)))
+            self._fabriquer_apercu(textes[0][1], voice_id, chemin_wav(1)))
         try:
             for rang, (nom, texte) in enumerate(textes, start=1):
                 # « Arrêter » a incrémenté le numéro : on s'arrête là.
@@ -4243,7 +4851,7 @@ class VoxPackApp(ctk.CTk):
                     break
                 self._dire(t("etat_ecoute", rang=rang, total=total, nom=nom))
                 try:
-                    await tache              # la voix de CETTE phrase
+                    await tache              # le WAV de CETTE phrase
                 except Exception as e:
                     if self._apercu_no == numero:
                         raison = raison_lisible(e)
@@ -4255,24 +4863,11 @@ class VoxPackApp(ctk.CTk):
                 # Pendant la lecture qui suit, la phrase suivante se prépare.
                 if rang < total:
                     tache = asyncio.create_task(
-                        self._telecharger_voix(textes[rang][1], voice_id,
-                                               chemin(rang + 1)))
+                        self._fabriquer_apercu(textes[rang][1], voice_id,
+                                               chemin_wav(rang + 1)))
                 if self._apercu_no != numero:
                     break
-                source = chemin(rang)
-                wav = chemin_wav(rang)
-                try:
-                    convertir_en_wav(source, wav)
-                    if robot:
-                        appliquer_effet_robot(wav, robot, "fr" if voice_id.startswith("fr-") else "en")
-                    ameliorer_niveau_wav(wav)
-                    source = wav
-                except Exception as e:
-                    if self._apercu_no == numero:
-                        self.after(0, lambda err=e: self._message(
-                            t("msg_apercu_echec", err=err),
-                            icone="erreur"))
-                    break
+                source = chemin_wav(rang)
                 lecture = LectureAudio(source)
                 self._lecture = lecture
                 # On attend la fin de la lecture SANS bloquer la boucle : c'est
@@ -4282,12 +4877,12 @@ class VoxPackApp(ctk.CTk):
             if not tache.done():
                 tache.cancel()
             for rang in range(1, total + 1):
-                for fichier in (chemin(rang), chemin_wav(rang)):
-                    if os.path.exists(fichier):
-                        try:
-                            os.remove(fichier)
-                        except OSError:
-                            pass
+                fichier = chemin_wav(rang)
+                if os.path.exists(fichier):
+                    try:
+                        os.remove(fichier)
+                    except OSError:
+                        pass
         if self._apercu_no != numero:
             # « Arrêter » a déjà tout remis en place, ou un autre aperçu a
             # pris le relais : ne pas toucher à son bouton ni à son message.
@@ -4332,7 +4927,7 @@ class VoxPackApp(ctk.CTk):
                 # un nom invalide donnerait un fichier que la radio ne lirait
                 # pas : on le signale au lieu de le fabriquer pour rien
                 refuses.append((nom or t("pb_vide"), souci))
-            elif texte:
+            elif phrase_sans_silences(texte):
                 taches.append((nom, texte))
         if not taches:
             self._message(t("msg_generer_aucune"), icone="attention")
@@ -4394,19 +4989,19 @@ class VoxPackApp(ctk.CTk):
         self._dire(t("etat_recherche_service"))
 
         for idx, (nom, texte) in enumerate(taches):
-            temp_mp3 = os.path.join(self.output_dir, f"{nom}_temp.mp3")
             final_wav = os.path.join(self.output_dir, f"{nom}.wav")
             fait = idx + 1
             try:
                 self._dire(t("etat_recherche_voix", fait=fait, total=total,
                              nom=nom))
-                await sauver_voix(texte, voice_id, temp_mp3,
-                                  pitch=self._robot_pitch(), rate=self._robot_rate())
-                self._dire(t("etat_generation_wav", fait=fait, total=total,
-                             nom=nom))
-                convertir_en_wav(temp_mp3, final_wav)
-                self._appliquer_robot(final_wav)
-                ameliorer_niveau_wav(final_wav)
+                await fabriquer_wav(
+                    texte, voice_id, final_wav,
+                    pitch=self._robot_pitch(), rate=self._robot_rate(),
+                    robot=self._robot,
+                    langue_effet=self._langue_effet(voice_id),
+                    annoncer=lambda: self._dire(
+                        t("etat_generation_wav", fait=fait, total=total,
+                          nom=nom)))
             except Exception as e:
                 # On note l'échec et on passe à la ligne suivante : une phrase
                 # qui rate ne doit pas priver l'utilisateur de toutes les autres.
@@ -4419,9 +5014,6 @@ class VoxPackApp(ctk.CTk):
                         break
                 else:
                     reseau_suite = 0
-            finally:
-                if os.path.exists(temp_mp3):
-                    os.remove(temp_mp3)
 
             val = fait / total
             self.after(0, lambda v=val: self.progress.set(v))

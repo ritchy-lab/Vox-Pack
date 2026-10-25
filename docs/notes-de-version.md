@@ -11,6 +11,23 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 1.5.0
+
+- **L'allemand arrive.** L'application parle désormais trois langues : français,
+  anglais et allemand. L'interface, l'aide, les messages et la liste changent
+  ensemble, et chaque langue garde sa propre liste. Quatre voix allemandes :
+  **Katja** (★, la voix officielle d'EdgeTX), Conrad, Amala et Killian — soit
+  **34 voix** au total — et **211 sons système** officiels en allemand. Merci à
+  **Ralf** pour la traduction et la relecture.
+- **Des silences dans vos phrases.** Un « > » vaut une demi-seconde :
+  « Motor an >> Motor aus » laisse une seconde entre les deux, et
+  « >>> Motor an » retarde l'annonce d'une seconde et demie. Dix secondes au
+  maximum. Utile pour retarder une annonce, ou pour détacher deux informations.
+- **Une petite fenêtre à la fermeture.** En quittant l'application, une fenêtre
+  discrète vous invitera à soutenir le projet — uniquement si vous en avez
+  envie. Cochez **« Ne plus demander »** et elle disparaît définitivement.
+  Envie d'y revenir un jour ? Le lien Ko-fi reste sous la signature.
+
 ## Nouveautés de la 1.4.4
 
 - **La fin des phrases n'est plus coupée.** L'application arrêtait chaque son
@@ -100,7 +117,8 @@ expliqués dans le [README](https://github.com/ritchy-lab/Vox-Pack#installation)
 - **Les voix** viennent du **service Microsoft Edge** via `edge-tts` (non
   officiel). Vox-Pack ne distribue pas les voix ; le texte est envoyé à
   Microsoft au moment de la génération.
-- L'application existe **en français et en anglais** (menu Fichier → Langue).
+- L'application existe **en français, en anglais et en allemand** (menu
+  Fichier → Langue).
 - Les fichiers produits sont au format exact attendu par EdgeTX :
   **WAV, 16 bits, 32 kHz, mono**.
 
@@ -116,6 +134,23 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 1.5.0
+
+- **German is here.** The application now speaks three languages: French,
+  English and German. The interface, help, messages and list all change
+  together, and each language keeps its own list. Four German voices: **Katja**
+  (★, EdgeTX's official voice), Conrad, Amala and Killian — **34 voices** in
+  total — plus **211 official German system sounds**. Thanks to **Ralf** for the
+  translation and the proofreading.
+- **Silences in your phrases.** A ">" is half a second: "Motor an >> Motor aus"
+  leaves one second between the two, and ">>> Motor an" delays the announcement
+  by a second and a half. Ten seconds at most. Handy to delay an announcement,
+  or to separate two pieces of information.
+- **A small window on exit.** When you quit the application, a discreet window
+  invites you to support the project — only if you feel like it. Tick
+  **"Don't ask again"** and it disappears for good. Changed your mind? The Ko-fi
+  link stays under the signature.
 
 ## What's new in 1.4.4
 
@@ -203,7 +238,7 @@ certificate): the two clicks to make are explained in the
 - **The voices** come from the **Microsoft Edge service** via `edge-tts`
   (unofficial). Vox-Pack does not distribute the voices; the text is sent to
   Microsoft when you generate.
-- The app comes **in French and English** (File → Language menu).
+- The app comes **in French, English and German** (File → Language menu).
 - The files it produces are exactly what EdgeTX expects:
   **WAV, 16-bit, 32 kHz, mono**.
 
@@ -211,4 +246,5 @@ certificate): the two clicks to make are explained in the
 
 **Everything is explained in the
 [README](https://github.com/ritchy-lab/Vox-Pack)** (English version:
-[README.en.md](https://github.com/ritchy-lab/Vox-Pack/blob/main/README.en.md)).
+[README.en.md](https://github.com/ritchy-lab/Vox-Pack/blob/main/README.en.md),
+German: [README.de.md](https://github.com/ritchy-lab/Vox-Pack/blob/main/README.de.md)).
