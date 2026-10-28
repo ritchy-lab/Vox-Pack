@@ -11,6 +11,17 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 1.5.1
+
+- **La fin des phrases n'est plus coupée, pour de bon.** Chaque son garde
+  maintenant **un quart de seconde de silence** après le dernier mot. La 1.5
+  n'en laissait que 50 ms : la dernière consonne — le « d » de « motor armed »,
+  le « s » de « takeoff flaps » — s'entendait s'arrêter net, et deux annonces
+  jouées à la suite se collaient l'une à l'autre.
+- **Rien d'autre ne change** : même voix, même format, même niveau. Les
+  fichiers s'allongent d'environ 0,2 s (≈ 1 s de moyenne au lieu de 0,8 s).
+  Les fichiers déjà fabriqués ne changent pas : il faut les régénérer.
+
 ## Nouveautés de la 1.5.0
 
 - **L'allemand arrive.** L'application parle désormais trois langues : français,
@@ -134,6 +145,17 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 1.5.1
+
+- **The end of a phrase is no longer cut off — for good.** Every sound now
+  keeps **a quarter of a second of silence** after the last word. 1.5 left only
+  50 ms: the final consonant — the "d" of "motor armed", the "s" of "takeoff
+  flaps" — stopped short, and two announcements played back to back ran into
+  each other.
+- **Nothing else changes**: same voices, same format, same level. Files are
+  about 0.2 s longer (≈ 1 s on average instead of 0.8 s). Files already made
+  are unchanged: generate them again to benefit.
 
 ## What's new in 1.5.0
 

@@ -7,6 +7,41 @@ Légende : `[ ]` à faire · `[x]` fait
 
 ## Fait
 
+### Version 1.5.1 (28 octobre)
+
+- [x] **La fin des phrases coupée de nouveau, sur la 1.5.** Signalé depuis les
+  états-Unis : « motor armed » perd son « d », « takeoff flaps » son « s ».
+  Vérifié **avant** de toucher au code :
+  - la chaîne audio est **identique** à celle de la 1.4.4 :
+    `sauver_voix`, `convertir_en_wav` et `ameliorer_niveau_wav` sont les mêmes
+    fonctions, au caractère près, et `LectureAudio` n'a pas changé ;
+  - le fichier ne perd pas la consonne : sur « Motor armed » (Emily), le
+    dernier échantillon audible tombe à **1 103 ms** et le fichier finissait à
+    **1 153 ms**, soit 50 ms plus loin, à −78 dBFS. Le « d » est bien dedans ;
+  - **le repère qui manquait** : les sons officiels d'EdgeTX gardent **environ
+    850 ms** de silence après le dernier son (mesuré sur `armed.wav` et
+    `gearup.wav` du dépôt `edgetx-sdcard-sounds` : 845 et 866 ms). Les nôtres
+    n'en gardaient que 50. C'est ce temps-là que l'oreille et le haut-parleur
+    réclament ;
+  - **ce qui a changé en 1.5, c'est l'écoute** : l'aperçu fabrique le WAV de la
+    phrase suivante *pendant* la lecture, donc les annonces s'enchaînent sans
+    le temps mort de la conversion qui existait en 1.4.4. La coupe à 50 ms, qui
+    se cachait dans ce silence, s'entend quand la phrase suivante démarre
+    aussitôt — et sur la radio, le haut-parleur n'a pas le temps de finir.
+  **Correctif** : `QUEUE_FIN = 0.250`, un quart de seconde de silence après le
+  dernier échantillon audible (−50 dBFS), complété s'il manque (`ameliorer_
+  niveau_wav`, point 6). Il s'applique à toutes les sorties : liste, aperçu et
+  les 212 sons système. Fichiers : 985 → **1 185 ms** (« Motor armed ») et
+  1 176 → **1 376 ms** (« Takeoff flaps »), soit +200 ms. Les pauses « > »
+  comptent dans ce quart de seconde : « motor armed >>> » fait bien 1,5 s.
+  Contrôle ajouté dans `tests/fumee_windows.py` (250 ms de queue exigées).
+  Contrôle par un WAV fixe : la sortie 1.4.4 et la sortie corrigée sont
+  identiques **au bit près** jusqu'à l'ancienne fin, puis 200 ms de zéros.
+  On s'arrête volontairement à 250 ms, et non aux 850 ms des sons officiels :
+  la demande de l'utilisateur, et les fichiers restent courts (≈ 1,05 s de
+  moyenne contre 1,93 s sans traitement). Si c'est encore trop court à
+  l'oreille, un seul chiffre à changer : `QUEUE_FIN`.
+
 ### Version 1.5.0 (25 octobre) — chantier, non publiée
 
 - [x] **Troisième langue : l'allemand.** 180 textes (176 de l'interface + 3 clés

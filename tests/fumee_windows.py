@@ -77,7 +77,7 @@ def test_conversion_nom_temporaire(dossier):
 
 
 def test_traitement_niveau(dossier):
-    """Coupe des silences, limiteur, normalisation, fondu de sortie."""
+    """Coupe des silences, limiteur, normalisation, fondu, queue de 250 ms."""
     print("2. traitement du niveau (silence coupé, parole gardée, fin douce)")
     sr = 32000
     chemin = os.path.join(dossier, "niveau.wav")
@@ -93,6 +93,13 @@ def test_traitement_niveau(dossier):
     niveau_fin = 20 * np.log10(fin + 1e-12)
     verifier(niveau_fin < -40,
              f"le fichier se termine en douceur ({niveau_fin:.0f} dBFS)")
+    # Le quart de seconde qui suit le dernier son : sans lui, la dernière
+    # consonne s'entend coupée (signalé le 28 octobre 2026 sur la 1.5).
+    actifs = np.where(np.abs(y) > 0.003)[0]     # seuil du traitement, −50 dBFS
+    queue = (len(y) - actifs[-1] - 1) / sr if len(actifs) else 0.0
+    verifier(queue >= 0.24,
+             f"un quart de seconde de queue après le dernier son "
+             f"({queue * 1000:.0f} ms)")
 
 
 class Champ:

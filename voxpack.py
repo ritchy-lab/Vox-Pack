@@ -282,10 +282,21 @@ def appliquer_effet_robot(chemin, numero, langue="en"):
                 pass
 
 
+# Quart de seconde de silence gardé APRÈS le dernier échantillon audible.
+# Sans lui, la coupe s'arrêtait 50 ms après la fin du son : à l'écoute, la
+# dernière consonne (« d » de « armed », « s » de « flaps ») s'entend coupée,
+# et deux annonces jouées à la suite se collent. Repères mesurés le
+# 28 octobre 2026 : notre fichier finissait 50 ms après le dernier son, les
+# sons officiels d'EdgeTX gardent environ 850 ms. (Voir le point 6 dans
+# ameliorer_niveau_wav.)
+QUEUE_FIN = 0.250
+
+
 def ameliorer_niveau_wav(chemin):
     """Coupe les silences, limite et normalise un WAV EdgeTX.
 
-    Coupe + gain +6 dB + limiteur à avance de 5 ms, puis normalisation.
+    Coupe + gain +6 dB + limiteur à avance de 5 ms, puis normalisation, et
+    un quart de seconde de silence après le dernier son (QUEUE_FIN).
     Pas de compression par blocs, pas de tanh : le limiteur seul donne le
     niveau, sans le clic du compresseur.
     """
@@ -345,6 +356,31 @@ def ameliorer_niveau_wav(chemin):
     fondu = max(1, int(0.010 * sr))
     if len(x) > fondu:
         x[-fondu:] *= np.linspace(1.0, 0.0, fondu)
+
+    # 6. Quart de seconde de silence après le dernier son.
+    #
+    # Le point 1 ne laisse que 50 ms entre le dernier échantillon audible et
+    # la fin du fichier. C'est trop peu : à l'écoute, le son semble s'arrêter
+    # net, et la dernière consonne — le « d » de « motor armed », le « s » de
+    # « takeoff flaps » — s'entend coupée. Signalé de nouveau le 28 octobre
+    # 2026, sur la 1.5 : le traitement n'avait pas changé depuis la 1.4.4,
+    # c'est la marge qui restait trop serrée.
+    #
+    # Mesuré : sur « Motor armed », le fichier finissait 50 ms après le dernier
+    # échantillon audible, à −78 dBFS — rien ne manquait au signal, c'est le
+    # temps laissé après le son qui était trop court. Les sons officiels
+    # d'EdgeTX gardent, eux, environ 850 ms.
+    #
+    # Le quart de seconde est COMPLÉTÉ avec du silence, pas pris sur la suite
+    # du fichier : la queue fait donc exactement 250 ms, quelle que soit la
+    # voix et même pour une phrase fabriquée en plusieurs morceaux (dont les
+    # bords sont coupés à 50 ms avant collage). Le fichier reste court :
+    # environ 1,05 s de moyenne, contre 1,93 s sans traitement.
+    actifs = np.where(np.abs(x) > 0.003)[0]
+    if len(actifs):
+        manque = int(QUEUE_FIN * sr) - (len(x) - actifs[-1] - 1)
+        if manque > 0:
+            x = np.concatenate((x, np.zeros(manque, dtype=x.dtype)))
 
     temporaire = chemin + ".niveau"
     try:
@@ -2005,6 +2041,10 @@ async def fabriquer_wav(texte, voice_id, destination, pitch=None, rate=None,
     dernier = max(i for i, (g, _) in enumerate(morceaux) if g == "texte")
     avant = sum(v for g, v in morceaux[:premier] if g == "silence")
     apres = sum(v for g, v in morceaux[dernier + 1:] if g == "silence")
+    # La queue de 250 ms que le traitement du niveau pose après le dernier son
+    # compte dans la pause demandée : « Motor armed >>> » laisse bien 1,5 s de
+    # silence, et non 1,75 s.
+    apres = max(0.0, apres - QUEUE_FIN)
 
     joint = bytearray()
     for rang in range(premier, dernier + 1):
