@@ -441,10 +441,15 @@ def main() -> int:
     print("Fenêtre des langues")
     prises = []
     fenetre = voxpack2.FenetreLanguesV2(app, "fr", prises.append)
-    codes = [langue.code for langue in voxpack2._LANGUES_TABLE]
-    index_fr = codes.index("fr")
+    # La langue courante se marque par son cadre cyan, et rien d'autre : le
+    # liseré blanc du clavier restait affiché en permanence (vu le 5
+    # novembre au matin, alors que le parcours clavier est retiré).
+    bordures = {str(cellule.cget("highlightbackground")).upper()
+                for cellule, _titre, _detail, _bord in fenetre._cellules}
     verifier("la langue courante est marquée",
-             fenetre._focus_i == index_fr, fenetre._focus_i)
+             fenetre.ACCENT.upper() in bordures, bordures)
+    verifier("aucun cadre blanc ne reste affiché",
+             "#FFFFFF" not in bordures, bordures)
     verifier("les cellules ne prennent pas le focus",
              all(str(cellule[0].cget("takefocus")) in ("", "0")
                  for cellule in fenetre._cellules))

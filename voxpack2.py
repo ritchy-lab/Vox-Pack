@@ -3967,10 +3967,6 @@ class FenetreLanguesV2(tk.Toplevel):
     ACCENT = "#0FBBD0"
     TEXTE = "#E9F4F6"
     GRIS = "#7C959A"
-    # Le liseré du clavier, distinct de l'accent de la langue courante.
-    FOCUS = "#FFFFFF"
-    # Son fond : plus clair, pour que la cellule se détache franchement.
-    FOCUS_FOND = "#1B3B44"
     LARGEUR = 680
     HAUTEUR = 540
 
@@ -4014,8 +4010,6 @@ class FenetreLanguesV2(tk.Toplevel):
 
         self._cellules = []
         self._survollee = None
-        self._focus_i = next((i for i, langue in enumerate(_LANGUES_TABLE)
-                              if langue.code == code_courant), 0)
         for i, langue in enumerate(_LANGUES_TABLE):
             ici = langue.code == code_courant
             bord = self.ACCENT if ici else self.TRAIT
@@ -4079,19 +4073,17 @@ class FenetreLanguesV2(tk.Toplevel):
         self._peindre()
 
     def _peindre(self):
-        """Couleurs des cellules : le survol, puis le clavier.
+        """Couleurs des cellules : le survol, puis la langue courante.
 
-        Le clavier passe avant tout : cadre blanc de 2 px, fond plus clair et
-        nom en blanc. Un simple liseré d'un pixel se voyait à peine sur le
-        fond sombre — Richard l'a dit le 3 novembre au soir, et il avait
-        raison.
+        Il n'y a plus de liseré blanc : il marquait la cellule sous le
+        clavier, et le parcours au clavier a été retiré le 4 novembre au
+        soir. Il restait affiché en permanence sur la langue courante, même
+        quand on survolait une autre cellule. La langue courante se
+        distingue par son cadre cyan, posé à la création.
         """
         for i, (cellule, titre, detail, bord) in enumerate(self._cellules):
             morceaux = (cellule, titre, detail)
-            if i == self._focus_i:
-                self._colorer(morceaux, self.FOCUS_FOND, self.FOCUS)
-                titre.configure(fg="#FFFFFF")
-            elif i == self._survollee:
+            if i == self._survollee:
                 self._colorer(morceaux, self.SURVOL, self.ACCENT)
                 titre.configure(fg=self.TEXTE)
             else:
