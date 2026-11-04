@@ -1101,6 +1101,9 @@ TEXTES = {
         "err_illisible":
             "Le service de voix a renvoyé une réponse illisible. "
             "Réessayez dans un instant.",
+        "err_muet":
+            "Le service de voix a renvoyé un son vide : la phrase n'a pas "
+            "été prononcée. Réessayez, ou changez la phrase.",
         "err_reseau": "pas de connexion Internet",
         "err_reseau_detail":
             "Impossible de joindre le service de voix Microsoft. Vérifie ta "
@@ -1472,6 +1475,9 @@ TEXTES = {
         "err_illisible":
             "The voice service returned an unreadable response. "
             "Try again in a moment.",
+        "err_muet":
+            "The voice service returned an empty sound: the phrase was not "
+            "spoken. Try again, or change the phrase.",
         "err_reseau": "no Internet connection",
         "err_reseau_detail":
             "Cannot reach Microsoft's voice service. Check your Internet "
@@ -1830,6 +1836,7 @@ TEXTES["de"] = {
         "err_voix_absente": "Stimme vom Dienst entfernt: bitte eine andere wählen",
         "err_lent": "Dienst hat nicht rechtzeitig geantwortet (langsame Verbindung?)",
         "err_illisible": "Der Sprachdienst hat eine unlesbare Antwort geliefert. Bitte gleich noch einmal versuchen.",
+        "err_muet": "Der Sprachdienst hat einen leeren Ton geliefert: Der Satz wurde nicht gesprochen. Versuchen Sie es erneut oder ändern Sie den Satz.",
         "err_reseau": "keine Internetverbindung",
         "err_reseau_detail": "Der Sprachdienst von Microsoft ist nicht erreichbar. Prüfen Sie Ihre Internetverbindung (VPN, Firewall, DNS) und versuchen Sie es erneut.",
         "msg_reseau_coupe": "Internetverbindung verloren: Die Erzeugung wurde gestoppt. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
@@ -2376,6 +2383,25 @@ def _ecrire_pcm(chemin, brut, sr=FORMAT_EDGETX[0]):
         _effacer(temporaire)
 
 
+def wav_a_du_son(chemin):
+    """Vrai si le WAV contient au moins un échantillon non nul.
+
+    Un service de voix peut répondre « 200 » et livrer un fichier muet :
+    voix retirée du catalogue, phrase faite de caractères qu'il ignore. Le
+    fichier a alors la bonne taille et le bon format — il est simplement
+    silencieux. Sans ce contrôle, il était compté comme un succès, et la
+    radio jouait le silence.
+    """
+    try:
+        with wave.open(chemin, "rb") as w:
+            if w.getnframes() <= 0:
+                return False
+            brut = w.readframes(w.getnframes())
+    except (wave.Error, OSError):
+        return False
+    return any(brut)
+
+
 async def fabriquer_wav(texte, voice_id, destination, pitch=None, rate=None,
                         robot=0, langue_effet="en", niveau=0, annoncer=None):
     """Fabrique le WAV d'une phrase, silences compris.
@@ -2408,6 +2434,8 @@ async def fabriquer_wav(texte, voice_id, destination, pitch=None, rate=None,
                 appliquer_effet_robot(temporaire, robot, langue_effet)
             ameliorer_niveau_wav(temporaire)
             appliquer_niveau(temporaire, niveau)
+            if not wav_a_du_son(temporaire):
+                raise ValueError(t("err_muet"))
             os.replace(temporaire, destination)
         finally:
             _effacer(mp3, temporaire)
@@ -2463,6 +2491,8 @@ async def fabriquer_wav(texte, voice_id, destination, pitch=None, rate=None,
             _ecrire_pcm(temporaire,
                         b"\x00\x00" * int(avant * sr) + brut
                         + b"\x00\x00" * int(apres * sr), sr)
+        if not wav_a_du_son(temporaire):
+            raise ValueError(t("err_muet"))
         os.replace(temporaire, destination)
     finally:
         _effacer(temporaire)
@@ -2990,18 +3020,64 @@ def lire_reglages():
     try:
         with open(REGLAGES_FILE, "r", encoding="utf-8") as f:
             reglages = json.load(f)
-        return reglages if isinstance(reglages, dict) else {}
     except Exception:
         return {}
+    return _reglages_surs(reglages)
+
+
+def _reglages_surs(reglages):
+    """Ne garde que les réglages dont le type est celui qu'on écrit.
+
+    Un fichier modifié à la main, ou écrit par une version qui rangeait
+    autrement, ne doit jamais empêcher la fenêtre de s'ouvrir : un « voix »
+    qui n'était pas un dictionnaire faisait planter l'application au
+    démarrage, avant même le premier pixel (voir _remplir_voix).
+    """
+    if not isinstance(reglages, dict):
+        return {}
+    propres = {}
+    langue = reglages.get("langue_ui")
+    if isinstance(langue, str) and langue in TEXTES:
+        propres["langue_ui"] = langue
+    voix = reglages.get("voix")
+    if isinstance(voix, dict):
+        propres["voix"] = {
+            code: valeur for code, valeur in voix.items()
+            if isinstance(code, str) and isinstance(valeur, str)}
+    for cle in ("niveau", "allure", "robot"):
+        valeur = reglages.get(cle)
+        if isinstance(valeur, int) and not isinstance(valeur, bool):
+            propres[cle] = valeur
+    for cle in ("dernier_dossier", "dernier_dossier_systeme"):
+        valeur = reglages.get(cle)
+        if isinstance(valeur, str) and valeur:
+            propres[cle] = valeur
+    soutien = reglages.get("soutien_fermeture")
+    if isinstance(soutien, bool):
+        propres["soutien_fermeture"] = soutien
+    return propres
 
 
 def ecrire_reglages(reglages):
+    """Écrit les réglages d'un seul coup : temporaire, puis remplacement.
+
+    Une écriture interrompue (disque plein, arrêt brutal) laissait un JSON
+    tronqué. Au lancement suivant, lire_reglages le rejetait : langue,
+    voix, dernier dossier et réglages des curseurs repartaient aux valeurs
+    par défaut, sans un mot.
+    """
+    temporaire = REGLAGES_FILE + ".tmp"
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
-        with open(REGLAGES_FILE, "w", encoding="utf-8") as f:
+        with open(temporaire, "w", encoding="utf-8") as f:
             json.dump(reglages, f, ensure_ascii=False, indent=2)
+        os.replace(temporaire, REGLAGES_FILE)
     except Exception:
-        pass  # des réglages, ce n'est pas vital : on n'alerte pas
+        try:
+            os.remove(temporaire)
+        except OSError:
+            pass
+        # des réglages, ce n'est pas vital : on n'alerte pas
 
 
 # ------------------------------------------------------------------
@@ -5679,10 +5755,7 @@ class VoxPackApp(ctk.CTk):
         contenu = []
         fichier = chemin_liste(self.langue)
         if os.path.exists(fichier):
-            # Lecture par le module csv : il comprend aussi bien les anciens
-            # fichiers (sans guillemets) que les nouveaux.
-            with open(fichier, "r", encoding="utf-8", newline="") as f:
-                lignes_lues = list(csv.reader(f))
+            lignes_lues = self._lire_liste(fichier)
             # Un en-tête « nom,phrase » (nos fichiers exportés en ont un) est
             # ignoré : sinon il deviendrait une ligne de la liste. Le libellé
             # dépend de la langue dans laquelle l'export a été fait.
@@ -5700,6 +5773,34 @@ class VoxPackApp(ctk.CTk):
 
         for nom, texte in contenu:
             self._ajouter_ligne_ui(nom, texte)
+
+    @staticmethod
+    def _lire_liste(fichier):
+        """Lit le CSV de la liste, en UTF-8 puis en Latin-1.
+
+        Un fichier réenregistré par un tableur peut être en Latin-1 : les
+        accents y sont valides, seul l'UTF-8 les refuse. Sans ce repli, la
+        lecture levait une exception au démarrage et l'application ne
+        s'ouvrait pas du tout — pas même une fenêtre vide, pas même un
+        message.
+
+        La lecture passe par lire_lignes_csv, qui reconnaît aussi le
+        point-virgule : un tableur français enregistre ainsi, et toute la
+        ligne devenait sinon le nom du fichier. Un fichier vraiment
+        illisible donne une liste vide, et l'appelant charge alors la liste
+        de la langue. Enfin, un fichier avec un en-tête « nom,phrase »
+        exporté par l'application est accepté : l'en-tête est retiré par
+        l'appelant.
+        """
+        for encodage in ("utf-8-sig", "latin-1"):
+            try:
+                with open(fichier, "r", encoding=encodage, newline="") as f:
+                    return lire_lignes_csv(f)
+            except UnicodeDecodeError:
+                continue
+            except OSError:
+                return []
+        return []
 
         # Les lignes sont nouvelles : l'ancre de sélection n'a plus de sens,
         # et les noms invalides doivent être signalés dès l'affichage.

@@ -15,6 +15,7 @@ Trois choses, sans lancer ni compiler :
    le relais, au lieu d'une exception au lancement.
 """
 
+import json
 import os
 import re
 import sys
@@ -153,6 +154,55 @@ def main() -> int:
                 app.destroy()
             except Exception:                   # noqa: BLE001
                 pass
+
+    print("Démarrage avec des fichiers abîmés")
+    # Trois cas vus en vrai, ou plausibles : une liste réenregistrée par un
+    # tableur (Latin-1 et point-virgule), et un réglage « voix » qui n'est
+    # pas un dictionnaire. Chacun empêchait la fenêtre de s'ouvrir.
+    os.makedirs(voxpack2.DATA_DIR, exist_ok=True)
+    liste = os.path.join(voxpack2.DATA_DIR, "liste_fr.csv")
+    with open(liste, "wb") as f:
+        f.write("reacteur;Moteur armé\n".encode("latin-1"))
+    with open(os.path.join(voxpack2.DATA_DIR, "reglages.json"), "w",
+              encoding="utf-8") as f:
+        json.dump({"langue_ui": "fr", "voix": "fr-DeniseNeural"}, f)
+    app = None
+    try:
+        app = voxpack2.VoxPackApp()
+        app.withdraw()
+        app.update()
+        verifier("une liste Latin-1 n'empêche plus le démarrage", True)
+        verifier("le point-virgule du tableur est reconnu",
+                 len(app.lignes) == 1 and app.lignes[0]["nom"] == "reacteur",
+                 app.lignes[0]["nom"] if app.lignes else "aucune ligne")
+        verifier("les accents de la liste sont lisibles",
+                 bool(app.lignes) and app.lignes[0]["texte"] == "Moteur armé",
+                 app.lignes[0]["texte"] if app.lignes else "")
+        verifier("un réglage « voix » mal typé est ignoré",
+                 isinstance(app._reglages.get("voix", {}), dict),
+                 repr(app._reglages.get("voix")))
+    except Exception as e:                      # noqa: BLE001
+        verifier("une liste Latin-1 n'empêche plus le démarrage", False, repr(e))
+    finally:
+        if app is not None:
+            try:
+                app.destroy()
+            except Exception:                   # noqa: BLE001
+                pass
+
+    print("Écriture des réglages")
+    # Un remplacement d'un seul coup : le fichier reste lisible, et aucun
+    # temporaire ne traîne à côté.
+    reglages = os.path.join(voxpack2.DATA_DIR, "reglages.json")
+    voxpack2.ecrire_reglages({"langue_ui": "fr", "allure": 12})
+    try:
+        with open(reglages, encoding="utf-8") as f:
+            relus = json.load(f)
+        verifier("les réglages écrits se relisent", relus.get("allure") == 12)
+        verifier("aucun temporaire ne reste",
+                 not os.path.exists(reglages + ".tmp"))
+    except Exception as e:                      # noqa: BLE001
+        verifier("les réglages écrits se relisent", False, repr(e))
 
     print()
     if ECHECS:

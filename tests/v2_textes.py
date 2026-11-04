@@ -198,6 +198,29 @@ def main() -> int:
     verifier("un en-tête est reconnu",
              voxpack2.est_entete(["nom", "phrase"]))
 
+    print("Son muet")
+    # Un service qui répond « 200 » avec du silence ne doit pas passer pour
+    # un succès : la radio jouerait le silence, et le bilan annoncerait
+    # « tout est fait ».
+    import struct
+    import wave
+    with tempfile.TemporaryDirectory() as dossier:
+        chemins = {}
+        for nom, donnees in (("muet", b"\x00\x00" * 4000),
+                             ("son", struct.pack("<400h", *([900] * 400)))):
+            chemins[nom] = os.path.join(dossier, nom + ".wav")
+            with wave.open(chemins[nom], "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(32000)
+                w.writeframes(donnees)
+        verifier("un WAV muet est refusé",
+                 not voxpack2.wav_a_du_son(chemins["muet"]))
+        verifier("un WAV audible est accepté",
+                 voxpack2.wav_a_du_son(chemins["son"]))
+        verifier("un fichier absent est refusé",
+                 not voxpack2.wav_a_du_son(os.path.join(dossier, "absent.wav")))
+
     print("Langue du système : les quinze codes")
     for valeur, attendu in (
             ("fr-FR", "fr"), ("fr_FR.UTF-8", "fr"), ("de-DE", "de"),

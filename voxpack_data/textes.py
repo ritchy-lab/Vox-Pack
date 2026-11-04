@@ -2599,8 +2599,41 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_supprimer_rien': '請至少勾選一行要刪除嘅內容。',
         'msg_supprimer_tout': '你會刪除成個清單。\n\n下次開應用程式時會自動重建。\n\n繼續？'}}
 
+# Le service de voix peut répondre sans erreur et livrer un son muet (voix
+# retirée du catalogue, phrase faite de caractères qu'il ignore). Ce lot est
+# séparé pour ne pas toucher aux lots existants : une seule clé par langue.
+LOT_MUET = {
+    "es": {"err_muet": "El servicio de voz devolvió un sonido vacío: la frase "
+                       "no se pronunció. Vuelve a intentarlo o cambia la "
+                       "frase."},
+    "it": {"err_muet": "Il servizio vocale ha restituito un suono vuoto: la "
+                       "frase non è stata pronunciata. Riprova o cambia la "
+                       "frase."},
+    "pt": {"err_muet": "O serviço de voz devolveu um som vazio: a frase não "
+                       "foi pronunciada. Tente novamente ou mude a frase."},
+    "ru": {"err_muet": "Служба голоса вернула пустой звук: фраза не была "
+                       "произнесена. Повторите попытку или измените фразу."},
+    "sv": {"err_muet": "Rösttjänsten returnerade ett tomt ljud: frasen sades "
+                       "inte. Försök igen eller ändra frasen."},
+    "uk": {"err_muet": "Служба голосу повернула порожній звук: фразу не було "
+                       "вимовлено. Спробуйте ще раз або змініть фразу."},
+    "cs": {"err_muet": "Služba hlasu vrátila prázdný zvuk: věta nebyla "
+                       "vyslovena. Zkuste to znovu nebo větu změňte."},
+    "da": {"err_muet": "Stemtjenesten returnerede en tom lyd: sætningen blev "
+                       "ikke sagt. Prøv igen, eller ændr sætningen."},
+    "ja": {"err_muet": "音声サービスが空の音声を返しました。このフレーズは"
+                       "読み上げられていません。もう一度試すか、フレーズを"
+                       "変えてください。"},
+    "cn": {"err_muet": "语音服务返回了空音频：这句话没有被朗读。请重试或修改"
+                       "这句话。"},
+    "tw": {"err_muet": "語音服務傳回了空白音訊：這句話沒有被朗讀。請重試或修改"
+                       "這句話。"},
+    "hk": {"err_muet": "語音服務傳回咗空白音訊：呢句未有讀出。請再試一次或者"
+                       "改咗呢句。"},
+}
+
 for _lot in (LOT_0, LOT_DIALOGUES, LOT_NOMS, LOT_VOIX, LOT_DIVERS,
-             LOT_GENERATION, LOT_AIDE):
+             LOT_GENERATION, LOT_AIDE, LOT_MUET):
     for _code, _textes in _lot.items():
         TEXTES[_code].update(_textes)
 
