@@ -3337,24 +3337,30 @@ class VoyantV2(tk.Canvas):
 # Barre de progression de la maquette : un trait, pas des points
 # ------------------------------------------------------------------
 class BarreV2(tk.Canvas):
-    """Le trait de progression, en creux dans le métal du bandeau.
+    """La fente de progression, avec des ronds allumés dedans.
 
-    Il monte et redescend doucement, au lieu de sauter d'un coup : c'est le
-    « thermomètre » de la maquette. `commande` est appelée à chaque pas avec
-    la valeur, pour tenir le compteur à jour — c'est ce qui fait remonter
-    puis redescendre le compteur avec la barre.
+    L'ordre de dessin vient de Richard (4 novembre au soir), et c'est lui qui
+    donne le relief :
+
+    1. le fond de la fente, très sombre ;
+    2. les ronds, espacés, sur toute la largeur ;
+    3. la fente et ses deux traits PAR-DESSUS — le trait noir du haut et le
+       trait clair du bas passent devant la rangée et la coupent. Dessinés
+       avant, les ronds paraissaient posés sur le métal au lieu d'être
+       dedans.
+
+    Seuls les ronds de la partie faite sont rouges : le reste de la fente
+    reste vide, pas une rangée de trous gris. Les ronds sont espacés et le
+    nombre est calculé pour que la rangée finisse sur un rond entier : c'est
+    ce qui supprime les crans en bout de fente.
     """
 
-    # La jauge, en trois bandes : lumière, couleur, ombre. Rouges (demande
-    # de Richard, 2 novembre) pour trancher sur le cyan du reste de l'écran.
-    # Changer les trois ensemble : une seule bande changerait le relief.
-    JAUGE_HAUT = "#FF6A58"
-    JAUGE_MILIEU = "#FF2114"      # le rouge du voyant SYSTEM, plus vif
-    JAUGE_BAS = "#C7241A"
-    # La tête de la jauge : un trait presque blanc, qui dit « c'est chaud
-    # jusqu'ici ». Sans lui, la barre paraissait terne sur le métal sombre
-    # (Richard, 3 novembre : « pas assez rouge »).
-    JAUGE_TETE = "#FFF1EE"
+    # La couleur réglée par Richard le 4 novembre à 19 h 16.
+    JAUGE = "#C41910"
+    CREUX = "#040B0C"      # le fond de la fente
+    OMBRE = "#24383C"      # le trait clair du bas
+    NOIR = "#000000"       # le trait noir du haut
+    ESPACE = 2             # pixels entre deux ronds
 
     def __init__(self, parent, largeur, hauteur, fond, commande=None):
         super().__init__(parent, width=largeur, height=hauteur, bg=fond,
@@ -3367,28 +3373,42 @@ class BarreV2(tk.Canvas):
         self._debut = 0.0
         self._t0 = time.time()
         self._anim = False
-        # Le creux : fond très sombre, ombre en haut, lumière en bas.
-        self.create_rectangle(0, 0, largeur, hauteur, fill="#040B0C",
+        self._allumes = 0
+
+        # 1. Le fond de la fente.
+        self.create_rectangle(0, 0, largeur, hauteur, fill=self.CREUX,
                               outline="")
-        self.create_line(0, 0, largeur, 0, fill="#000000")
+        # 2. Les ronds.
+        self._ronds = []
+        self._creer_ronds()
+        # 3. La fente par-dessus : ses deux traits coupent la rangée.
+        self.create_line(0, 0, largeur, 0, fill=self.NOIR)
         self.create_line(0, hauteur - 1, largeur, hauteur - 1,
-                         fill="#24383C")
-        # La jauge en trois bandes : lumière, cyan, ombre. Trois traits
-        # plats se verraient ; trois bandes donnent le relief du verre.
-        self._haut_fin = max(2, 1 + hauteur // 4)
-        self._bas_debut = min(hauteur - 1,
-                              hauteur - 1 - max(1, hauteur // 4))
-        self._jauge_h = self.create_rectangle(
-            1, 1, 1, self._haut_fin, fill=self.JAUGE_HAUT, outline="")
-        self._jauge_m = self.create_rectangle(
-            1, self._haut_fin, 1, self._bas_debut,
-            fill=self.JAUGE_MILIEU, outline="")
-        self._jauge_b = self.create_rectangle(
-            1, self._bas_debut, 1, hauteur - 1,
-            fill=self.JAUGE_BAS, outline="")
-        self._tete = self.create_line(
-            2, 1, 2, hauteur - 1, fill=self.JAUGE_TETE, width=2,
-            state="hidden")
+                         fill=self.OMBRE)
+
+    def _creer_ronds(self):
+        """Crée la rangée, une fois pour toutes.
+
+        Les ronds occupent la hauteur intérieure de la fente — quatre pixels
+        quand la fente en fait six — et sont donc posés ENTRE les deux
+        traits, sans marge. Un rond de la hauteur totale, coupé par les
+        traits, se lisait comme un tiret : c'est le diamètre intérieur qui
+        donne des ronds.
+
+        L'entraxe est réparti sur toute la largeur, de sorte que la rangée
+        se termine sur un rond entier et non sur une moitié.
+        """
+        diametre = max(2, self._hauteur - 2)
+        pas = diametre + self.ESPACE
+        nombre = max(1, int(self._largeur / pas))
+        pas = self._largeur / nombre
+        rayon = diametre / 2
+        haut = (self._hauteur - diametre) / 2
+        for i in range(nombre):
+            centre = pas * (i + 0.5)
+            self._ronds.append(self.create_oval(
+                centre - rayon, haut, centre + rayon, haut + diametre,
+                fill=self.CREUX, outline=""))
 
     def set(self, valeur):
         self._cible = max(0.0, min(1.0, float(valeur)))
@@ -3419,31 +3439,24 @@ class BarreV2(tk.Canvas):
         self.after(25, self._pas)
 
     def _dessiner(self):
-        # À zéro, la jauge disparaît complètement : aucun trait bleu ne doit
-        # rester dans le creux (c'était le défaut de la première version).
-        if self._valeur <= 0.0:
-            for morceau in (self._jauge_h, self._jauge_m, self._jauge_b,
-                            self._tete):
-                self.itemconfigure(morceau, state="hidden")
-        else:
-            # Au bout, la jauge touche le bord droit de la barre : le
-            # thermomètre va jusqu'au bout, comme dans la 1.5.1.
-            x = min(self._largeur, max(2, round(self._largeur * self._valeur)))
-            for morceau in (self._jauge_h, self._jauge_m, self._jauge_b):
-                self.itemconfigure(morceau, state="normal")
-            self.coords(self._jauge_h, 1, 1, x, self._haut_fin)
-            self.coords(self._jauge_m, 1, self._haut_fin, x,
-                        self._bas_debut)
-            self.coords(self._jauge_b, 1, self._bas_debut, x,
-                        self._hauteur - 1)
-            self.coords(self._tete, x, 1, x, self._hauteur - 1)
-            self.itemconfigure(self._tete, state="normal")
+        """Allume les ronds de la partie faite, éteint les autres."""
+        allumes = int(round(len(self._ronds) * self._valeur))
+        if self._valeur >= 1.0:
+            allumes = len(self._ronds)
+        # Seuls les ronds qui changent d'état sont repeints : la jauge
+        # avance de quelques ronds par image, pas de la rangée entière.
+        debut = min(self._allumes, allumes)
+        fin = max(self._allumes, allumes)
+        for i in range(debut, fin):
+            self.itemconfigure(
+                self._ronds[i],
+                fill=self.JAUGE if i < allumes else self.CREUX)
+        self._allumes = allumes
         if self._commande:
             try:
                 self._commande(self._valeur)
             except Exception:
                 pass
-
 
     def reset(self):
         """Redescend doucement, mais pas tout de suite.
