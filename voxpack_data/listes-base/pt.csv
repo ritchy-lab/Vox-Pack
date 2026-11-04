@@ -1,0 +1,25 @@
+armed;armado
+disarm;desarmado
+alt;Altitude
+gearup;trem de pouso levantado
+geardn;trem de pouso abaixado
+flapup;flaps levantados
+flapdn;flaps abaixados
+landin;pouso
+engoff;motor, desligado
+thmmod;modo termal ligado
+nrmmod;modo normal ligado
+lnding;modo pouso ligado
+acro;modo acro ligado
+fm-1;modo de voo um
+fm-2;modo de voo dois
+fm-3;modo de voo três
+vrion;vario, ligado
+vrioff;vario, desligado
+fm-lnd;modo de voo pouso
+fm-spd;modo de voo velocidade
+fm-nrm;modo de voo normal
+fm-crs;modo de voo cruseiro
+fm-acr;modo de voo acro
+fm-lch;modo de voo lançamento
+fm-thm;modo de voo térmica

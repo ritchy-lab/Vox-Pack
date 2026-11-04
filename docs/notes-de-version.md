@@ -11,6 +11,51 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 2.0.0
+
+- **Quinze langues.** Après le français, l'anglais et l'allemand, douze
+  langues s'ajoutent : espagnol, italien, portugais, russe, suédois,
+  ukrainien, tchèque, danois, japonais, chinois simplifié, chinois
+  traditionnel et cantonais (Hong Kong). Chacune apporte son interface, son
+  aide, ses messages, ses **voix** — **68 voix** au total — et sa propre
+  liste de phrases. L'application démarre dans la langue de ton ordinateur,
+  et **chaque langue garde sa liste** : tu peux passer de l'une à l'autre
+  sans rien perdre.
+- **Un nouvel écran.** La fenêtre est redessinée : fond sombre de la
+  maquette, boutons dessinés, quatre voyants (Robot 1 à 3 et HAL 9000),
+  thermomètre de progression rouge, et une ligne d'état qui dit à chaque
+  instant ce que fait l'application. La fenêtre n'a plus de barre de titre :
+  elle se déplace en la faisant glisser, et ses deux boutons de fermeture
+  restent à portée.
+- **Une nouvelle icône.** Dans le Dock du Mac et la barre des tâches de
+  Windows, c'est désormais l'émetteur de la v2, avec le mot VOX-PACK.
+- **Les sons système dans la langue choisie.** Les annonces officielles
+  d'EdgeTX sont fabriquées dans le dossier `SYSTEM/` de cette langue —
+  `SOUNDS/jp`, `SOUNDS/cz`, `SOUNDS/ua-ostap`… — au lieu de retomber sur
+  l'anglais. Le nombre de sons dépend de la langue : 186 en français, 256 en
+  tchèque, 274 en russe et en ukrainien…
+- **Une aide qui suit la langue.** Les 57 sections de l'aide sont traduites
+  dans les quinze langues. Le japonais, le taïwanais et le hongkongais
+  affichent un avertissement : leur aide a été traduite par une IA et n'a pas
+  encore été relue par un locuteur natif.
+- **La voix officielle, à l'allure de la radio.** Chaque langue propose
+  d'abord la voix officielle d'EdgeTX (★), avec sa vitesse et sa hauteur
+  d'origine : le suédois parle par exemple 10 Hz plus bas, comme dans la
+  recette d'EdgeTX.
+- **Exporter et importer dans les quinze langues** : un fichier exporté en
+  espagnol (`nombre,frase`) se réimporte maintenant sans créer une fausse
+  ligne.
+- **Génération plus sûre** : le compteur des succès compte les fichiers
+  réellement écrits ; l'arrêt sur panne réseau se déclenche après trois
+  échecs **d'affilée**, et non plus au troisième échec au total ; le WAV
+  final est écrit à côté puis renommé, pour qu'un échec ne laisse jamais un
+  fichier à moitié écrit.
+- **Détails** : le bouton « Arrêter » dessine son carré dans toutes les
+  langues ; les libellés chinois n'imbriquent plus les parenthèses
+  (`Xiaoxiao (中文 · 简体)`) ; la fenêtre des langues et l'aide ne collent
+  plus à la souris ; l'affichage reste lisible à
+  125 % et à 150 % sous Windows.
+
 ## Nouveautés de la 1.5.1
 
 - **La fin des phrases n'est plus coupée, pour de bon.** Chaque son garde
@@ -128,8 +173,8 @@ expliqués dans le [README](https://github.com/ritchy-lab/Vox-Pack#installation)
 - **Les voix** viennent du **service Microsoft Edge** via `edge-tts` (non
   officiel). Vox-Pack ne distribue pas les voix ; le texte est envoyé à
   Microsoft au moment de la génération.
-- L'application existe **en français, en anglais et en allemand** (menu
-  Fichier → Langue).
+- L'application existe en **quinze langues** (menu Fichier → Langue) : elle
+  démarre dans celle de ton ordinateur.
 - Les fichiers produits sont au format exact attendu par EdgeTX :
   **WAV, 16 bits, 32 kHz, mono**.
 
@@ -145,6 +190,45 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 2.0.0
+
+- **Fifteen languages.** Beyond French, English and German, twelve languages
+  join: Spanish, Italian, Portuguese, Russian, Swedish, Ukrainian, Czech,
+  Danish, Japanese, Simplified Chinese, Traditional Chinese and Cantonese
+  (Hong Kong). Each brings its interface, its help, its messages, its
+  **voices** — **68 voices** in all — and its own phrase list. The app starts
+  in your computer's language, and **each language keeps its own list**: you
+  can switch back and forth without losing anything.
+- **A new screen.** The window is redrawn: dark backdrop from the mock-up
+  artwork, drawn buttons, four LEDs (Robot 1 to 3 and HAL 9000), a red
+  progress thermometer, and a status line that says what the app is doing at
+  every moment. The window has no title bar: drag it to move it, and its two
+  close buttons stay within reach.
+- **A new icon.** In the macOS Dock and the Windows taskbar, it is now the
+  v2 transmitter, with the VOX-PACK wordmark.
+- **System sounds in the chosen language.** EdgeTX's official announcements
+  are now built in that language's `SYSTEM/` folder — `SOUNDS/jp`,
+  `SOUNDS/cz`, `SOUNDS/ua-ostap`… — instead of falling back to English. The
+  number of sounds depends on the language: 186 in French, 256 in Czech, 274
+  in Russian and Ukrainian…
+- **Help that follows the language.** All 57 help sections are translated
+  into the fifteen languages. Japanese, Taiwanese Chinese and Hong Kong
+  Cantonese show a warning: their help was machine-translated and has not yet
+  been proofread by a native speaker.
+- **The official voice at the radio's own pace.** Each language offers
+  EdgeTX's official voice first (★), with its original rate and pitch:
+  Swedish, for instance, speaks 10 Hz lower, as in the EdgeTX recipe.
+- **Export and import in all fifteen languages**: a file exported in Spanish
+  (`nombre,frase`) now imports back without creating a bogus line.
+- **Safer generation**: the success counter now counts files actually
+  written; the network cut-off now triggers after three failures **in a
+  row**, not three overall; and the final WAV is written alongside then
+  renamed, so a failure never leaves a half-written file.
+- **Details**: the Stop button draws its square in every language; Chinese
+  labels no longer nest brackets (`Xiaoxiao (中文 · 简体)`); the language
+  window and the help no longer stick to the mouse; text
+  stays readable at 125% and 150% under Windows.
 
 ## What's new in 1.5.1
 
@@ -260,7 +344,8 @@ certificate): the two clicks to make are explained in the
 - **The voices** come from the **Microsoft Edge service** via `edge-tts`
   (unofficial). Vox-Pack does not distribute the voices; the text is sent to
   Microsoft when you generate.
-- The app comes **in French, English and German** (File → Language menu).
+- The app comes **in fifteen languages** (File → Language menu) and starts in
+  your computer's language.
 - The files it produces are exactly what EdgeTX expects:
   **WAV, 16-bit, 32 kHz, mono**.
 

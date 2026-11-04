@@ -20,7 +20,9 @@ import numpy as np
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RACINE)
 
-import voxpack                                    # noqa: E402  (après le chemin)
+import voxpack2 as voxpack                        # noqa: E402  (après le chemin)
+# On teste le module que la recette compile : la 1.5.1 (voxpack.py) n'est
+# plus livrée, et un smoke test sur elle ne prouverait rien sur la v2.
 
 ECHECS = []
 
@@ -102,16 +104,6 @@ def test_traitement_niveau(dossier):
              f"({queue * 1000:.0f} ms)")
 
 
-class Champ:
-    """Imite une case de saisie de l'interface, pour tester hors interface."""
-
-    def __init__(self, valeur):
-        self.valeur = valeur
-
-    def get(self):
-        return self.valeur
-
-
 def test_enregistrement_liste(dossier):
     """Temporaire + renommage, avec les trois essais (WinError 5)."""
     print("3. enregistrement de la liste (temporaire, renommage, essais)")
@@ -122,8 +114,7 @@ def test_enregistrement_liste(dossier):
         langue = "en"
 
         def __init__(self):
-            self.lignes = [{"entry_nom": Champ("armed"),
-                            "entry_txt": Champ("Armed")}]
+            self.lignes = [{"nom": "armed", "texte": "Armed"}]
             self._bak_faits = set()
             self._erreur_sauvegarde = False
             self.alertes = 0

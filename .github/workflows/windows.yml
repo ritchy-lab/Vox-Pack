@@ -42,9 +42,16 @@ jobs:
 
       # Les trois défauts d'octobre 2026 ne se voyaient que sur PC : écriture
       # d'un WAV en « .tmp », réécriture de la liste, traitement du niveau.
-      # Mieux vaut les attraper ici que chez un utilisateur.
+      # Mieux vaut les attraper ici que chez un utilisateur. Les cinq tests de
+      # la v2 tournent aussi : ils isolent HOME/USERPROFILE eux-mêmes.
       - name: Vérifier le code avant de fabriquer
-        run: python tests/fumee_windows.py
+        run: |
+          python tests/fumee_windows.py
+          python tests/v2_textes.py
+          python tests/v2_langues.py
+          python tests/v2_paquet.py
+          python tests/v2_ecran.py
+          python tests/v2_adaptation.py
 
       - name: Compiler l'application
         run: python -m PyInstaller Vox-Pack.spec --noconfirm

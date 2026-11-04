@@ -1,7 +1,11 @@
 # ============================================================
-# Vox-Pack
+# Vox-Pack 1.5.1 — ARCHIVE
 # © 2026 ritchy-lab — licence MIT (voir le fichier LICENSE)
 # made by ritchy
+# ------------------------------------------------------------
+# L'application publiée en 2.0.0 est `voxpack2.py`. Ce fichier est gardé
+# comme archive de la 1.5.1 (décision de Richard, 3 novembre 2026) : il n'est
+# plus compilé par Vox-Pack.spec, et plus utilisé par les tests.
 # ============================================================
 
 import asyncio

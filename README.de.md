@@ -1,4 +1,4 @@
-<img src="assets/logo-fond-sombre.png" alt="Vox-Pack" width="760">
+<img src="bandeau-vp2.webp" alt="Vox-Pack" width="760">
 
 🇫🇷 **[Version française](README.md)** · 🇬🇧 **[English version](README.en.md)**
 
@@ -15,29 +15,32 @@ Anwendung erzeugt die Dateien in genau dem Format, das EdgeTX erwartet
 
 ## So sieht es aus
 
-<img src="captures/fenetre-de.png" alt="Das Fenster von Vox-Pack" width="820">
+<img src="captures/fenetre-v2-de.png" alt="Das Fenster von Vox-Pack" width="820">
+
+*Aufgenommen während der Erstellung der System-Ansagen, mit HAL 9000: Leuchten, Kästchen und Fortschritts-Thermometer sind sichtbar.*
 
 Sie schreiben Ihre Sätze, wählen eine Stimme, markieren die Zeilen zum
 Erzeugen und drücken **Let's Go**.
 
-<img src="captures/voix-pretes-de.png" alt="Ihre Stimmen sind fertig" width="520">
+<img src="captures/voix-pretes-v2-de.png" alt="Ihre Stimmen sind fertig" width="520">
 
 Zwei Klicks später liegt ein Ordner mit `.wav`-Dateien bereit. Die Anwendung
 sagt Ihnen immer, **wohin** sie geschrieben hat — und **was schiefgegangen**
 ist.
 
-<img src="captures/aide-de.png" alt="Die Hilfe von Vox-Pack" width="520">
+<img src="captures/aide-v2-de.png" alt="Die Hilfe von Vox-Pack" width="520">
 
-Und sie erklärt sich selbst: Die Schaltfläche **?** oben rechts öffnet diese
+Und sie erklärt sich selbst: Die Schaltfläche **?** unten rechts öffnet diese
 Hilfe.
 
 ## So funktioniert es
 
-1. **Stimme wählen.** Es gibt **34**: 11 französische (Frankreich, Schweiz,
-   Belgien, Québec), 19 englische (USA, Großbritannien, Irland) und 4 deutsche.
-   Das Menü zeigt den Akzent — „Katja (Weiblich - Deutschland)“, „Ryan (Männlich
-   - Großbritannien)“ —, die aktuelle Stimme ist markiert, und **★** kennzeichnet
-   die offizielle Stimme von EdgeTX (Denise für Französisch, Emily für Englisch,
+1. **Stimme wählen.** Das Menü bietet die Stimmen der gewählten Sprache:
+   11 französische (Frankreich, Schweiz, Belgien, Québec), 19 englische (USA,
+   Großbritannien, Irland), 4 deutsche und weitere in den zwölf anderen
+   Sprachen. Das Menü zeigt den Akzent — „Katja (Deutschland)“, „Emily
+   (Irland)“ —, die aktuelle Stimme ist markiert, und **★** kennzeichnet die
+   offizielle Stimme von EdgeTX (Denise für Französisch, Emily für Englisch,
    Katja für Deutsch).
 2. **Sätze schreiben.** Die Liste ist mit gängigen Ansagen vorbereitet — 28 auf
    Deutsch, 44 auf Französisch und Englisch (Motor, Klappen, Fahrwerk, Timer,
@@ -66,11 +69,12 @@ der Ansage hört man nur die Pause.
 
 ## System-Ansagen von EdgeTX
 
-Das Menü **Datei → System-Ansagen erzeugen…** baut die **186 offiziellen
-SYSTEM-Dateien** auf Französisch (**212** auf Englisch, **211** auf Deutsch) mit
-der gewählten Stimme, in einem Ordner `SYSTEM/` zum Kopieren auf die SD-Karte.
-Die Liste stammt aus dem offiziellen EdgeTX-Depot und wird nicht verändert; Ihre
-Sätze, Ihre Liste und Ihre Einstellungen bleiben unberührt.
+Das Menü **Datei → System-Ansagen erzeugen…** baut die **offiziellen
+SYSTEM-Dateien der gewählten Sprache** mit der gewählten Stimme, in einem
+Ordner `SYSTEM/` zum Kopieren auf die SD-Karte, nach `SOUNDS/<Sprache>/`. Die
+Zahl hängt von der Sprache und der EdgeTX-Liste ab. Die Liste stammt aus dem
+offiziellen EdgeTX-Depot und wird nicht verändert; Ihre Sätze, Ihre Liste und
+Ihre Einstellungen bleiben unberührt.
 
 ## Roboterstimmen und HAL 9000
 
@@ -89,14 +93,18 @@ Internetverbindung passiert nichts.
 
 ## Die Sprache der Anwendung
 
-Die Anwendung gibt es **auf Französisch, Englisch und Deutsch**. Sie startet in
-der Sprache Ihres Computers, und Sie können sie jederzeit unter
-**Datei → Sprache** wechseln.
+Die Anwendung gibt es in **fünfzehn Sprachen**: Französisch, Englisch, Deutsch,
+Spanisch, Italienisch, Portugiesisch, Russisch, Schwedisch, Ukrainisch,
+Tschechisch, Dänisch, Japanisch, Vereinfachtes Chinesisch, Traditionelles
+Chinesisch und Kantonesisch (Hongkong). Sie startet in der Sprache Ihres
+Computers, und Sie können sie jederzeit unter **Datei → Sprache** wechseln.
 
 Diese Wahl bestimmt **alles gleichzeitig**: die Texte, die angebotenen Stimmen
 und die Liste der Sätze. Und **jede Sprache behält ihre eigene Liste**: Sie
-können auf Französisch arbeiten, auf Englisch wechseln und zurückkommen — **Ihre
-Arbeit ist noch da**.
+können auf Französisch arbeiten, in eine andere Sprache wechseln und
+zurückkommen — **Ihre Arbeit ist noch da**.
+
+[Die fünfzehn Sprachen in Bildern](docs/langues-galerie.md).
 
 ## Was erzeugt wird
 
@@ -110,7 +118,7 @@ Arbeit ist noch da**.
   Zeichen bleiben**: So wird es auf jeder Fernsteuerung und in jeder Version
   gelesen.
 - Die Dateien kommen in einen Ordner, den Sie auf die SD-Karte kopieren, nach
-  `SOUNDS/de` (oder `SOUNDS/fr`, `SOUNDS/en`).
+  `SOUNDS/<Sprache>/` (`SOUNDS/de`, `SOUNDS/fr`, `SOUNDS/en`…).
 
 ## Die Liste verwalten
 
@@ -180,7 +188,7 @@ und starten Sie die Anwendung erneut:
 
     python3.11 -m venv venv
     venv/bin/python -m pip install -r requirements.txt
-    venv/bin/python voxpack.py
+    venv/bin/python voxpack2.py
 
 Um die macOS-Anwendung (`Vox-Pack.app`) und ihr Release-Zip zu bauen:
 
@@ -202,7 +210,7 @@ Der alte Ordner wird nie gelöscht.
 
 ## Hilfe
 
-Die Anwendung erklärt sich selbst: Klicken Sie auf **?** oben rechts.
+Die Anwendung erklärt sich selbst: Klicken Sie auf **?** unten rechts.
 
 ## Hinweise
 

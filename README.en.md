@@ -1,4 +1,4 @@
-<img src="assets/logo-fond-sombre.png" alt="Vox-Pack" width="760">
+<img src="bandeau-vp2.webp" alt="Vox-Pack" width="760">
 
 🇫🇷 **[Version française](README.md)** · 🇩🇪 **[Deutsche Fassung](README.de.md)**
 
@@ -15,28 +15,31 @@ ready to copy onto the radio's SD card.
 
 ## What it looks like
 
-<img src="captures/fenetre-en.png" alt="The Vox-Pack window" width="820">
+<img src="captures/fenetre-v2-en.png" alt="The Vox-Pack window" width="820">
+
+*Captured during system sound creation, with HAL 9000: the LEDs, ticked boxes and progress thermometer are visible.*
 
 You write your phrases, pick a voice, tick the lines to generate, and press
 **Let's Go**.
 
-<img src="captures/voix-pretes-en.png" alt="Your voices are ready" width="520">
+<img src="captures/voix-pretes-v2-en.png" alt="Your voices are ready" width="520">
 
 Two clicks later, a folder of `.wav` files ready for the radio. The app always
 tells you **where** it wrote them, and **what may have failed**.
 
-<img src="captures/aide-en.png" alt="Vox-Pack's help window" width="520">
+<img src="captures/aide-v2-en.png" alt="Vox-Pack's help window" width="520">
 
-And it explains itself: the **?** button in the top right corner opens this
+And it explains itself: the **?** button in the bottom right corner opens this
 help.
 
 ## How it works
 
-1. **Pick a voice.** There are **30** of them: 11 in French (France,
-   Switzerland, Belgium, Quebec) and 19 in English (United States, United
-   Kingdom, Ireland). The menu shows the accent — "Denise (Female - France)",
-   "Ryan (Male - United Kingdom)" — the current voice is ticked, and **★**
-   marks EdgeTX's official voice (Denise in French, Emily in English).
+1. **Pick a voice.** The menu offers the voices of the chosen language: 11 in
+   French (France, Switzerland, Belgium, Quebec), 19 in English (United
+   States, United Kingdom, Ireland), 4 in German, and more in the other twelve
+   languages. The menu shows the accent — "Denise (France)", "Emily (Ireland)"
+   — the current voice is ticked, and **★** marks EdgeTX's official voice
+   (Denise in French, Emily in English, Katja in German).
 2. **Type your phrases.** The list comes pre-filled with 44 common
    announcements (engine, flaps, gear, timer, flight modes…). You can edit,
    add or remove any line.
@@ -55,10 +58,11 @@ Your list is saved automatically, so you find it again next time.
 
 ## EdgeTX system sounds
 
-The **File → Create system sounds…** menu builds the **186 official SYSTEM
-files** in French (**212** in English) with the chosen voice, in a `SYSTEM/`
-folder to copy to the SD card. The list comes from the official EdgeTX
-repository and is not modified; your phrases, list and settings are untouched.
+The **File → Create system sounds…** menu builds the **official SYSTEM files
+of the chosen language** with the chosen voice, in a `SYSTEM/` folder to copy
+to the SD card, into `SOUNDS/<language>/`. The number depends on the language
+and on the EdgeTX list. The list comes from the official EdgeTX repository and
+is not modified; your phrases, list and settings are untouched.
 
 ## Robot voices and HAL 9000
 
@@ -76,13 +80,18 @@ appears. If you are offline, nothing happens.
 
 ## The application's language
 
-The application comes **in French and in English**. It starts in the language
-of your computer, and you can change it whenever you like in
-**File → Language**.
+The application comes in **fifteen languages**: French, English, German,
+Spanish, Italian, Portuguese, Russian, Swedish, Ukrainian, Czech, Danish,
+Japanese, Simplified Chinese, Traditional Chinese and Cantonese (Hong Kong).
+It starts in the language of your computer, and you can change it whenever you
+like in **File → Language**.
 
 That choice drives **all three at once**: the texts, the voices offered, and
 the phrase list. And **each language keeps its own list**: you can work in
-French, switch to English, then come back — **your work is still there**.
+French, switch to another language, then come back — **your work is still
+there**.
+
+[See the fifteen languages in pictures](docs/langues-galerie.md).
 
 ## What it produces
 
@@ -96,7 +105,7 @@ French, switch to English, then come back — **your work is still there**.
   before that. **If in doubt, stay at 6 characters**: it will be read on every
   radio and every version.
 - The files go into a folder that you then copy onto the SD card, inside
-  `SOUNDS/en` (or `SOUNDS/fr`).
+  `SOUNDS/<language>/` (`SOUNDS/en`, `SOUNDS/fr`, `SOUNDS/de`…).
 
 ## Managing your list
 
@@ -165,7 +174,7 @@ application again:
 
     python3.11 -m venv venv
     venv/bin/python -m pip install -r requirements.txt
-    venv/bin/python voxpack.py
+    venv/bin/python voxpack2.py
 
 To build the macOS application (`Vox-Pack.app`) and its release zip:
 
@@ -186,7 +195,7 @@ is never deleted.
 
 ## Help
 
-The application explains itself: click the **?** in the top right corner.
+The application explains itself: click the **?** in the bottom right corner.
 
 ## Notes
 

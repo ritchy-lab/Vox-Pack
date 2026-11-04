@@ -1,0 +1,25 @@
+armed;アーム
+disarm;ディスアーム
+alt;高度
+gearup;gear up
+geardn;gear down
+flapup;フラップアップ
+flapdn;フラップダウン
+landin;着陸
+engoff;エンジン、OFF
+thmmod;サーマルモード、ON
+nrmmod;normalモード、ON
+lnding;着陸モード、ON
+acro;アクロモード、ON
+fm-1;飛行モード 1
+fm-2;飛行モード 2
+fm-3;飛行モード 3
+vrion;バリオ、ON
+vrioff;バリオ、OFF
+fm-lnd;飛行モード、着陸
+fm-spd;飛行モード、スピード
+fm-nrm;飛行モード、ノーマル
+fm-crs;飛行モード、クルーズ
+fm-acr;飛行モード、アクロ
+fm-lch;飛行モード、ローンチ
+fm-thm;飛行モード、サーマル

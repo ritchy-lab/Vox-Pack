@@ -1,0 +1,25 @@
+armed;armado
+disarm;desarmado
+alt;Altitud
+gearup;tren arriba
+geardn;tren abajo
+flapup;flaps arriba
+flapdn;flaps abajo
+landin;aterrizaje
+engoff;motor apagado
+thmmod;modo térmica activado
+nrmmod;modo normal activado
+lnding;modo aterrizaje activado
+acro;modo acro activado
+fm-1;modo de vuelo uno
+fm-2;modo de vuelo dos
+fm-3;modo de vuelo tres
+vrion;vario activado
+vrioff;vario desactivado
+fm-lnd;modo de vuelo aterrizaje
+fm-spd;modo de vuelo velocidad
+fm-nrm;modo de vuelo normal
+fm-crs;modo de vuelo crucero
+fm-acr;modo de vuelo acro
+fm-lch;modo de vuelo lanzamiento
+fm-thm;modo de vuelo térmica

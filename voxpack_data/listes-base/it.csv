@@ -1,0 +1,25 @@
+armed;Armato
+disarm;Disarmato
+alt;Altitudine
+gearup;carrello chiuso
+geardn;carrello aperto
+flapup;flap rientrati
+flapdn;flap estesi
+attero;atterraggio
+engoff;motore spento
+thmmod;modalità termica
+nrmmod;modalità volo normale
+lnding;modalità atterraggio
+acro;modalità acro
+fm-1;Modalità volo uno
+fm-2;Modalità di volo due
+fm-3;Modalità di volo tre
+vrion;variometro attivato
+vrioff;variometro disabilitato
+fm-lnd;fase di volo land
+fm-spd;fase di volo velocità
+fm-nrm;fase di volo normale
+fm-crs;fase di volo cruise
+fm-acr;fase di volo acro
+fm-lch;fase di volo lancio
+fm-thm;fase di volo termica

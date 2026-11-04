@@ -1,0 +1,25 @@
+armed;aktiveret
+disarm;de aktiveret
+alt;Højde
+gearup;landningsstel oppe
+geardn;landningsstel nede
+flapup;flaps oppe
+flapdn;flaps nede
+landin;landning
+engoff;motor afkoblet
+thmmod;termik tilstand
+nrmmod;normal tilstand
+lnding;landnings tilstand
+acro;acro tilstand til
+fm-1;flyve tilstand et
+fm-2;flyve tilstand to
+fm-3;flyve tilstand tre
+vrion;vario
+vrioff;vario afkoblet
+fm-lnd;flyve tilstand landning
+fm-spd;flyve tilstand hastighed
+fm-nrm;flyve tilstand normal
+fm-crs;flyve tilstand plan flyvning
+fm-acr;flyve tilstand acro
+fm-lch;flyve tilstand start
+fm-thm;flyve tilstand termik

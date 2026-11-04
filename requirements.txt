@@ -17,8 +17,13 @@ customtkinter==6.0.0
 # Lecture des images (logo)
 Pillow==12.3.0
 
-# Effet robot (traitement du WAV)
-numpy==2.4.6
+# Effet robot (traitement du WAV).
+# Deux versions, pour une raison vue sur le PC de Richard le 3 novembre 2026 :
+# numpy 2.4.6 s'installe mais ne se charge pas sur un Windows 10 ancien
+# (1903, « DLL initialization routine failed »), alors que 1.26.4 y passe.
+# macOS garde la 2.4.6, qui n'a jamais posé problème.
+numpy==2.4.6; sys_platform == "darwin"
+numpy==1.26.4; sys_platform != "darwin"
 
 # macOS uniquement : sélecteur de dossier natif (feuille NSOpenPanel)
 # en français, à la place de celui de Tk qui écrit « Choose » en dur.

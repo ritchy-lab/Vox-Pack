@@ -19,9 +19,19 @@ from PyInstaller.utils.hooks import collect_all
 datas = [
     ('logo.png', '.'),
     ('ko-fi.png', '.'),
+    # L'écran de la v2 : la carcasse dessinée, le bandeau de l'aide et
+    # l'image de survol du lien de soutien. Sans elles, l'application
+    # s'ouvrirait sur un fond uni (voir _charger_carcasse) : autant les
+    # joindre.
+    ('carcasse.webp', '.'),
+    ('bandeau-vp2.webp', '.'),
+    ('ko-fi-survol.png', '.'),
     # L'icône de la fenêtre : Windows ne prend pas celle de l'exécutable.
     ('icon.ico', '.'),
     ('icon.png', '.'),
+    # Les données du paquet `voxpack_data` : les modules .py voyagent tout
+    # seuls (imports), mais les CSV des listes de départ sont des fichiers.
+    ('voxpack_data/listes-base', 'voxpack_data/listes-base'),
 ]
 binaries = []
 hiddenimports = []
@@ -54,7 +64,7 @@ for paquet in paquets:
     hiddenimports += h
 
 a = Analysis(
-    ['voxpack.py'],
+    ['voxpack2.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
@@ -116,7 +126,12 @@ if sys.platform == 'darwin':
             # l'application déclare, et PyInstaller n'en déclare aucune.
             # C'est le même correctif que Python a appliqué à son propre
             # lanceur (Python.app) en 3.12.
-            'CFBundleLocalizations': ['fr', 'en', 'de'],
+            # Les quinze langues de l'interface : macOS choisit la langue
+            # de ses propres fenêtres (dossier, fichier…) d'après cette
+            # liste. Les codes suivent ceux de `voxpack_data/langues.py`.
+            'CFBundleLocalizations': ['fr', 'en', 'de', 'es', 'it', 'pt',
+                                      'ru', 'sv', 'uk', 'cs', 'da', 'ja',
+                                      'zh-Hans', 'zh-Hant', 'zh-HK'],
             'CFBundleAllowMixedLocalizations': True,
         },
     )

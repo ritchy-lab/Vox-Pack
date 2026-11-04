@@ -1,0 +1,25 @@
+armed;Armováno
+disarm;Vypnuto
+alt;Výška
+gearup;Podvozek zatažen
+geardn;Podvozek vysunut
+flapup;Klapky zataženy
+flapdn;Klapky vysunuty
+attero;Přistání
+engoff;Motor vypnut
+thmmod;Termický režim, zapnuto
+nrmmod;Normální režim, zapnuto
+lnding;Režim přistání
+acro;Akrobatický režim
+fm-1;letový režim jedna
+fm-2;letový režim dva
+fm-3;letový režim tři
+vrion;Vario zapnuto
+vrioff;Vario vypnuto
+fm-lnd;Letový režim přistání
+fm-spd;Rychlostní režim
+fm-nrm;Normální režim
+fm-crs;Letový režim cestovní
+fm-acr;Letový režim akro
+fm-lch;Letový režim start
+fm-thm;Termický režim

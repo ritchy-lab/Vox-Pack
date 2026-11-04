@@ -1,4 +1,4 @@
-<img src="assets/logo-fond-sombre.png" alt="Vox-Pack" width="760">
+<img src="bandeau-vp2.webp" alt="Vox-Pack" width="760">
 
 🇬🇧 **[English version](README.en.md)** · 🇩🇪 **[Deutsche Fassung](README.de.md)**
 
@@ -15,28 +15,32 @@ L'application crée les fichiers au format exact attendu par EdgeTX
 
 ## À quoi ça ressemble
 
-<img src="captures/fenetre-fr.png" alt="La fenêtre de Vox-Pack" width="820">
+<img src="captures/fenetre-v2-fr.png" alt="La fenêtre de Vox-Pack" width="820">
+
+*Capture prise pendant la création des sons système, avec HAL 9000 : les voyants, les cases cochées et le thermomètre de progression sont visibles.*
 
 Tu écris tes phrases, tu choisis une voix, tu coches les lignes à générer, et
 tu appuies sur **Let's Go**.
 
-<img src="captures/voix-pretes-fr.png" alt="Vos voix sont prêtes" width="520">
+<img src="captures/voix-pretes-v2-fr.png" alt="Vos voix sont prêtes" width="520">
 
 Deux clics plus tard, un dossier de fichiers `.wav` prêts pour la radio.
 L'application te dit toujours **où** elle a écrit, et **ce qui a pu échouer**.
 
-<img src="captures/aide-fr.png" alt="L'aide de Vox-Pack" width="520">
+<img src="captures/aide-v2-fr.png" alt="L'aide de Vox-Pack" width="520">
 
-Et elle explique elle-même comment s'en servir : le bouton **?** en haut à
+Et elle explique elle-même comment s'en servir : le bouton **?** en bas à
 droite ouvre cette aide.
 
 ## Comment ça marche
 
-1. **Choisis une voix.** Il y en a **30** : 11 en français (France, Suisse,
-   Belgique, Québec) et 19 en anglais (États-Unis, Royaume-Uni, Irlande). Le
-   menu indique l'accent — « Denise (Femme - France) », « Ryan (Homme -
-   Royaume-Uni) » — la voix en cours est cochée, et la **★** marque la voix
-   officielle d'EdgeTX (Denise en français, Emily en anglais).
+1. **Choisis une voix.** Le menu propose les voix de la langue choisie :
+   11 en français (France, Suisse, Belgique, Québec), 19 en anglais
+   (États-Unis, Royaume-Uni, Irlande), 4 en allemand, et d'autres dans les
+   douze autres langues. Le menu indique l'accent — « Denise (France) »,
+   « Emily (Irlande) » — la voix en cours est cochée, et la **★** marque la
+   voix officielle d'EdgeTX (Denise en français, Emily en anglais, Katja en
+   allemand).
 2. **Écris tes phrases.** La liste est pré-remplie avec 44 annonces courantes
    (moteur, volets, train, chrono, modes de vol…). Tu peux tout modifier,
    ajouter ou supprimer des lignes.
@@ -57,11 +61,11 @@ démarrage, et tu peux la faire évoluer petit à petit.
 
 ## Les sons système d'EdgeTX
 
-Le menu **Fichier → Créer les sons système…** fabrique les **186 annonces
-SYSTEM officielles** en français (**212** en anglais) avec la voix choisie,
-dans un dossier `SYSTEM/` à copier sur la carte SD. La liste vient du dépôt
-officiel EdgeTX et n'est pas modifiée ; tes phrases, ta liste et tes réglages
-ne sont pas touchés.
+Le menu **Fichier → Créer les sons système…** fabrique les **annonces SYSTEM
+officielles de la langue choisie** avec la voix choisie, dans un dossier
+`SYSTEM/` à copier sur la carte SD, dans `SOUNDS/<langue>/`. Le nombre dépend
+de la langue et de la liste EdgeTX. La liste vient du dépôt officiel EdgeTX et
+n'est pas modifiée ; tes phrases, ta liste et tes réglages ne sont pas touchés.
 
 ## Les voix de robot et HAL 9000
 
@@ -79,14 +83,18 @@ dossier ; sinon, rien ne s'affiche. Si tu es hors ligne, il ne se passe rien.
 
 ## La langue de l'application
 
-L'application existe **en français et en anglais**. Elle démarre dans la
-langue de ton ordinateur, et tu peux en changer quand tu veux dans
-**Fichier → Langue**.
+L'application existe en **quinze langues** : français, anglais, allemand,
+espagnol, italien, portugais, russe, suédois, ukrainien, tchèque, danois,
+japonais, chinois simplifié, chinois traditionnel et cantonais (Hong Kong).
+Elle démarre dans la langue de ton ordinateur, et tu peux en changer quand tu
+veux dans **Fichier → Langue**.
 
 Ce choix commande **les trois à la fois** : les textes, les voix proposées,
 et la liste de phrases. Et **chaque langue garde sa propre liste** : tu peux
-travailler en français, passer en anglais, puis revenir — **tu retrouves ton
-travail intact**.
+travailler en français, passer dans une autre langue, puis revenir — **tu
+retrouves ton travail intact**.
+
+[Voir les quinze langues en images](docs/langues-galerie.md).
 
 ## Ce que l'application produit
 
@@ -100,7 +108,7 @@ travail intact**.
   acceptent 8 même avant. **En cas de doute, reste à 6 caractères** : ce sera
   lu sur toutes les radios et toutes les versions.
 - Les fichiers sont rangés dans un dossier que tu copies ensuite sur la carte
-  SD, dans `SOUNDS/fr` (ou `SOUNDS/en`).
+  SD, dans `SOUNDS/<langue>/` (`SOUNDS/fr`, `SOUNDS/en`, `SOUNDS/de`…).
 
 ## Gérer ta liste
 
@@ -171,7 +179,7 @@ cette ligne, puis relance l'application :
 
     python3.11 -m venv venv
     venv/bin/python -m pip install -r requirements.txt
-    venv/bin/python voxpack.py
+    venv/bin/python voxpack2.py
 
 Pour fabriquer l'application macOS (`Vox-Pack.app`) et son zip de publication :
 
@@ -193,7 +201,7 @@ L'ancien dossier n'est jamais supprimé.
 ## L'aide
 
 L'application explique elle-même comment l'utiliser : clique sur le **?** en
-haut à droite.
+bas à droite.
 
 ## Notes
 

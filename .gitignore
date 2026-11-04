@@ -17,6 +17,9 @@ venv/
 # PyInstaller
 build/
 dist/
+# La v2 a ses propres dossiers, pour ne pas écraser ceux de la 1.5.1
+dist-v2/
+build-v2/
 
 # ...sauf la recette de build, qu'on veut garder dans le dépôt
 !Vox-Pack.spec
@@ -36,3 +39,37 @@ captures/non-utilisees/
 
 # Notes de session (privées, gardées sur le Mac)
 docs/memo-session.md
+
+# Notes de travail et échanges privés : ils restent sur le Mac.
+# Git ne suit que ce qui est ajouté explicitement ; ces règles empêchent
+# qu'un « git add -A » les emporte un jour dans une publication.
+docs/v2-*.md
+docs/audit-*.md
+docs/maquette-v2-etat.md
+docs/langues-couverture.md
+docs/traductions-a-faire.csv
+docs/traduction-de-complete.csv
+docs/vox-pack-new.md
+
+# Documents destinés aux utilisateurs : publiés à côté (site, Release),
+# pas dans le dépôt (ce sont des binaires lourds qui changent à chaque fois).
+docs/README-vox-pack-2-fr.docx
+README-vox-pack-2-fr.pdf
+
+# Maquettes et essais d'écran : matériel de travail, jamais publié
+maquette/*.png
+maquette/*.json
+maquette/*.bat
+maquette/apercu-lignes.py
+maquette/liste-dessinee.py
+maquette/jauge-ronds.py
+maquette/barre-ronds-app.py
+
+# Captures de travail (vérifications, essais de jauge) : seules les images
+# citées par les README sont envoyées.
+captures/jauge-*.png
+captures/barre-ronds.png
+captures/maquette-*.png
+captures/v2-barre-*.png
+captures/v2-ecran-verification.png
+captures/v2-liste-dessinee.png

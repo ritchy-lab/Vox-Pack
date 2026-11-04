@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Fabrique l'icône Windows (icon.ico) à partir des deux dessins.
+"""Fabrique l'icône Windows (icon.ico) à partir du dessin de la v2.
 
 Windows attend un fichier .ico contenant plusieurs tailles : il pioche selon
-le contexte (barre des tâches, explorateur, liste, grandes icônes). Comme pour
-le .icns du Mac, les petites tailles viennent du monogramme VP — le dessin
-détaillé y serait une tache — et les grandes du dessin détaillé.
+le contexte (barre des tâches, explorateur, liste, grandes icônes).
 
-Pillow ne sait pas assembler deux dessins différents dans un .ico (son
-paramètre append_images est ignoré) : on écrit donc le fichier nous-mêmes.
-Le format est simple, et chaque image y est stockée en PNG — ce que Windows
-comprend depuis Vista.
+Pillow ne sait pas assembler plusieurs dessins dans un .ico (son paramètre
+append_images est ignoré) : on écrit donc le fichier nous-mêmes. Le format est
+simple, et chaque image y est stockée en PNG — ce que Windows comprend depuis
+Vista.
 
 Appelé par assets/faire-les-images.sh.
 """
@@ -22,7 +20,8 @@ import sys
 from PIL import Image
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack.png")
+# Le dessin de la v2 (3 novembre 2026) : l'émetteur avec le mot VOX-PACK.
+GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2.png")
 
 # Un seul dessin, à toutes les tailles : Richard veut son émetteur partout.
 # Le monogramme VP, pourtant plus net en 16 px, a été écarté par Richard — il
