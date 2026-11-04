@@ -93,6 +93,12 @@ def main() -> int:
 
     print("Liste")
     verifier("des lignes sont chargées", len(app.lignes) > 0, len(app.lignes))
+    # Le 5 novembre, une erreur de découpage avait laissé la liste chargée
+    # mais jamais dessinée : la fenêtre s'ouvrait sur une liste vide. Ce
+    # contrôle-ci le voit, alors que « des lignes sont chargées » ne le
+    # voyait pas.
+    verifier("la liste est dessinée dès l'ouverture",
+             len(app._toile.find_all()) > 0, len(app._toile.find_all()))
     verifier("le nom est rempli", bool(app.lignes[0]["nom"]))
     verifier("la phrase est remplie", bool(app.lignes[0]["texte"]))
     avant = len(app.lignes)

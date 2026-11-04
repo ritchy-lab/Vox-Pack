@@ -5787,6 +5787,15 @@ class VoxPackApp(ctk.CTk):
         for nom, texte in contenu:
             self._ajouter_ligne_ui(nom, texte)
 
+        # Les lignes sont nouvelles : l'ancre de sélection n'a plus de sens,
+        # et les noms invalides doivent être signalés dès l'affichage.
+        self._ancre_selection = None
+        self._verifier_noms(redessiner=False)
+        self._dessiner_liste()
+        self._toile.yview_moveto(0.0)
+        self._ecrire_csv()
+        self._maj_total_liste()
+
     @staticmethod
     def _lire_liste(fichier):
         """Lit le CSV de la liste, en UTF-8 puis en Latin-1.
@@ -5814,15 +5823,6 @@ class VoxPackApp(ctk.CTk):
             except OSError:
                 return []
         return []
-
-        # Les lignes sont nouvelles : l'ancre de sélection n'a plus de sens,
-        # et les noms invalides doivent être signalés dès l'affichage.
-        self._ancre_selection = None
-        self._verifier_noms(redessiner=False)
-        self._dessiner_liste()
-        self._toile.yview_moveto(0.0)
-        self._ecrire_csv()
-        self._maj_total_liste()
 
     def _ajouter_ligne_ui(self, nom, texte):
         """Ajoute une ligne au modèle. Le dessin vient après, en un bloc.

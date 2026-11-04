@@ -178,6 +178,14 @@ def main() -> int:
         verifier("les accents de la liste sont lisibles",
                  bool(app.lignes) and app.lignes[0]["texte"] == "Moteur armé",
                  app.lignes[0]["texte"] if app.lignes else "")
+        # Le 5 novembre, la liste était chargée mais plus dessinée : le
+        # canevas restait vide à l'ouverture. On vérifie donc le dessin ici,
+        # sur le démarrage lui-même, et sans changer de langue.
+        verifier("la liste est dessinée dès l'ouverture",
+                 len(app._toile.find_all()) > 0, len(app._toile.find_all()))
+        verifier("la zone de défilement est posée",
+                 str(app._toile.cget("scrollregion")).strip() != "",
+                 app._toile.cget("scrollregion"))
         verifier("un réglage « voix » mal typé est ignoré",
                  isinstance(app._reglages.get("voix", {}), dict),
                  repr(app._reglages.get("voix")))
