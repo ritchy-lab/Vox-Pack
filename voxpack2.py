@@ -3406,30 +3406,28 @@ class VoyantV2(tk.Canvas):
 # Barre de progression de la maquette : un trait, pas des points
 # ------------------------------------------------------------------
 class BarreV2(tk.Canvas):
-    """La fente de progression, avec des ronds allumés dedans.
+    """La jauge de la maquette : des ronds dans la fente.
 
-    L'ordre de dessin vient de Richard (4 novembre au soir), et c'est lui qui
-    donne le relief :
+    Référence : maquette/jauge-ronds.py (version 3), la maquette validée par
+    Richard. On en reprend exactement les cotes et les couleurs :
 
-    1. le fond de la fente, très sombre ;
-    2. les ronds, espacés, sur toute la largeur ;
-    3. la fente et ses deux traits PAR-DESSUS — le trait noir du haut et le
-       trait clair du bas passent devant la rangée et la coupent. Dessinés
-       avant, les ronds paraissaient posés sur le métal au lieu d'être
-       dedans.
+    - la fente garde son relief : fond très sombre, trait noir en haut,
+      trait clair en bas ;
+    - les ronds remplissent la hauteur intérieure, 4 px entre les deux
+      traits, sans marge ;
+    - ils sont espacés de 4 px, et la partie non faite reste du vide : aucun
+      rond gris ;
+    - seul ce qui est fait est dessiné, en rouge (#C41910).
 
-    Seuls les ronds de la partie faite sont rouges : le reste de la fente
-    reste vide, pas une rangée de trous gris. Les ronds sont espacés et le
-    nombre est calculé pour que la rangée finisse sur un rond entier : c'est
-    ce qui supprime les crans en bout de fente.
+    Seuls les ronds de la partie faite sont dessinés. La rangée ne défile
+    pas : elle s'allume de gauche à droite, un rond à la fois.
     """
 
-    # La couleur réglée par Richard le 4 novembre à 19 h 16.
-    JAUGE = "#FF0D00"
+    JAUGE = "#C41910"      # le rouge de la maquette
     CREUX = "#040B0C"      # le fond de la fente
-    OMBRE = "#324C51"      # le trait clair du bas
+    OMBRE = "#24383C"      # le trait clair du bas
     NOIR = "#000000"       # le trait noir du haut
-    ESPACE = 1             # pixels entre deux ronds
+    ESPACE = 4             # pixels entre deux ronds
 
     def __init__(self, parent, largeur, hauteur, fond, commande=None):
         super().__init__(parent, width=largeur, height=hauteur, bg=fond,
@@ -3442,52 +3440,41 @@ class BarreV2(tk.Canvas):
         self._debut = 0.0
         self._t0 = time.time()
         self._anim = False
-        self._allumes = 0
+        # Les positions ne dépendent que de la taille : on les calcule une
+        # fois pour toutes.
+        self._places = self._positions()
+        self._tracer()
 
-        # 1. Le fond de la fente.
-        self.create_rectangle(0, 0, largeur, hauteur, fill=self.CREUX,
-                              outline="")
-        # 2. Les ronds.
-        self._ronds = []
-        self._creer_ronds()
-        # 3. La fente par-dessus : ses deux traits coupent la rangée.
-        # Des rectangles d'un pixel, et non des traits : un trait posé sur
-        # le bord du canevas est à moitié dehors, et Tk ne le rend pas de
-        # la même façon sur macOS et sur Windows. Le rond paraissait alors
-        # décalé vers le bas.
-        self.create_rectangle(0, 0, largeur, 1, fill=self.NOIR, outline="")
-        self.create_rectangle(0, hauteur - 1, largeur, hauteur,
-                              fill=self.OMBRE, outline="")
+    def _tracer(self):
+        """La fente seule : fond, trait noir en haut, trait clair en bas."""
+        self.create_rectangle(0, 0, self._largeur, self._hauteur,
+                              fill=self.CREUX, outline="", tags="creux")
+        self.create_line(0, 0, self._largeur, 0, fill=self.NOIR,
+                         tags="creux")
+        self.create_line(0, self._hauteur - 1, self._largeur,
+                         self._hauteur - 1, fill=self.OMBRE, tags="creux")
 
-    def _creer_ronds(self):
-        """Crée la rangée, une fois pour toutes.
+    def _positions(self):
+        """Les centres possibles des ronds, du premier au dernier.
 
-        Les ronds occupent toute la hauteur de la fente ; les deux traits
-        d'un pixel, en haut et en bas, les coupent — c'est ce qui laisse
-        voir des ronds plutôt que des tirets. C'est le dessin validé par
-        Richard : on n'y touche pas.
-
-        L'entraxe est calculé sur la hauteur de la fente, et réparti sur
-        toute la largeur, de sorte que la rangée se termine sur un rond
-        entier et non sur une moitié.
+        Le rond touche le trait du haut et celui du bas : c'est toute la
+        hauteur intérieure, sans marge. Le premier est à un pixel du bord.
         """
-        diametre = max(2, self._hauteur)
-        pas = diametre + self.ESPACE
-        nombre = max(1, int(self._largeur / pas))
-        pas = self._largeur / nombre
+        diametre = max(2, self._hauteur - 2)
         rayon = diametre / 2
-        haut = (self._hauteur - diametre) // 2
-        for i in range(nombre):
-            centre = pas * (i + 0.5)
-            self._ronds.append(self.create_oval(
-                centre - rayon, haut, centre + rayon, haut + diametre,
-                fill=self.CREUX, outline=""))
+        centre = self._hauteur / 2
+        pas = diametre + self.ESPACE
+        positions = []
+        x = rayon + 1
+        while x + rayon <= self._largeur - 1 + 0.5:
+            positions.append((x, centre, rayon))
+            x += pas
+        return positions
 
     def set(self, valeur):
         self._cible = max(0.0, min(1.0, float(valeur)))
         # On repart de la valeur affichée : la jauge rejoint sa cible en un
-        # temps fixe (450 ms), quelle que soit la distance. Une approche
-        # proportionnelle n'atteignait jamais le bout.
+        # temps fixe (450 ms), quelle que soit la distance.
         self._debut = self._valeur
         self._t0 = time.time()
         if not self._anim:
@@ -3512,19 +3499,15 @@ class BarreV2(tk.Canvas):
         self.after(25, self._pas)
 
     def _dessiner(self):
-        """Allume les ronds de la partie faite, éteint les autres."""
-        allumes = int(round(len(self._ronds) * self._valeur))
-        if self._valeur >= 1.0:
-            allumes = len(self._ronds)
-        # Seuls les ronds qui changent d'état sont repeints : la jauge
-        # avance de quelques ronds par image, pas de la rangée entière.
-        debut = min(self._allumes, allumes)
-        fin = max(self._allumes, allumes)
-        for i in range(debut, fin):
-            self.itemconfigure(
-                self._ronds[i],
-                fill=self.JAUGE if i < allumes else self.CREUX)
-        self._allumes = allumes
+        """N'allume que ce qui est fait ; le reste de la fente reste noir."""
+        self.delete("rond")
+        cible = 1 + self._valeur * (self._largeur - 2)
+        for x, centre, rayon in self._places:
+            if x > cible:
+                break
+            self.create_oval(x - rayon, centre - rayon, x + rayon,
+                             centre + rayon, fill=self.JAUGE, outline="",
+                             tags="rond")
         if self._commande:
             try:
                 self._commande(self._valeur)
@@ -3550,9 +3533,6 @@ class BarreV2(tk.Canvas):
             pass
 
 
-# ------------------------------------------------------------------
-# Curseur des réglages : un creux, une jauge, un bouton
-# ------------------------------------------------------------------
 class CurseurV2(tk.Canvas):
     """Le curseur de la maquette : piste en dégradé, poignée biseautée.
 
@@ -4340,6 +4320,7 @@ class VoxPackApp(ctk.CTk):
         # déposent donc ici, et le fil principal vide la file (voir
         # _pomper_ui).
         self._ui_queue = queue.Queue()
+        self._tracer(f"--- Vox-Pack {VERSION} ---")
 
         choisir_police()
         # Avant de créer le moindre élément : l'interface s'adapte à la place
@@ -5254,6 +5235,7 @@ class VoxPackApp(ctk.CTk):
         """
         symbole, couleur = self.ICONES.get(icone, self.ICONES["info"])
         boutons = boutons or [(t("compris"), None)]
+        self._tracer("message: début")
         # Règle de la 1.5 : le nom propre ne s'étale pas dans les chemins
         # affichés — le dossier personnel devient « ~ ».
         personnel = os.path.expanduser("~")
@@ -5311,13 +5293,32 @@ class VoxPackApp(ctk.CTk):
                      fonte=(FONT_MAIN, 15), commande=cliquer)
 
         popup.update_idletasks()
+        self._tracer("message: mesurée")
         hauteur = popup.winfo_reqheight()
         x = self.winfo_rootx() + (self.winfo_width() - largeur) // 2
         y = self.winfo_rooty() + (self.winfo_height() - hauteur) // 2
         popup.geometry(f"{largeur}x{hauteur}+{max(x, 0)}+{max(y, 0)}")
         popup.transient(self)
         popup.lift()
+        self._tracer("message: levée")
         self._alertes.append(popup)
+        # Si l'application est derrière une autre fenêtre, la popup naît
+        # derrière elle et on ne la voit pas. Un bref « topmost » la montre,
+        # sans lui voler le clavier. Pas de grab : c'est le grab qui rendait
+        # l'application entièrement sourde quand la popup restait cachée.
+        if not application_activee(self):
+            try:
+                popup.attributes("-topmost", True)
+
+                def relacher_topmost(fenetre=popup):
+                    try:
+                        fenetre.attributes("-topmost", False)
+                    except Exception:
+                        pass
+
+                popup.after(2500, relacher_topmost)
+            except Exception:
+                pass
         # L'application est parfois passée derrière pendant une longue
         # génération : l'alerte s'affiche alors sans que le clavier lui
         # revienne, et Échap reste sans effet. On repasse devant, mais
@@ -5355,7 +5356,7 @@ class VoxPackApp(ctk.CTk):
         popup.after(60, self._rendre_le_clavier)
         popup.bind("<Escape>", lambda e: self._fermer_alerte(popup))
         popup.bind("<Return>", lambda e: self._valider_alerte(popup))
-        popup.after(120, lambda: self._prendre_grab(popup))
+        self._tracer("message: prête")
         return popup
 
     def _valider_alerte(self, popup):
@@ -5399,10 +5400,16 @@ class VoxPackApp(ctk.CTk):
                 return
         except tk.TclError:
             return
-        try:
-            self.focus_force()
-        except tk.TclError:
-            pass
+        self._tracer("clavier: avant")
+        # Ne pas forcer le clavier quand une autre application est devant :
+        # c'est inutile, et c'est peut-être ce qui bloquait Windows quand
+        # l'alerte naissait derrière une fenêtre.
+        if application_activee(self):
+            try:
+                self.focus_force()
+            except tk.TclError:
+                pass
+        self._tracer("clavier: après")
         if sys.platform == "darwin":
             try:
                 from AppKit import NSApp
@@ -5435,13 +5442,6 @@ class VoxPackApp(ctk.CTk):
                 return True
             self._alertes.pop()
         return False
-
-    @staticmethod
-    def _prendre_grab(popup):
-        try:
-            popup.grab_set()
-        except tk.TclError:
-            pass
 
     def _fermer_alerte(self, popup):
         try:
@@ -6616,6 +6616,21 @@ class VoxPackApp(ctk.CTk):
         else:
             self._ui_queue.put((action, args, kwargs))
 
+    def _tracer(self, quoi):
+        """Trace temporaire pour comprendre un gel sur le PC.
+
+        Chaque étape d'une alerte est écrite dans
+        %TEMP%\\voxpack-trace.log. Si l'application se fige, la dernière
+        ligne dit où elle s'est arrêtée.
+        """
+        try:
+            chemin = os.path.join(tempfile.gettempdir(),
+                                  "voxpack-trace.log")
+            with open(chemin, "a", encoding="utf-8") as fichier:
+                fichier.write(f"{time.strftime('%H:%M:%S')} {quoi}\n")
+        except Exception:
+            pass
+
     def _pomper_ui(self):
         """Vide la file des actions d'interface, puis se replanifie."""
         while True:
@@ -6624,6 +6639,8 @@ class VoxPackApp(ctk.CTk):
             except queue.Empty:
                 break
             try:
+                if action == self._message:
+                    self._tracer("file: message")
                 action(*args, **kwargs)
             except Exception:
                 pass
@@ -7345,6 +7362,7 @@ class VoxPackApp(ctk.CTk):
 
     def _fin_sons_systeme(self):
         """Le bouton redevient « Let's Go » une fois la génération terminée."""
+        self._tracer("fin sons: début")
         self._voyant_systeme.eteindre()
         self._sons_stop = None
         self._genere = False
@@ -7356,6 +7374,7 @@ class VoxPackApp(ctk.CTk):
                 fg_color="#0B2E36")
         except Exception:
             pass
+        self._tracer("fin sons: fin")
 
     async def _generer_sons_systeme(self, sortie, voice_id=""):
         """Fabrique un WAV par ligne du CSV, dans <dossier>/SYSTEM/.

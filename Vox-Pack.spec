@@ -92,6 +92,12 @@ if sys.platform != 'darwin':
         'splash.png',
         binaries=a.binaries,
         datas=a.datas,
+        # La ligne de texte réelle de la décompression : c'est le seul
+        # retour d'information que le splash de PyInstaller sait animer.
+        text_pos=(24, 206),
+        text_size=-9,
+        text_color='#0FBBD0',
+        text_default='Chargement de Vox-Pack...',
         always_on_top=True,
     )
 

@@ -148,17 +148,27 @@ def main() -> int:
 
     print("Jauge")
     hauteur = app.progress._hauteur
-    boite = app.progress.bbox(app.progress._ronds[0])
-    verifier("le rond occupe toute la hauteur de la fente",
-             boite is not None and boite[3] - boite[1] == hauteur,
-             f"({boite} pour {hauteur})")
-    # Les deux traits sont des rectangles d'un pixel, entièrement dans le
-    # canevas : un trait posé sur le bord était à moitié dehors, et Tk ne le
-    # rendait pas pareil sur macOS et Windows.
-    types = [app.progress.type(item)
-             for item in app.progress.find_all()]
-    verifier("les deux traits sont des rectangles",
-             types.count("rectangle") >= 3, types)
+    verifier("les couleurs sont celles de la maquette",
+             (app.progress.JAUGE, app.progress.OMBRE,
+              app.progress.ESPACE) == ("#C41910", "#24383C", 4),
+             (app.progress.JAUGE, app.progress.OMBRE,
+              app.progress.ESPACE))
+    x, centre, rayon = app.progress._places[0]
+    verifier("le premier rond est à 3 px du bord, 4 px de haut",
+             (x, centre, rayon) == (3, hauteur / 2, 2),
+             (x, centre, rayon))
+    verifier("le rond touche les deux traits",
+             centre - rayon == 1 and centre + rayon == hauteur - 1,
+             (centre - rayon, centre + rayon))
+    app.progress.set(0.5)
+    fin = time.time() + 1.0
+    while time.time() < fin:
+        app.update()
+        time.sleep(0.02)
+    verifier("seuls les ronds faits sont dessinés",
+             0 < len(app.progress.find_withtag("rond"))
+             < len(app.progress._places),
+             len(app.progress.find_withtag("rond")))
 
     print("File d'attente des fils")
     # Un fil de travail ne doit jamais appeler Tk directement : il dépose
