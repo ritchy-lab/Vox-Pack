@@ -3406,28 +3406,30 @@ class VoyantV2(tk.Canvas):
 # Barre de progression de la maquette : un trait, pas des points
 # ------------------------------------------------------------------
 class BarreV2(tk.Canvas):
-    """La jauge de la maquette : des ronds dans la fente.
+    """La jauge de Richard : des ronds pleine hauteur dans la fente.
 
-    Référence : maquette/jauge-ronds.py (version 3), la maquette validée par
-    Richard. On en reprend exactement les cotes et les couleurs :
+    Le dessin est celui du 5 novembre au matin, réglé par Richard
+    (commit 4a2b85b) :
 
-    - la fente garde son relief : fond très sombre, trait noir en haut,
-      trait clair en bas ;
-    - les ronds remplissent la hauteur intérieure, 4 px entre les deux
-      traits, sans marge ;
-    - ils sont espacés de 4 px, et la partie non faite reste du vide : aucun
-      rond gris ;
-    - seul ce qui est fait est dessiné, en rouge (#C41910).
+    - la fente fait toute la hauteur du canevas, fond #040B0C ;
+    - un trait noir d'un pixel en haut, une ombre #324C51 d'un pixel en bas ;
+    - des ronds de toute la hauteur, espacés d'un pixel, rouge #FF0D00 ;
+    - la rangée est répartie sur toute la largeur et se termine sur un rond ;
+    - les deux traits passent par-dessus les ronds et les coupent.
 
-    Seuls les ronds de la partie faite sont dessinés. La rangée ne défile
-    pas : elle s'allume de gauche à droite, un rond à la fois.
+    Sur macOS, Tk dessine les ovales proprement : on garde le dessin
+    vectoriel du matin, celui que Richard a validé. Sur Windows, GDI arrondit
+    les ovales de quelques pixels de façon asymétrique et les ronds
+    paraissaient décentrés : la jauge y est dessinée en 1:1 dans une image
+    Pillow, puis affichée telle quelle. Le dessin est le même ; seule la
+    façon de le poser change.
     """
 
-    JAUGE = "#C41910"      # le rouge de la maquette
+    JAUGE = "#FF0D00"      # le rouge réglé par Richard le 4 novembre
     CREUX = "#040B0C"      # le fond de la fente
-    OMBRE = "#24383C"      # le trait clair du bas
+    OMBRE = "#324C51"      # le trait clair du bas
     NOIR = "#000000"       # le trait noir du haut
-    ESPACE = 4             # pixels entre deux ronds
+    ESPACE = 1             # pixels entre deux ronds
 
     def __init__(self, parent, largeur, hauteur, fond, commande=None):
         super().__init__(parent, width=largeur, height=hauteur, bg=fond,
@@ -3440,36 +3442,101 @@ class BarreV2(tk.Canvas):
         self._debut = 0.0
         self._t0 = time.time()
         self._anim = False
-        # Les positions ne dépendent que de la taille : on les calcule une
-        # fois pour toutes.
-        self._places = self._positions()
-        self._tracer()
+        self._allumes = 0
+        # Le chemin image est celui de Windows. La variable d'environnement
+        # permet de l'éprouver sur le Mac (voir tests/v2_ecran.py).
+        self._image_mode = (sys.platform.startswith("win")
+                            or os.environ.get("VOXPACK_JAUGE_IMAGE") == "1")
+        if self._image_mode:
+            self._images = {}
+            self._motifs = self._motif()
+            self._ronds = self._placer_ronds()
+            self._item = self.create_image(0, 0, anchor="nw")
+            self._photo = None
+            self._afficher(0)
+        else:
+            self._construire_vectoriel()
 
-    def _tracer(self):
-        """La fente seule : fond, trait noir en haut, trait clair en bas."""
-        self.create_rectangle(0, 0, self._largeur, self._hauteur,
-                              fill=self.CREUX, outline="", tags="creux")
-        self.create_line(0, 0, self._largeur, 0, fill=self.NOIR,
-                         tags="creux")
-        self.create_line(0, self._hauteur - 1, self._largeur,
-                         self._hauteur - 1, fill=self.OMBRE, tags="creux")
+    def _placer_ronds(self):
+        """Les centres des ronds, répartis sur toute la largeur.
 
-    def _positions(self):
-        """Les centres possibles des ronds, du premier au dernier.
-
-        Le rond touche le trait du haut et celui du bas : c'est toute la
-        hauteur intérieure, sans marge. Le premier est à un pixel du bord.
+        Même répartition que la version du matin : un entraxe calculé pour
+        que la rangée se termine sur un rond entier, et des centres à
+        mi-entraxe. Les coordonnées restent en flottant ; Tk et Pillow les
+        arrondissent au pixel.
         """
-        diametre = max(2, self._hauteur - 2)
-        rayon = diametre / 2
-        centre = self._hauteur / 2
+        diametre = max(2, self._hauteur)
         pas = diametre + self.ESPACE
-        positions = []
-        x = rayon + 1
-        while x + rayon <= self._largeur - 1 + 0.5:
-            positions.append((x, centre, rayon))
-            x += pas
-        return positions
+        nombre = max(1, int(self._largeur / pas))
+        pas = self._largeur / nombre
+        return [pas * (i + 0.5) for i in range(nombre)]
+
+    def _construire_vectoriel(self):
+        """Le dessin du matin, avec les ovales de Tk (macOS)."""
+        h = self._hauteur
+        self.create_rectangle(0, 0, self._largeur, h, fill=self.CREUX,
+                              outline="")
+        self._places = self._placer_ronds()
+        self._ronds = []
+        for centre in self._places:
+            self._ronds.append(self.create_oval(
+                centre - h / 2, 0, centre + h / 2, h,
+                fill=self.CREUX, outline="", tags="rond"))
+        # Les deux traits par-dessus : ils coupent les ronds et donnent le
+        # relief. Des rectangles d'un pixel, pas des traits posés sur le
+        # bord (Tk ne les rend pas pareil sur macOS et Windows).
+        self.create_rectangle(0, 0, self._largeur, 1, fill=self.NOIR,
+                              outline="")
+        self.create_rectangle(0, h - 1, self._largeur, h, fill=self.OMBRE,
+                              outline="")
+
+    def _motif(self):
+        """Un rond plein de la hauteur de la fente, en pixels nets.
+
+        Un masque booléen de hauteur x hauteur : les pixels dont le centre
+        est dans le cercle. Le rayon est très légèrement réduit pour que les
+        coins ne soient pas mangés. Le motif est symétrique par construction.
+        """
+        h = self._hauteur
+        centre = h / 2
+        rayon = max(2, h) / 2 - 0.2
+        motif = []
+        for y in range(h):
+            ligne = []
+            for x in range(h):
+                dx = x + 0.5 - centre
+                dy = y + 0.5 - centre
+                ligne.append(dx * dx + dy * dy <= rayon * rayon)
+            motif.append(ligne)
+        return motif
+
+    def _image(self, allumes):
+        """L'image de la jauge avec `allumes` ronds, traits par-dessus."""
+        if allumes in self._images:
+            return self._images[allumes]
+        image = Image.new("RGB", (self._largeur, self._hauteur), self.CREUX)
+        pixels = image.load()
+        h = self._hauteur
+        for centre in self._ronds[:allumes]:
+            gauche = int(centre - h / 2 + 0.5)
+            for y in range(h):
+                ligne = self._motifs[y]
+                for x in range(h):
+                    if ligne[x]:
+                        g = gauche + x
+                        if 0 <= g < self._largeur:
+                            pixels[g, y] = (255, 13, 0)
+        for x in range(self._largeur):
+            pixels[x, 0] = (0, 0, 0)
+            pixels[x, h - 1] = (0x32, 0x4C, 0x51)
+        photo = ImageTk.PhotoImage(image)
+        self._images[allumes] = photo
+        return photo
+
+    def _afficher(self, allumes):
+        self._photo = self._image(allumes)
+        self.itemconfigure(self._item, image=self._photo)
+        self._allumes = allumes
 
     def set(self, valeur):
         self._cible = max(0.0, min(1.0, float(valeur)))
@@ -3499,15 +3566,21 @@ class BarreV2(tk.Canvas):
         self.after(25, self._pas)
 
     def _dessiner(self):
-        """N'allume que ce qui est fait ; le reste de la fente reste noir."""
-        self.delete("rond")
-        cible = 1 + self._valeur * (self._largeur - 2)
-        for x, centre, rayon in self._places:
-            if x > cible:
-                break
-            self.create_oval(x - rayon, centre - rayon, x + rayon,
-                             centre + rayon, fill=self.JAUGE, outline="",
-                             tags="rond")
+        """N'allume que les ronds faits ; le reste de la fente reste noir."""
+        allumes = int(round(len(self._ronds) * self._valeur))
+        if self._valeur >= 1.0:
+            allumes = len(self._ronds)
+        if allumes != self._allumes:
+            if self._image_mode:
+                self._afficher(allumes)
+            else:
+                debut = min(self._allumes, allumes)
+                fin = max(self._allumes, allumes)
+                for i in range(debut, fin):
+                    self.itemconfigure(
+                        self._ronds[i],
+                        fill=self.JAUGE if i < allumes else self.CREUX)
+            self._allumes = allumes
         if self._commande:
             try:
                 self._commande(self._valeur)
@@ -5303,10 +5376,19 @@ class VoxPackApp(ctk.CTk):
         self._tracer("message: levée")
         self._alertes.append(popup)
         # Si l'application est derrière une autre fenêtre, la popup naît
-        # derrière elle et on ne la voit pas. Un bref « topmost » la montre,
-        # sans lui voler le clavier. Pas de grab : c'est le grab qui rendait
-        # l'application entièrement sourde quand la popup restait cachée.
-        if not application_activee(self):
+        # derrière elle et on ne la voit pas. Pas de grab : c'est le grab qui
+        # rendait l'application entièrement sourde quand la popup restait
+        # cachée.
+        if sys.platform.startswith("win"):
+            # Windows : l'alerte reste au-dessus de la fenêtre principale
+            # tant qu'elle est ouverte. Sans cela, le focus rendu à la
+            # fenêtre principale la faisait passer derrière, et il fallait
+            # déplacer l'application pour la retrouver.
+            try:
+                popup.attributes("-topmost", True)
+            except Exception:
+                pass
+        elif not application_activee(self):
             try:
                 popup.attributes("-topmost", True)
 
@@ -5407,6 +5489,15 @@ class VoxPackApp(ctk.CTk):
         if application_activee(self):
             try:
                 self.focus_force()
+            except tk.TclError:
+                pass
+        # Le focus rendu à la fenêtre principale peut la faire passer
+        # au-dessus de l'alerte : on remet l'alerte devant. C'est ce qui
+        # manquait sous Windows, où l'alerte disparaissait derrière
+        # l'application.
+        if self._alertes:
+            try:
+                self._alertes[-1].lift()
             except tk.TclError:
                 pass
         self._tracer("clavier: après")

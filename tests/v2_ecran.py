@@ -148,27 +148,50 @@ def main() -> int:
 
     print("Jauge")
     hauteur = app.progress._hauteur
-    verifier("les couleurs sont celles de la maquette",
+    verifier("les couleurs sont celles de la jauge du matin",
              (app.progress.JAUGE, app.progress.OMBRE,
-              app.progress.ESPACE) == ("#C41910", "#24383C", 4),
+              app.progress.ESPACE) == ("#FF0D00", "#324C51", 1),
              (app.progress.JAUGE, app.progress.OMBRE,
               app.progress.ESPACE))
-    x, centre, rayon = app.progress._places[0]
-    verifier("le premier rond est à 3 px du bord, 4 px de haut",
-             (x, centre, rayon) == (3, hauteur / 2, 2),
-             (x, centre, rayon))
-    verifier("le rond touche les deux traits",
-             centre - rayon == 1 and centre + rayon == hauteur - 1,
-             (centre - rayon, centre + rayon))
+    if app.progress._image_mode:
+        motif = app.progress._motifs
+        verifier("le rond est plein, symétrique et de la hauteur de la fente",
+                 len(motif) == hauteur
+                 and all(len(ligne) == hauteur for ligne in motif)
+                 and all(ligne == ligne[::-1] for ligne in motif)
+                 and motif == motif[::-1],
+                 motif)
+        verifier("l'image de la jauge fait exactement la taille du canevas",
+                 app.progress._photo is not None
+                 and app.progress._photo.width() == app.progress._largeur
+                 and app.progress._photo.height() == hauteur,
+                 (app.progress._photo.width(), app.progress._photo.height()))
+    else:
+        verifier("les ronds sont répartis sur toute la largeur",
+                 len(app.progress._ronds) > 1
+                 and app.progress._places[-1] > app.progress._largeur * 0.9,
+                 len(app.progress._ronds))
+        verifier("le premier rond est centré dans la fente",
+                 abs(app.progress._places[0] - hauteur / 2) <= 1,
+                 app.progress._places[0])
     app.progress.set(0.5)
     fin = time.time() + 1.0
     while time.time() < fin:
         app.update()
         time.sleep(0.02)
     verifier("seuls les ronds faits sont dessinés",
-             0 < len(app.progress.find_withtag("rond"))
-             < len(app.progress._places),
-             len(app.progress.find_withtag("rond")))
+             0 < app.progress._allumes < len(app.progress._ronds),
+             app.progress._allumes)
+    if not app.progress._image_mode:
+        verifier("le premier rond est allumé, le dernier éteint",
+                 app.progress.itemcget(app.progress._ronds[0],
+                                       "fill").lower()
+                 == app.progress.JAUGE.lower()
+                 and app.progress.itemcget(app.progress._ronds[-1],
+                                           "fill").lower()
+                 == app.progress.CREUX.lower(),
+                 (app.progress.itemcget(app.progress._ronds[0], "fill"),
+                  app.progress.itemcget(app.progress._ronds[-1], "fill")))
 
     print("File d'attente des fils")
     # Un fil de travail ne doit jamais appeler Tk directement : il dépose
