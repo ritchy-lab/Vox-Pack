@@ -3463,12 +3463,19 @@ class BarreV2(tk.Canvas):
         lisait comme un tiret coupé par les traits ; c'est la marge qui
         donne des ronds, et c'est elle aussi qui les centre.
 
-        La marge doit être un nombre entier de pixels : avec une fente de
-        6 px et un rond de 5, il resterait un demi-pixel en haut et en bas,
-        et Tk arrondit — le rond paraissait décalé d'un pixel. On garde donc
-        toujours deux pixels d'écart entre le rond et la hauteur de la
-        fente. Pour des ronds plus gros, il faut une fente plus haute :
-        7 px donnent des ronds de 5.
+        Le rond dessiné garde deux pixels de moins que la fente, et ces deux
+        pixels sont les deux traits : un en haut, un en bas. Le rond n'est
+        donc jamais coupé par eux. Sa hauteur visible reste celle validée sur
+        le Mac, mais elle ne dépend plus de la façon dont Tk dessine les
+        traits. Sur Windows, ceux-ci ne recouvrent pas les bords de la même
+        manière que sur macOS : les ronds paraissaient décalés vers le bas.
+        Avec une marge entière, le centrage est le même sur les deux
+        systèmes.
+
+        L'entraxe et le nombre de ronds restent, eux, calculés sur la hauteur
+        de la fente : la rangée garde exactement la densité validée sur le
+        Mac. Pour des ronds plus gros, il faut une fente plus haute : 7 px
+        donnent des ronds de 5.
 
         L'entraxe est réparti sur toute la largeur, de sorte que la rangée
         se termine sur un rond entier et non sur une moitié.
@@ -3477,12 +3484,14 @@ class BarreV2(tk.Canvas):
         pas = diametre + self.ESPACE
         nombre = max(1, int(self._largeur / pas))
         pas = self._largeur / nombre
-        rayon = diametre / 2
-        haut = (self._hauteur - diametre) // 2
+        # Le rond visible, lui, laisse un pixel de marge de chaque côté.
+        rond = max(2, diametre - 2)
+        rayon = rond / 2
+        haut = (self._hauteur - rond) // 2
         for i in range(nombre):
             centre = pas * (i + 0.5)
             self._ronds.append(self.create_oval(
-                centre - rayon, haut, centre + rayon, haut + diametre,
+                centre - rayon, haut, centre + rayon, haut + rond,
                 fill=self.CREUX, outline=""))
 
     def set(self, valeur):
@@ -4316,6 +4325,23 @@ class FenetreLanguesV2(tk.Toplevel):
 # ------------------------------------------------------------------
 class VoxPackApp(ctk.CTk):
     def __init__(self):
+        if sys.platform.startswith("win"):
+            # Identifiant d'application : la barre des tâches prend l'icône
+            # du .exe (icon.ico) et regroupe la fenêtre sous « Vox-Pack ».
+            # À poser avant la première fenêtre.
+            try:
+                import ctypes
+                from ctypes import wintypes
+
+                shell32 = ctypes.windll.shell32
+                shell32.SetCurrentProcessExplicitAppUserModelID.argtypes = [
+                    wintypes.LPCWSTR]
+                shell32.SetCurrentProcessExplicitAppUserModelID.restype = (
+                    ctypes.c_long)
+                shell32.SetCurrentProcessExplicitAppUserModelID(
+                    "com.ritchy-lab.vox-pack")
+            except Exception:
+                pass
         super().__init__()
 
 
@@ -4456,7 +4482,6 @@ class VoxPackApp(ctk.CTk):
         # retarder l'affichage. Silencieuse si le réseau manque.
         self.after(2500, self._verifier_maj)
 
-        self._poser_icone()
         self._construire_menu()
         # Habillage v2 : la fenêtre de la maquette (sans barre de titre),
         # posée sur la 1.5.1 intacte. Voir docs/v2-passation.md, §7 et §8.
@@ -5399,12 +5424,24 @@ class VoxPackApp(ctk.CTk):
         popup.after_idle(finir)
 
     def _ouvrir_dossier(self, chemin):
-        """Ouvre un dossier dans le gestionnaire de fichiers du système."""
+        """Ouvre un dossier dans le gestionnaire de fichiers du système.
+
+        Sous Windows, on passe explicitement par `explorer` : `os.startfile`
+        sur un chemin qui n'est pas un dossier lance l'application associée.
+        Si ce chemin était, par accident, celui de Vox-Pack, on ouvrirait une
+        deuxième fois Vox-Pack au lieu du dossier — exactement ce qui a été
+        vu sur le PC le 5 novembre. `explorer` ne peut, lui, qu'ouvrir une
+        fenêtre sur le dossier ou le sélectionner.
+        """
         try:
             if sys.platform == "darwin":
                 subprocess.run(["open", chemin], check=False)
             elif sys.platform.startswith("win"):
-                os.startfile(chemin)
+                chemin = os.path.normpath(os.fspath(chemin))
+                if os.path.isfile(chemin):
+                    subprocess.Popen(["explorer", "/select,", chemin])
+                else:
+                    subprocess.Popen(["explorer", chemin])
             else:
                 subprocess.run(["xdg-open", chemin], check=False)
         except Exception:
@@ -8115,6 +8152,68 @@ class VoxPackApp(ctk.CTk):
         self.bind("<Up>", lambda e: self._fleche_liste(-1), add="+")
         self.bind("<Down>", lambda e: self._fleche_liste(1), add="+")
 
+        # L'icône est reposée APRÈS overrideredirect(True) : cet appel recrée
+        # la fenêtre, et l'icône posée avant était perdue. C'est pour cela
+        # que le PC n'avait aucune icône dans la barre des tâches.
+        self._poser_icone()
+        self._icone_barre_windows()
+        # Le splash du .exe Windows a fait son office : la fenêtre est prête.
+        self.after(120, self._fermer_splash)
+
+    def _icone_barre_windows(self):
+        """Rend à la fenêtre sans cadre son bouton dans la barre des tâches.
+
+        `overrideredirect(True)` fait de la fenêtre une fenêtre « popup » :
+        Windows ne lui donne ni bouton dans la barre des tâches, ni icône.
+        On rétablit le style WS_EX_APPWINDOW sur la vraie fenêtre racine.
+        L'identifiant d'application, lui, est posé dans __init__ avant la
+        première fenêtre (voir plus haut).
+        """
+        if not sys.platform.startswith("win"):
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.windll.user32
+            user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+            user32.GetAncestor.restype = wintypes.HWND
+            user32.GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
+            user32.GetWindowLongW.restype = ctypes.c_long
+            user32.SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int,
+                                              ctypes.c_long]
+            user32.SetWindowLongW.restype = ctypes.c_long
+            user32.SetWindowPos.argtypes = [
+                wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
+                ctypes.c_int, ctypes.c_int, wintypes.UINT]
+            user32.SetWindowPos.restype = wintypes.BOOL
+            user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+
+            hwnd = user32.GetAncestor(self.winfo_id(), 2)  # GA_ROOT
+            if not hwnd:
+                return
+            GWL_EXSTYLE = -20
+            WS_EX_APPWINDOW = 0x00040000
+            WS_EX_TOOLWINDOW = 0x00000080
+            style = user32.GetWindowLongW(hwnd, GWL_EXSTYLE) & 0xFFFFFFFF
+            style = (style | WS_EX_APPWINDOW) & ~WS_EX_TOOLWINDOW
+            user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+            # Sans SetWindowPos, Windows garde l'ancien style en mémoire.
+            user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0,
+                                0x0002 | 0x0001 | 0x0004 | 0x0020)
+            user32.ShowWindow(hwnd, 5)  # SW_SHOW
+        except Exception:
+            pass
+
+    @staticmethod
+    def _fermer_splash():
+        """Referme l'écran de démarrage du .exe Windows, s'il existe."""
+        try:
+            import pyi_splash
+            pyi_splash.close()
+        except Exception:
+            pass
+
     def _centrer_fenetre(self):
         """Place la fenêtre sans cadre au milieu de l'écran.
 
@@ -8427,6 +8526,74 @@ class VoxPackApp(ctk.CTk):
             self._deplacement = None
 
 
+def _revenir_a_instance_existante():
+    """Windows : ramène au premier Vox-Pack, ou laisse démarrer celui-ci.
+
+    Sans cela, relancer le raccourci ouvre une deuxième application : deux
+    fenêtres, deux listes, et un risque d'écrire le même fichier de liste.
+    Le nom « Local\\ » limite le verrou à la session Windows.
+    """
+    if not sys.platform.startswith("win"):
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL,
+                                          wintypes.LPCWSTR]
+        kernel32.CreateMutexW.restype = wintypes.HANDLE
+        kernel32.CreateMutexW(None, False, "Local\\Vox-Pack-2.0")
+        if kernel32.GetLastError() != 183:      # ERROR_ALREADY_EXISTS
+            return False
+
+        user32 = ctypes.windll.user32
+        user32.EnumWindows.restype = wintypes.BOOL
+        user32.IsWindowVisible.argtypes = [wintypes.HWND]
+        user32.IsWindowVisible.restype = wintypes.BOOL
+        user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+        user32.GetWindowTextLengthW.restype = ctypes.c_int
+        user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR,
+                                          ctypes.c_int]
+        user32.GetWindowTextW.restype = ctypes.c_int
+        user32.GetWindowRect.argtypes = [wintypes.HWND,
+                                         ctypes.POINTER(wintypes.RECT)]
+        user32.GetWindowRect.restype = wintypes.BOOL
+        user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.BringWindowToTop.argtypes = [wintypes.HWND]
+        user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+        trouve = []
+
+        @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        def voir(hwnd, _):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            taille = user32.GetWindowTextLengthW(hwnd)
+            if not taille:
+                return True
+            buf = ctypes.create_unicode_buffer(taille + 1)
+            user32.GetWindowTextW(hwnd, buf, taille + 1)
+            if buf.value != "Vox-Pack":
+                return True
+            rect = wintypes.RECT()
+            user32.GetWindowRect(hwnd, ctypes.byref(rect))
+            # La fenêtre principale est carrée (640 px au moins) ; les
+            # alertes, elles, font moins de 500 px de large.
+            if rect.right - rect.left >= 500:
+                trouve.append(hwnd)
+                return False
+            return True
+
+        user32.EnumWindows(voir, 0)
+        if trouve:
+            user32.ShowWindow(trouve[0], 9)     # SW_RESTORE
+            user32.BringWindowToTop(trouve[0])
+            user32.SetForegroundWindow(trouve[0])
+        return True
+    except Exception:
+        return False
+
+
 if __name__ == "__main__":
     if "--smoke-test" in sys.argv:
         # Ce que la CI lance sur le binaire compilé : construire la fenêtre,
@@ -8439,6 +8606,8 @@ if __name__ == "__main__":
             raise SystemExit(1)
         app.destroy()
         print("smoke-test: ok")
+        raise SystemExit(0)
+    if _revenir_a_instance_existante():
         raise SystemExit(0)
     app = VoxPackApp()
     app.mainloop()

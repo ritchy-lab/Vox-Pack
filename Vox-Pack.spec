@@ -82,6 +82,23 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# Windows : un écran de démarrage pendant que PyInstaller décompresse le
+# .exe (9 à 14 s sur un PC, voir la passation du 5 novembre). Le splash ne
+# raccourcit pas l'attente, mais il la montre : l'application ne paraît plus
+# ne pas démarrer. Sur macOS, le .app est déjà un dossier : rien à attendre.
+splash = None
+if sys.platform != 'darwin':
+    splash = Splash(
+        'splash.png',
+        binaries=a.binaries,
+        datas=a.datas,
+        text_pos=(30, 296),
+        text_size=-12,
+        text_color='#0FBBD0',
+        text_default='Chargement de Vox-Pack...',
+        always_on_top=True,
+    )
+
 if sys.platform == 'darwin':
     # ---------- macOS : une application .app ----------
     exe = EXE(
@@ -148,6 +165,8 @@ else:
         a.scripts,
         a.binaries,
         a.datas,
+        splash,
+        splash.binaries,
         [],
         name='Vox-Pack',
         debug=False,
