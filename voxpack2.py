@@ -3463,14 +3463,14 @@ class BarreV2(tk.Canvas):
         lisait comme un tiret coupé par les traits ; c'est la marge qui
         donne des ronds, et c'est elle aussi qui les centre.
 
-        Le rond dessiné garde deux pixels de moins que la fente, et ces deux
-        pixels sont les deux traits : un en haut, un en bas. Le rond n'est
-        donc jamais coupé par eux. Sa hauteur visible reste celle validée sur
-        le Mac, mais elle ne dépend plus de la façon dont Tk dessine les
-        traits. Sur Windows, ceux-ci ne recouvrent pas les bords de la même
-        manière que sur macOS : les ronds paraissaient décalés vers le bas.
-        Avec une marge entière, le centrage est le même sur les deux
-        systèmes.
+        Le rond dessiné garde la largeur de la fente et deux pixels de moins
+        en hauteur, et ces deux pixels sont les deux traits : un en haut, un
+        en bas. Le rond n'est donc jamais coupé par eux. Son empreinte
+        visible reste celle validée sur le Mac, mais elle ne dépend plus de
+        la façon dont Tk dessine les traits. Sur Windows, ceux-ci ne
+        recouvrent pas les bords de la même manière que sur macOS : les ronds
+        paraissaient décalés vers le bas. Avec une marge entière, le centrage
+        est le même sur les deux systèmes.
 
         L'entraxe et le nombre de ronds restent, eux, calculés sur la hauteur
         de la fente : la rangée garde exactement la densité validée sur le
@@ -3480,18 +3480,19 @@ class BarreV2(tk.Canvas):
         L'entraxe est réparti sur toute la largeur, de sorte que la rangée
         se termine sur un rond entier et non sur une moitié.
         """
-        diametre = max(2, self._hauteur)
-        pas = diametre + self.ESPACE
+        largeur_rond = max(2, self._hauteur)
+        pas = largeur_rond + self.ESPACE
         nombre = max(1, int(self._largeur / pas))
         pas = self._largeur / nombre
-        # Le rond visible, lui, laisse un pixel de marge de chaque côté.
-        rond = max(2, diametre - 2)
-        rayon = rond / 2
-        haut = (self._hauteur - rond) // 2
+        # Le rond visible laisse un pixel de marge en haut et en bas : les
+        # traits ne le coupent plus.
+        hauteur_rond = max(2, largeur_rond - 2)
+        rayon = largeur_rond / 2
+        haut = (self._hauteur - hauteur_rond) // 2
         for i in range(nombre):
             centre = pas * (i + 0.5)
             self._ronds.append(self.create_oval(
-                centre - rayon, haut, centre + rayon, haut + rond,
+                centre - rayon, haut, centre + rayon, haut + hauteur_rond,
                 fill=self.CREUX, outline=""))
 
     def set(self, valeur):
