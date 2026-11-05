@@ -214,31 +214,6 @@ def convertir_en_wav(source_mp3, destination_wav):
 
 
 # ------------------------------------------------------------------
-# Trace temporaire : qui a le clavier quand une alerte s'ouvre ?
-# ------------------------------------------------------------------
-# Posée le 5 novembre pour comprendre pourquoi Échap n'arrivait pas
-# jusqu'aux fenêtres d'alerte. À retirer une fois la cause trouvée.
-TRACE_ECHAP = "/tmp/voxpack-echap.log"
-
-
-def _trace_echap(quoi):
-    try:
-        from AppKit import NSApp
-        actif = NSApp.isActive()
-        fenetre = NSApp.keyWindow()
-        taille = ((round(fenetre.frame().size.width),
-                   round(fenetre.frame().size.height)) if fenetre else None)
-    except Exception:
-        actif, taille = "?", None
-    try:
-        with open(TRACE_ECHAP, "a", encoding="utf-8") as f:
-            f.write(f"{time.strftime('%H:%M:%S')} {quoi:24} "
-                    f"actif={actif} fenetre_active={taille}\n")
-    except OSError:
-        pass
-
-
-# ------------------------------------------------------------------
 # Voix de robot
 # ------------------------------------------------------------------
 # Quatre presets appliqués à la voix choisie. L'interface ne montre que
@@ -5060,7 +5035,6 @@ class VoxPackApp(ctk.CTk):
         popup.transient(self)
         popup.lift()
         self._alertes.append(popup)
-        _trace_echap("alerte ouverte")
         # L'application est parfois passée derrière pendant une longue
         # génération : l'alerte s'affiche alors sans que le clavier lui
         # revienne, et Échap reste sans effet. On repasse devant, mais
@@ -5092,19 +5066,19 @@ class VoxPackApp(ctk.CTk):
         # c'est la fenêtre principale qui referme l'alerte la plus récente
         # (voir _echapper).
         popup.after(60, self._rendre_le_clavier)
-        popup.bind("<Escape>", lambda e: (_trace_echap("ECHAP sur l'alerte"),
-                                          self._fermer_alerte(popup)))
+        popup.bind("<Escape>", lambda e: self._fermer_alerte(popup))
         popup.after(120, lambda: self._prendre_grab(popup))
 
     def _rendre_le_clavier(self):
         """Redonne le clavier à la fenêtre principale, une alerte ouverte.
 
-        Le 5 novembre, la trace a montré le vrai problème : au moment où
-        l'alerte s'ouvre, macOS n'a plus AUCUNE fenêtre active
-        (`keyWindow = None`). L'application est active, mais aucune de ses
-        fenêtres ne reçoit le clavier — et Échap part dans le vide jusqu'au
-        clic suivant. `focus_force()` ne suffit pas : Tk le croit déjà
-        focalisé et ne redemande rien à macOS.
+        Le 5 novembre, la mesure a montré le vrai problème : au moment où
+        l'alerte s'ouvre alors que l'application était derrière (on regarde
+        une autre fenêtre pendant une génération), macOS n'a plus AUCUNE
+        fenêtre active (`keyWindow = None`). L'application est active, mais
+        aucune de ses fenêtres ne reçoit le clavier — et Échap part dans le
+        vide jusqu'au clic suivant. `focus_force()` ne suffit pas : Tk se
+        croit déjà focalisé et ne redemande rien à macOS.
 
         On redemande donc explicitement à macOS de rendre la fenêtre
         principale active, puis on remet l'alerte au-dessus d'elle.
@@ -5135,7 +5109,6 @@ class VoxPackApp(ctk.CTk):
                         self._alertes[-1].lift()
             except Exception:
                 pass
-        _trace_echap("clavier rendu")
 
     def _fermer_derniere_alerte(self):
         """Referme l'alerte la plus récente, si elle est encore ouverte.
@@ -7884,7 +7857,6 @@ class VoxPackApp(ctk.CTk):
         celle qu'on veut voir disparaître. Si elle n'a pas réussi à prendre
         le clavier (fenêtre sans cadre), c'est ce chemin-là qui la ferme.
         """
-        _trace_echap("ECHAP recu")
         if self._fermer_derniere_alerte():
             return "break"
         if self._fermer_langues():
