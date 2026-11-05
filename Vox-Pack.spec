@@ -92,7 +92,7 @@ if sys.platform != 'darwin':
         'splash.png',
         binaries=a.binaries,
         datas=a.datas,
-        text_pos=(30, 296),
+        text_pos=(24, 212),
         text_size=-12,
         text_color='#0FBBD0',
         text_default='Chargement de Vox-Pack...',
