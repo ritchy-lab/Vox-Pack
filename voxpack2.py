@@ -214,6 +214,31 @@ def convertir_en_wav(source_mp3, destination_wav):
 
 
 # ------------------------------------------------------------------
+# Trace temporaire : qui a le clavier quand une alerte s'ouvre ?
+# ------------------------------------------------------------------
+# Posée le 5 novembre pour comprendre pourquoi Échap n'arrivait pas
+# jusqu'aux fenêtres d'alerte. À retirer une fois la cause trouvée.
+TRACE_ECHAP = "/tmp/voxpack-echap.log"
+
+
+def _trace_echap(quoi):
+    try:
+        from AppKit import NSApp
+        actif = NSApp.isActive()
+        fenetre = NSApp.keyWindow()
+        taille = ((round(fenetre.frame().size.width),
+                   round(fenetre.frame().size.height)) if fenetre else None)
+    except Exception:
+        actif, taille = "?", None
+    try:
+        with open(TRACE_ECHAP, "a", encoding="utf-8") as f:
+            f.write(f"{time.strftime('%H:%M:%S')} {quoi:24} "
+                    f"actif={actif} fenetre_active={taille}\n")
+    except OSError:
+        pass
+
+
+# ------------------------------------------------------------------
 # Voix de robot
 # ------------------------------------------------------------------
 # Quatre presets appliqués à la voix choisie. L'interface ne montre que
@@ -3389,21 +3414,27 @@ class BarreV2(tk.Canvas):
     def _creer_ronds(self):
         """Crée la rangée, une fois pour toutes.
 
-        Les ronds occupent la hauteur intérieure de la fente — quatre pixels
-        quand la fente en fait six — et sont donc posés ENTRE les deux
-        traits, sans marge. Un rond de la hauteur totale, coupé par les
-        traits, se lisait comme un tiret : c'est le diamètre intérieur qui
-        donne des ronds.
+        Les ronds sont posés ENTRE les deux traits, avec la MÊME marge
+        entière au-dessus et au-dessous. Un rond à un pixel des bords se
+        lisait comme un tiret coupé par les traits ; c'est la marge qui
+        donne des ronds, et c'est elle aussi qui les centre.
+
+        La marge doit être un nombre entier de pixels : avec une fente de
+        6 px et un rond de 5, il resterait un demi-pixel en haut et en bas,
+        et Tk arrondit — le rond paraissait décalé d'un pixel. On garde donc
+        toujours deux pixels d'écart entre le rond et la hauteur de la
+        fente. Pour des ronds plus gros, il faut une fente plus haute :
+        7 px donnent des ronds de 5.
 
         L'entraxe est réparti sur toute la largeur, de sorte que la rangée
         se termine sur un rond entier et non sur une moitié.
         """
-        diametre = max(2, self._hauteur - 1)
+        diametre = max(2, self._hauteur - 2)
         pas = diametre + self.ESPACE
         nombre = max(1, int(self._largeur / pas))
         pas = self._largeur / nombre
         rayon = diametre / 2
-        haut = (self._hauteur - diametre) / 2
+        haut = (self._hauteur - diametre) // 2
         for i in range(nombre):
             centre = pas * (i + 0.5)
             self._ronds.append(self.create_oval(
@@ -5029,6 +5060,7 @@ class VoxPackApp(ctk.CTk):
         popup.transient(self)
         popup.lift()
         self._alertes.append(popup)
+        _trace_echap("alerte ouverte")
         # L'application est parfois passée derrière pendant une longue
         # génération : l'alerte s'affiche alors sans que le clavier lui
         # revienne, et Échap reste sans effet. On repasse devant, mais
@@ -5060,7 +5092,8 @@ class VoxPackApp(ctk.CTk):
         # c'est la fenêtre principale qui referme l'alerte la plus récente
         # (voir _echapper).
         popup.after(60, self._rendre_le_clavier)
-        popup.bind("<Escape>", lambda e: self._fermer_alerte(popup))
+        popup.bind("<Escape>", lambda e: (_trace_echap("ECHAP sur l'alerte"),
+                                          self._fermer_alerte(popup)))
         popup.after(120, lambda: self._prendre_grab(popup))
 
     def _rendre_le_clavier(self):
@@ -5074,6 +5107,7 @@ class VoxPackApp(ctk.CTk):
                 self.focus_force()
         except tk.TclError:
             pass
+        _trace_echap("clavier rendu")
 
     def _fermer_derniere_alerte(self):
         """Referme l'alerte la plus récente, si elle est encore ouverte.
@@ -7822,6 +7856,7 @@ class VoxPackApp(ctk.CTk):
         celle qu'on veut voir disparaître. Si elle n'a pas réussi à prendre
         le clavier (fenêtre sans cadre), c'est ce chemin-là qui la ferme.
         """
+        _trace_echap("ECHAP recu")
         if self._fermer_derniere_alerte():
             return "break"
         if self._fermer_langues():
