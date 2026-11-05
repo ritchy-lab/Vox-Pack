@@ -19,6 +19,10 @@ from PyInstaller.utils.hooks import collect_all
 datas = [
     ('logo.png', '.'),
     ('ko-fi.png', '.'),
+    # La licence et la notice voyagent avec l'application : le code est
+    # MIT, mais l'identité visuelle ne l'est pas (voir NOTICE).
+    ('LICENSE', '.'),
+    ('NOTICE', '.'),
     # L'écran de la v2 : la carcasse dessinée, le bandeau de l'aide et
     # l'image de survol du lien de soutien. Sans elles, l'application
     # s'ouvrirait sur un fond uni (voir _charger_carcasse) : autant les

@@ -1,0 +1,50 @@
+# NOTICE — licence et identité visuelle
+
+> **Le code est libre. Le visage ne l'est pas.**
+>
+> Le code de Vox-Pack est sous licence MIT : vous pouvez le lire, l'utiliser, le modifier et le redistribuer. En revanche, l'identité visuelle de l'application — son nom, son logo, ses images, sa carcasse et l'apparence générale de son interface — est protégée par le droit d'auteur de ritchy-lab et n'est pas couverte par cette licence. Si vous en faites un fork, donnez-lui son propre nom, son propre logo et sa propre apparence, plutôt que d'en recopier le visage. Merci de respecter ce travail.
+
+## Ce que couvre la licence MIT
+
+La licence MIT (voir `LICENSE`) couvre le **code source** de Vox-Pack : les
+fichiers Python, la recette de compilation, les scripts et les tests. Vous
+pouvez les lire, les modifier, les redistribuer et les réutiliser, à condition
+de conserver la notice de copyright et le texte de la licence.
+
+## Ce qu'elle ne couvre pas
+
+L'**identité visuelle** de Vox-Pack reste protégée par le droit d'auteur de
+ritchy-lab. Elle comprend notamment :
+
+- le nom « Vox-Pack » et le logo ;
+- `logo.png`, `icon.png`, `icon.ico`, `icon.icns` ;
+- `carcasse.webp`, `bandeau-vp2.webp` ;
+- `ko-fi.png`, `ko-fi-survol.png` ;
+- les images de `assets/` et de `captures/` ;
+- l'apparence générale de l'interface (disposition, couleurs, formes,
+  éléments dessinés).
+
+Ces éléments ne sont pas couverts par la licence MIT et ne peuvent pas être
+réutilisés pour identifier un fork. Si vous publiez une version modifiée,
+donnez-lui un autre nom, un autre logo et une autre apparence.
+
+## English
+
+> **The code is free. The face is not.**
+>
+> Vox-Pack's code is released under the MIT licence: you may read it, use it,
+> modify it and redistribute it. The app's visual identity — its name, its
+> logo, its images, its artwork and the overall appearance of its interface —
+> is protected by ritchy-lab's copyright and is not covered by that licence.
+> If you fork it, give it its own name, its own logo and its own appearance,
+> rather than copying its face. Thank you for respecting this work.
+
+The MIT licence (see `LICENSE`) covers the **source code**: Python files, the
+build recipe, scripts and tests. It does **not** cover the visual identity:
+the name, the logo, the images, the artwork, the screenshots and the overall
+appearance of the interface. Those remain © 2026 ritchy-lab. A fork must use a
+different name, logo and visual identity.
+
+---
+
+© 2026 ritchy-lab — Vox-Pack.

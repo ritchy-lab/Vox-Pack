@@ -1,5 +1,9 @@
 <img src="bandeau-vp2.webp" alt="Vox-Pack" width="760">
 
+> **Le code est libre. Le visage ne l'est pas.**
+>
+> Le code de Vox-Pack est sous licence MIT : vous pouvez le lire, l'utiliser, le modifier et le redistribuer. En revanche, l'identité visuelle de l'application — son nom, son logo, ses images, sa carcasse et l'apparence générale de son interface — est protégée par le droit d'auteur de ritchy-lab et n'est pas couverte par cette licence. Si vous en faites un fork, donnez-lui son propre nom, son propre logo et sa propre apparence, plutôt que d'en recopier le visage. Merci de respecter ce travail.
+
 🇬🇧 **[English version](README.en.md)** · 🇩🇪 **[Deutsche Fassung](README.de.md)**
 
 # Vox-Pack
@@ -228,6 +232,9 @@ Cet utilitaire te sert ou te plaît ? Tu peux
 ## Licence
 
 MIT — voir le fichier [LICENSE](LICENSE).
+
+Le code est libre ; l'identité visuelle (nom, logo, images, carcasse et
+apparence de l'interface) ne l'est pas — voir [NOTICE](NOTICE).
 
 ---
 
