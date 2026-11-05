@@ -148,15 +148,17 @@ def main() -> int:
 
     print("Jauge")
     hauteur = app.progress._hauteur
-    echelle = app.progress.ECHELLE
-    _cx, cy, _rx, ry = app.progress._ronds[0]
-    verifier("le rond a la même marge en haut et en bas",
-             abs((cy - ry) - echelle) < 0.01
-             and abs((cy + ry) - (hauteur - 1) * echelle) < 0.01,
-             f"({cy - ry}, {cy + ry})")
-    verifier("le rond garde deux pixels de moins que la fente",
-             abs(2 * ry / echelle - (hauteur - 2)) < 0.01,
-             f"({2 * ry / echelle} pour {hauteur})")
+    boite = app.progress.bbox(app.progress._ronds[0])
+    verifier("le rond occupe toute la hauteur de la fente",
+             boite is not None and boite[3] - boite[1] == hauteur,
+             f"({boite} pour {hauteur})")
+    # Les deux traits sont des rectangles d'un pixel, entièrement dans le
+    # canevas : un trait posé sur le bord était à moitié dehors, et Tk ne le
+    # rendait pas pareil sur macOS et Windows.
+    types = [app.progress.type(item)
+             for item in app.progress.find_all()]
+    verifier("les deux traits sont des rectangles",
+             types.count("rectangle") >= 3, types)
 
     print("File d'attente des fils")
     # Un fil de travail ne doit jamais appeler Tk directement : il dépose

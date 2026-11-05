@@ -3408,14 +3408,15 @@ class VoyantV2(tk.Canvas):
 class BarreV2(tk.Canvas):
     """La fente de progression, avec des ronds allumés dedans.
 
-    Le dessin vient de Richard (4 novembre au soir) : fond très sombre, trait
-    noir en haut, ombre claire en bas, et une rangée de ronds espacés.
+    L'ordre de dessin vient de Richard (4 novembre au soir), et c'est lui qui
+    donne le relief :
 
-    La fente, ses deux traits et les ronds sont dessinés dans une seule image
-    (quatre fois plus grande, puis réduite) : le rond et la fente partagent
-    donc le même repère, et le centrage ne dépend plus de la façon dont Tk
-    arrondit ses ovales et ses traits. C'est ce qui règle le décalage vu sur
-    Windows, où les traits ne recouvrent pas les bords comme sur macOS.
+    1. le fond de la fente, très sombre ;
+    2. les ronds, espacés, sur toute la largeur ;
+    3. la fente et ses deux traits PAR-DESSUS — le trait noir du haut et le
+       trait clair du bas passent devant la rangée et la coupent. Dessinés
+       avant, les ronds paraissaient posés sur le métal au lieu d'être
+       dedans.
 
     Seuls les ronds de la partie faite sont rouges : le reste de la fente
     reste vide, pas une rangée de trous gris. Les ronds sont espacés et le
@@ -3429,7 +3430,6 @@ class BarreV2(tk.Canvas):
     OMBRE = "#324C51"      # le trait clair du bas
     NOIR = "#000000"       # le trait noir du haut
     ESPACE = 1             # pixels entre deux ronds
-    ECHELLE = 4            # dessin en grand, puis réduction lissée
 
     def __init__(self, parent, largeur, hauteur, fond, commande=None):
         super().__init__(parent, width=largeur, height=hauteur, bg=fond,
@@ -3444,57 +3444,44 @@ class BarreV2(tk.Canvas):
         self._anim = False
         self._allumes = 0
 
-        # La fente, le trait noir et l'ombre sont dessinés dans une seule
-        # image, en grand puis réduite : les ronds et la fente partagent donc
-        # exactement le même repère, et le centrage ne dépend plus de la
-        # façon dont Tk arrondit ses ovales et ses traits.
-        self._base = self._dessiner_fente()
+        # 1. Le fond de la fente.
+        self.create_rectangle(0, 0, largeur, hauteur, fill=self.CREUX,
+                              outline="")
+        # 2. Les ronds.
         self._ronds = []
         self._creer_ronds()
-        self._item = self.create_image(0, 0, anchor="nw")
-        self._photo = None
-        self._dessiner()
-
-    def _dessiner_fente(self):
-        """Le fond de la fente et ses deux traits, en grand."""
-        e = self.ECHELLE
-        largeur = self._largeur * e
-        hauteur = self._hauteur * e
-        image = Image.new("RGB", (largeur, hauteur), self.CREUX)
-        dessin = ImageDraw.Draw(image)
-        dessin.rectangle([0, 0, largeur - 1, hauteur - 1], fill=self.CREUX)
-        # Le trait noir du haut et l'ombre du bas font un pixel logique.
-        dessin.rectangle([0, 0, largeur - 1, e - 1], fill=self.NOIR)
-        dessin.rectangle([0, (self._hauteur - 1) * e, largeur - 1,
-                          hauteur - 1], fill=self.OMBRE)
-        return image
+        # 3. La fente par-dessus : ses deux traits coupent la rangée.
+        # Des rectangles d'un pixel, et non des traits : un trait posé sur
+        # le bord du canevas est à moitié dehors, et Tk ne le rend pas de
+        # la même façon sur macOS et sur Windows. Le rond paraissait alors
+        # décalé vers le bas.
+        self.create_rectangle(0, 0, largeur, 1, fill=self.NOIR, outline="")
+        self.create_rectangle(0, hauteur - 1, largeur, hauteur,
+                              fill=self.OMBRE, outline="")
 
     def _creer_ronds(self):
-        """Calcule la rangée, une fois pour toutes.
+        """Crée la rangée, une fois pour toutes.
 
-        Les ronds sont posés ENTRE les deux traits, avec la MÊME marge
-        entière au-dessus et au-dessous. Le rond garde la largeur de la fente
-        et deux pixels de moins en hauteur : ces deux pixels sont les deux
-        traits, un en haut et un en bas. Il n'est donc jamais coupé par eux.
+        Les ronds occupent toute la hauteur de la fente ; les deux traits
+        d'un pixel, en haut et en bas, les coupent — c'est ce qui laisse
+        voir des ronds plutôt que des tirets. C'est le dessin validé par
+        Richard : on n'y touche pas.
 
-        L'entraxe et le nombre de ronds sont calculés sur la hauteur de la
-        fente : la rangée garde exactement la densité validée sur le Mac.
-        L'entraxe est réparti sur toute la largeur, de sorte que la rangée
-        se termine sur un rond entier et non sur une moitié.
+        L'entraxe est calculé sur la hauteur de la fente, et réparti sur
+        toute la largeur, de sorte que la rangée se termine sur un rond
+        entier et non sur une moitié.
         """
-        largeur_rond = max(2, self._hauteur)
-        pas = largeur_rond + self.ESPACE
+        diametre = max(2, self._hauteur)
+        pas = diametre + self.ESPACE
         nombre = max(1, int(self._largeur / pas))
         pas = self._largeur / nombre
-        hauteur_rond = max(2, largeur_rond - 2)
-        rayon = largeur_rond / 2
-        rayon_vertical = hauteur_rond / 2
-        centre_y = self._hauteur / 2
-        e = self.ECHELLE
+        rayon = diametre / 2
+        haut = (self._hauteur - diametre) // 2
         for i in range(nombre):
             centre = pas * (i + 0.5)
-            self._ronds.append((centre * e, centre_y * e,
-                                rayon * e, rayon_vertical * e))
+            self._ronds.append(self.create_oval(
+                centre - rayon, haut, centre + rayon, haut + diametre,
+                fill=self.CREUX, outline=""))
 
     def set(self, valeur):
         self._cible = max(0.0, min(1.0, float(valeur)))
@@ -3529,16 +3516,14 @@ class BarreV2(tk.Canvas):
         allumes = int(round(len(self._ronds) * self._valeur))
         if self._valeur >= 1.0:
             allumes = len(self._ronds)
-        image = self._base.copy()
-        if allumes:
-            dessin = ImageDraw.Draw(image)
-            for cx, cy, rx, ry in self._ronds[:allumes]:
-                dessin.ellipse((cx - rx, cy - ry, cx + rx, cy + ry),
-                               fill=self.JAUGE)
-        photo = ImageTk.PhotoImage(
-            image.resize((self._largeur, self._hauteur), Image.LANCZOS))
-        self._photo = photo
-        self.itemconfigure(self._item, image=photo)
+        # Seuls les ronds qui changent d'état sont repeints : la jauge
+        # avance de quelques ronds par image, pas de la rangée entière.
+        debut = min(self._allumes, allumes)
+        fin = max(self._allumes, allumes)
+        for i in range(debut, fin):
+            self.itemconfigure(
+                self._ronds[i],
+                fill=self.JAUGE if i < allumes else self.CREUX)
         self._allumes = allumes
         if self._commande:
             try:
