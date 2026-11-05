@@ -30,7 +30,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 import certifi
 import edge_tts
 
@@ -5187,13 +5187,60 @@ class VoxPackApp(ctk.CTk):
     # ------------------------------------------------------------------
     # macOS impose ses boîtes grises, avec l'icône de Python : hors sujet dans
     # une application soignée. On dessine donc les nôtres, aux couleurs de
-    # Vox-Pack. La pastille est dessinée : aucune image à embarquer.
+    # Vox-Pack. La pastille est dessinée à la volée : aucune image à embarquer.
     ICONES = {
         "info":      ("i", CYAN),
         "succes":    ("✓", CYAN),
         "attention": ("!", "#FFB347"),
         "erreur":    ("×", "#FF6B6B"),
     }
+
+    @staticmethod
+    def _dessiner_icone_alerte(symbole, couleur, taille=52):
+        """L'icône d'une alerte, dessinée en grand puis réduite.
+
+        Tk trace ses ovales sans anti-aliasing : sur Windows, le cercle des
+        alertes apparaissait crénelé. On le dessine quatre fois plus grand
+        avec Pillow, puis on le réduit : le contour et le symbole sont lissés.
+        """
+        echelle = 4
+        cote = taille * echelle
+        image = Image.new("RGBA", (cote, cote), (0, 0, 0, 0))
+        dessin = ImageDraw.Draw(image)
+        marge = 3 * echelle
+        dessin.ellipse((marge, marge, cote - marge, cote - marge),
+                       outline=couleur, width=2 * echelle)
+
+        u = cote / 52.0          # les cotes qui suivent sont en pixels de 52
+        trait = max(1, int(round(3.2 * u)))
+
+        if symbole == "✓":
+            dessin.line([(17 * u, 27 * u), (23 * u, 34 * u), (36 * u, 18 * u)],
+                        fill=couleur, width=trait, joint="curve")
+        elif symbole == "×":
+            dessin.line([(17 * u, 17 * u), (35 * u, 35 * u)],
+                        fill=couleur, width=trait)
+            dessin.line([(35 * u, 17 * u), (17 * u, 35 * u)],
+                        fill=couleur, width=trait)
+        elif symbole == "!":
+            dessin.line([(26 * u, 14 * u), (26 * u, 31 * u)], fill=couleur,
+                        width=max(1, int(round(4 * u))))
+            r = 2.4 * u
+            dessin.ellipse((26 * u - r, 37 * u - r, 26 * u + r, 37 * u + r),
+                           fill=couleur)
+        else:                    # "i"
+            dessin.line([(26 * u, 22 * u), (26 * u, 38 * u)], fill=couleur,
+                        width=max(1, int(round(3.4 * u))))
+            r = 2.4 * u
+            dessin.ellipse((26 * u - r, 14 * u - r, 26 * u + r, 14 * u + r),
+                           fill=couleur)
+
+        return image.resize((taille, taille), Image.LANCZOS)
+
+    def _icone_alerte(self, symbole, couleur, taille=52):
+        """La même icône, prête pour Tk (la référence est gardée par l'appelant)."""
+        return ImageTk.PhotoImage(
+            self._dessiner_icone_alerte(symbole, couleur, taille))
 
     def _message(self, texte, icone="info", boutons=None,
                  titre="Vox-Pack", largeur=430, defaut=0):
@@ -5240,11 +5287,10 @@ class VoxPackApp(ctk.CTk):
         rangee_largeur = len(boutons) * 150 + (len(boutons) - 1) * 12
         largeur = int(min(largeur, max(besoin, rangee_largeur + 44, 360)))
 
-        pastille = tk.Canvas(corps, width=52, height=52, bg="#0A1416",
-                             highlightthickness=0)
-        pastille.create_oval(3, 3, 49, 49, outline=couleur, width=2)
-        pastille.create_text(26, 26, text=symbole, fill=couleur,
-                             font=(FONT_MAIN, 24, "bold"))
+        photo = self._icone_alerte(symbole, couleur)
+        pastille = tk.Label(corps, image=photo, bg="#0A1416", bd=0,
+                            highlightthickness=0)
+        pastille.image = photo          # Tk ne garde pas l'image tout seul
         pastille.pack(pady=(16, 0))
 
         tk.Label(corps, text=texte, bg="#0A1416", fg="#E9F4F6",
