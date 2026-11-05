@@ -3356,7 +3356,7 @@ class BarreV2(tk.Canvas):
     """
 
     # La couleur réglée par Richard le 4 novembre à 19 h 16.
-    JAUGE = "#C41910"
+    JAUGE = "#FF0D00"
     CREUX = "#040B0C"      # le fond de la fente
     OMBRE = "#24383C"      # le trait clair du bas
     NOIR = "#000000"       # le trait noir du haut
@@ -3398,7 +3398,7 @@ class BarreV2(tk.Canvas):
         L'entraxe est réparti sur toute la largeur, de sorte que la rangée
         se termine sur un rond entier et non sur une moitié.
         """
-        diametre = max(2, self._hauteur - 2)
+        diametre = max(2, self._hauteur - 1)
         pas = diametre + self.ESPACE
         nombre = max(1, int(self._largeur / pas))
         pas = self._largeur / nombre
@@ -5047,36 +5047,40 @@ class VoxPackApp(ctk.CTk):
                     popup.lift()
             except Exception:
                 pass
-        # Le clavier se demande une fois la fenêtre AFFICHÉE. Demandé ici,
-        # tout de suite, macOS l'ignore : la fenêtre n'est pas encore à
-        # l'écran, les touches continuent d'arriver à la fenêtre principale,
-        # et Échap ne fermait pas la confirmation de fin de génération.
-        popup.after(60, lambda: self._prendre_clavier(popup))
+        # Le clavier RESTE à la fenêtre principale. C'est contre-intuitif,
+        # mais c'est la seule façon qui marche : une fenêtre sans cadre ne
+        # peut pas devenir « fenêtre active » sur macOS, et la lui demander
+        # retire le clavier à la fenêtre principale. Plus aucune touche
+        # n'arrive alors — Échap compris — jusqu'au clic suivant dans
+        # l'application. C'est exactement ce que Richard a décrit le
+        # 5 novembre : « il faut cliquer dans la fenêtre principale, et
+        # après Échap fonctionne ».
+        #
+        # L'alerte n'a pas besoin du clavier : elle n'a que des boutons, et
+        # c'est la fenêtre principale qui referme l'alerte la plus récente
+        # (voir _echapper).
+        popup.after(60, self._rendre_le_clavier)
         popup.bind("<Escape>", lambda e: self._fermer_alerte(popup))
         popup.after(120, lambda: self._prendre_grab(popup))
 
-    @staticmethod
-    def _prendre_clavier(fenetre):
-        """Donne le clavier à une petite fenêtre, une fois qu'elle est visible.
+    def _rendre_le_clavier(self):
+        """Redonne le clavier à la fenêtre principale, une alerte ouverte.
 
-        Une fenêtre sans cadre ne prend pas le clavier toute seule : la
-        demande faite avant son affichage est ignorée, et les touches
-        restent à la fenêtre principale. La fenêtre des langues attend 50 ms
-        (voir FenetreLanguesV2) ; une alerte attend un peu plus, car elle
-        s'ouvre souvent juste après un clic.
+        Demandé une fois l'alerte affichée : juste après sa création, Tk
+        n'a pas fini de la poser, et le clavier peut rester nulle part.
         """
         try:
-            if fenetre.winfo_exists():
-                fenetre.focus_force()
+            if self.winfo_exists():
+                self.focus_force()
         except tk.TclError:
             pass
 
     def _fermer_derniere_alerte(self):
         """Referme l'alerte la plus récente, si elle est encore ouverte.
 
-        Filet de sécurité : même si la petite fenêtre n'a pas réussi à
-        prendre le clavier, Échap depuis la fenêtre principale la referme.
-        Renvoie True si une alerte a été fermée.
+        C'est le chemin NORMAL d'Échap : le clavier reste à la fenêtre
+        principale (voir _message), donc l'alerte ne reçoit pas la touche
+        elle-même. Renvoie True si une alerte a été fermée.
         """
         while self._alertes:
             popup = self._alertes[-1]
@@ -7455,7 +7459,7 @@ class VoxPackApp(ctk.CTk):
             fonte=(FONT_MAIN, p(22)), commande=self._lancer_generation_v2)
 
         self._total_v2 = 0
-        self.progress = BarreV2(self, largeur=p(560), hauteur=p(6),
+        self.progress = BarreV2(self, largeur=p(560), hauteur=p(8),
                                 fond=self._couleur_v2(340, 872),
                                 commande=self._maj_compteur_v2)
         self.progress.place(x=p(340), y=p(866))
