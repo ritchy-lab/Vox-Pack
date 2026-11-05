@@ -5099,14 +5099,42 @@ class VoxPackApp(ctk.CTk):
     def _rendre_le_clavier(self):
         """Redonne le clavier à la fenêtre principale, une alerte ouverte.
 
-        Demandé une fois l'alerte affichée : juste après sa création, Tk
-        n'a pas fini de la poser, et le clavier peut rester nulle part.
+        Le 5 novembre, la trace a montré le vrai problème : au moment où
+        l'alerte s'ouvre, macOS n'a plus AUCUNE fenêtre active
+        (`keyWindow = None`). L'application est active, mais aucune de ses
+        fenêtres ne reçoit le clavier — et Échap part dans le vide jusqu'au
+        clic suivant. `focus_force()` ne suffit pas : Tk le croit déjà
+        focalisé et ne redemande rien à macOS.
+
+        On redemande donc explicitement à macOS de rendre la fenêtre
+        principale active, puis on remet l'alerte au-dessus d'elle.
         """
         try:
-            if self.winfo_exists():
-                self.focus_force()
+            if not self.winfo_exists():
+                return
+        except tk.TclError:
+            return
+        try:
+            self.focus_force()
         except tk.TclError:
             pass
+        if sys.platform == "darwin":
+            try:
+                from AppKit import NSApp
+                if NSApp.keyWindow() is None:
+                    self.lift()
+                    for fenetre in NSApp.windows():
+                        if (fenetre.isVisible()
+                                and round(fenetre.frame().size.width)
+                                == self._format):
+                            fenetre.makeKeyWindow()
+                            break
+                    # La fenêtre principale vient de repasser devant :
+                    # l'alerte doit rester au-dessus d'elle.
+                    if self._alertes:
+                        self._alertes[-1].lift()
+            except Exception:
+                pass
         _trace_echap("clavier rendu")
 
     def _fermer_derniere_alerte(self):
