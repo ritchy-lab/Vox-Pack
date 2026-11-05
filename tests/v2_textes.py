@@ -255,6 +255,37 @@ def main() -> int:
     verifier("une étiquette vide n'annonce rien",
              not voxpack2.version_plus_recente("", "1.5.1"))
 
+    print("Mises à jour : empreinte du fichier")
+    import hashlib
+    descripteur, chemin = tempfile.mkstemp(prefix="voxpack-digest-")
+    os.close(descripteur)
+    try:
+        with open(chemin, "wb") as fichier:
+            fichier.write(b"vox-pack")
+        empreinte = hashlib.sha256(b"vox-pack").hexdigest()
+        verifier("la bonne empreinte est acceptée",
+                 voxpack2.digest_valide(chemin, "sha256:" + empreinte))
+        verifier("une empreinte fausse est refusée",
+                 not voxpack2.digest_valide(chemin, "sha256:" + "0" * 64))
+        verifier("une empreinte absente ne bloque pas",
+                 voxpack2.digest_valide(chemin, ""))
+        verifier("un fichier absent est refusé",
+                 not voxpack2.digest_valide(chemin + ".absent",
+                                            "sha256:" + empreinte))
+    finally:
+        try:
+            os.remove(chemin)
+        except OSError:
+            pass
+
+    print("Noms réservés par Windows")
+    for nom in ("con", "CON", "prn", "aux", "nul", "com1", "LPT9"):
+        verifier(f"{nom} est refusé",
+                 voxpack2.probleme_nom(nom) == voxpack2.t("pb_reserve"),
+                 voxpack2.probleme_nom(nom))
+    verifier("un nom normal passe toujours",
+             voxpack2.probleme_nom("mot-arme") is None)
+
     print("Génération : bilan et coupure réseau")
     tester_bilan_generation()
 

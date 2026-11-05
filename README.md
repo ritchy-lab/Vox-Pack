@@ -17,7 +17,7 @@ L'application crée les fichiers au format exact attendu par EdgeTX
 
 <img src="captures/fenetre-v2-fr.png" alt="La fenêtre de Vox-Pack" width="820">
 
-*Capture prise pendant la création des sons système, avec HAL 9000 : les voyants, les cases cochées et le thermomètre de progression sont visibles.*
+*Capture prise pendant la création des sons système, avec HAL 9000 : les voyants, les cases cochées et la jauge à ronds sont visibles.*
 
 Tu écris tes phrases, tu choisis une voix, tu coches les lignes à générer, et
 tu appuies sur **Let's Go**.
@@ -69,7 +69,7 @@ n'est pas modifiée ; tes phrases, ta liste et tes réglages ne sont pas touché
 
 ## Les voix de robot et HAL 9000
 
-À droite de la fenêtre, **trois pastilles Robot 1 à 3 et la pastille HAL 9000** transforment
+À gauche de la fenêtre, **trois pastilles Robot 1 à 3 et la pastille HAL 9000** transforment
 la voix choisie. Aucune allumée : la voix normale. Clique une pastille, puis
 **Écouter** ; reclique la pastille allumée pour revenir à la normale. L'effet
 s'applique aussi aux fichiers de la liste et aux sons système.
@@ -119,6 +119,10 @@ Le menu **Fichier** permet de :
   par une virgule. L'application demande confirmation avant de remplacer ;
 - **Charger la liste par défaut**, celle livrée avec l'application, dans la
   langue de tes voix.
+
+Une suppression de plusieurs lignes propose **Annuler**. **Cmd+Z** (Ctrl+Z
+sous Windows) annule la dernière suppression, même une seule ligne. **Entrée**
+active le bouton par défaut de la fenêtre de message.
 
 ## Prérequis
 

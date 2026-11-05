@@ -65,6 +65,18 @@ jobs:
           }
           Get-Item "dist/Vox-Pack.exe" | Format-List Name, Length
 
+      # Test-Path ne dit rien : un .exe dont il manque voxpack_data existe
+      # quand même. On le fait vraiment démarrer, puis quitter.
+      - name: Vérifier que le .exe démarre
+        shell: pwsh
+        run: |
+          $processus = Start-Process -FilePath "dist\Vox-Pack.exe" `
+            -ArgumentList "--smoke-test" -PassThru -Wait
+          if ($processus.ExitCode -ne 0) {
+            Write-Error "Vox-Pack.exe ne démarre pas (code $($processus.ExitCode))."
+            exit 1
+          }
+
       - name: Déposer le .exe
         uses: actions/upload-artifact@v7
         with:

@@ -23,7 +23,7 @@ vol : « Moteur armé », « Train sorti », « Chrono démarré »…
   sans rien perdre.
 - **Un nouvel écran.** La fenêtre est redessinée : fond sombre de la
   maquette, boutons dessinés, quatre voyants (Robot 1 à 3 et HAL 9000),
-  thermomètre de progression rouge, et une ligne d'état qui dit à chaque
+  jauge de progression à ronds rouges, et une ligne d'état qui dit à chaque
   instant ce que fait l'application. La fenêtre n'a plus de barre de titre :
   elle se déplace en la faisant glisser, et ses deux boutons de fermeture
   restent à portée.
@@ -202,9 +202,9 @@ Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
   can switch back and forth without losing anything.
 - **A new screen.** The window is redrawn: dark backdrop from the mock-up
   artwork, drawn buttons, four LEDs (Robot 1 to 3 and HAL 9000), a red
-  progress thermometer, and a status line that says what the app is doing at
-  every moment. The window has no title bar: drag it to move it, and its two
-  close buttons stay within reach.
+  progress gauge made of red dots, and a status line that says what the app
+  is doing at every moment. The window has no title bar: drag it to move it,
+  and its two close buttons stay within reach.
 - **A new icon.** In the macOS Dock and the Windows taskbar, it is now the
   v2 transmitter, with the VOX-PACK wordmark.
 - **System sounds in the chosen language.** EdgeTX's official announcements

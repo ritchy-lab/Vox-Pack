@@ -63,6 +63,17 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
+      # Ce que le job Windows faisait déjà, et qui manquait ici : une
+      # régression dans les textes, les listes ou l'écran ne se voyait qu'une
+      # fois le .app publié. Les tests isolent HOME eux-mêmes.
+      - name: Vérifier le code avant de fabriquer
+        run: |
+          python tests/v2_textes.py
+          python tests/v2_langues.py
+          python tests/v2_paquet.py
+          python tests/v2_ecran.py
+          python tests/v2_adaptation.py
+
       - name: Compiler l'application
         run: python -m PyInstaller Vox-Pack.spec --noconfirm
 
@@ -71,6 +82,11 @@ jobs:
           xattr -cr "dist/Vox-Pack.app"
           codesign --force --deep --sign - "dist/Vox-Pack.app"
           codesign --verify --deep --strict "dist/Vox-Pack.app"
+
+      # Test-Path ne dit rien : un .app dont il manque voxpack_data existe
+      # quand même. On le fait vraiment démarrer, puis quitter.
+      - name: Vérifier que l'application démarre
+        run: '"dist/Vox-Pack.app/Contents/MacOS/Vox-Pack" --smoke-test'
 
       - name: Fabriquer le zip
         run: |

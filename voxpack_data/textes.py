@@ -2632,8 +2632,111 @@ LOT_MUET = {
                        "改咗呢句。"},
 }
 
+# Revue du 5 novembre : trois messages courts, dans les quinze langues.
+# - un nom réservé par Windows (CON, PRN, AUX, NUL, COM1…, LPT1…) ;
+# - l'annulation d'une suppression de plusieurs lignes ;
+# - le bilan du rechargement de la liste par défaut (ce n'est pas un import).
+LOT_5_NOV = {
+    "fr": {
+        "pb_reserve": "nom réservé par Windows",
+        "msg_supprime": "{n} ligne{s} supprimée{s}.",
+        "msg_defaut_ok": "{n} phrases {langue} chargées.",
+    },
+    "en": {
+        "pb_reserve": "name reserved by Windows",
+        "msg_supprime": "{n} line{s} deleted.",
+        "msg_defaut_ok": "{n} {langue} phrases loaded.",
+    },
+    "de": {
+        "pb_reserve": "von Windows reservierter Name",
+        "msg_supprime": "Gelöschte Zeilen: {n}.",
+        "msg_defaut_ok": "{n} {langue} Sätze geladen.",
+    },
+    "es": {
+        "pb_reserve": "nombre reservado por Windows",
+        "msg_supprime": "{n} línea(s) eliminada(s).",
+        "msg_defaut_ok": "{n} frases en {langue} cargadas.",
+    },
+    "it": {
+        "pb_reserve": "nome riservato da Windows",
+        "msg_supprime": "Righe eliminate: {n}.",
+        "msg_defaut_ok": "{n} frasi in {langue} caricate.",
+    },
+    "pt": {
+        "pb_reserve": "nome reservado pelo Windows",
+        "msg_supprime": "{n} linha(s) excluída(s).",
+        "msg_defaut_ok": "{n} frases em {langue} carregadas.",
+    },
+    "ru": {
+        "pb_reserve": "имя зарезервировано Windows",
+        "msg_supprime": "Удалено строк: {n}.",
+        "msg_defaut_ok": "Загружено фраз ({langue}): {n}.",
+    },
+    "sv": {
+        "pb_reserve": "namn reserverat av Windows",
+        "msg_supprime": "Borttagna rader: {n}.",
+        "msg_defaut_ok": "{n} {langue} fraser inlästa.",
+    },
+    "uk": {
+        "pb_reserve": "ім'я зарезервоване Windows",
+        "msg_supprime": "Видалено рядків: {n}.",
+        "msg_defaut_ok": "Завантажено фраз ({langue}): {n}.",
+    },
+    "cs": {
+        "pb_reserve": "název vyhrazený systémem Windows",
+        "msg_supprime": "Smazané řádky: {n}.",
+        "msg_defaut_ok": "Načteno frází ({langue}): {n}.",
+    },
+    "da": {
+        "pb_reserve": "navn reserveret af Windows",
+        "msg_supprime": "Slettede linjer: {n}.",
+        "msg_defaut_ok": "{n} {langue} sætninger indlæst.",
+    },
+    "ja": {
+        "pb_reserve": "Windows で予約されている名前",
+        "msg_supprime": "{n} 行を削除しました。",
+        "msg_defaut_ok": "{langue}のフレーズを {n} 件読み込みました。",
+    },
+    "cn": {
+        "pb_reserve": "Windows 保留名称",
+        "msg_supprime": "已删除 {n} 行。",
+        "msg_defaut_ok": "已加载 {n} 条{langue}短语。",
+    },
+    "tw": {
+        "pb_reserve": "Windows 保留名稱",
+        "msg_supprime": "已刪除 {n} 行。",
+        "msg_defaut_ok": "已載入 {n} 句{langue}短句。",
+    },
+    "hk": {
+        "pb_reserve": "Windows 保留名稱",
+        "msg_supprime": "已刪除 {n} 行。",
+        "msg_defaut_ok": "已載入 {n} 句{langue}短句。",
+    },
+}
+
+# Raccourcis ajoutés à la même occasion : Cmd+Z / Ctrl+Z pour la dernière
+# suppression, Entrée pour valider la fenêtre de message.
+LOT_AIDE_ANNULER = {
+    "fr": {"aide_annuler": "Cmd+Z (Ctrl+Z sous Windows) annule la dernière suppression, même une seule ligne. Entrée valide la fenêtre de message ouverte."},
+    "en": {"aide_annuler": "Cmd+Z (Ctrl+Z on Windows) undoes the last deletion, even a single line. Enter confirms the open message window."},
+    "de": {"aide_annuler": "Cmd+Z (Strg+Z unter Windows) macht die letzte Löschung rückgängig, auch bei einer einzelnen Zeile. Die Eingabetaste bestätigt das offene Meldungsfenster."},
+    "es": {"aide_annuler": "Cmd+Z (Ctrl+Z en Windows) deshace la última eliminación, incluso una sola línea. Intro confirma la ventana de mensaje abierta."},
+    "it": {"aide_annuler": "Cmd+Z (Ctrl+Z su Windows) annulla l'ultima eliminazione, anche di una sola riga. Invio conferma la finestra di messaggio aperta."},
+    "pt": {"aide_annuler": "Cmd+Z (Ctrl+Z no Windows) desfaz a última exclusão, mesmo uma só linha. Enter confirma a janela de mensagem aberta."},
+    "ru": {"aide_annuler": "Cmd+Z (Ctrl+Z в Windows) отменяет последнее удаление, даже одной строки. Enter подтверждает открытое окно сообщения."},
+    "sv": {"aide_annuler": "Cmd+Z (Ctrl+Z i Windows) ångrar den senaste borttagningen, även en enskild rad. Retur bekräftar det öppna meddelandefönstret."},
+    "uk": {"aide_annuler": "Cmd+Z (Ctrl+Z у Windows) скасовує останнє видалення, навіть одного рядка. Enter підтверджує відкрите вікно повідомлення."},
+    "cs": {"aide_annuler": "Cmd+Z (Ctrl+Z ve Windows) vrátí poslední smazání, i jediného řádku. Enter potvrdí otevřené okno zprávy."},
+    "da": {"aide_annuler": "Cmd+Z (Ctrl+Z i Windows) fortryder den seneste sletning, også en enkelt linje. Enter bekræfter det åbne meddelelsesvindue."},
+    "ja": {"aide_annuler": "Cmd+Z（Windows では Ctrl+Z）で直前の削除を取り消します。1 行だけでも同じです。Enter で開いているメッセージを確定します。"},
+    "cn": {"aide_annuler": "Cmd+Z（Windows 上为 Ctrl+Z）撤销上一次删除，即使只有一行。Enter 确认打开的消息窗口。"},
+    "tw": {"aide_annuler": "Cmd+Z（Windows 上為 Ctrl+Z）復原上一次刪除，即使只有一行。Enter 確認開啟的訊息視窗。"},
+    "hk": {"aide_annuler": "Cmd+Z（Windows 上為 Ctrl+Z）復原上一次刪除，即使只有一行。Enter 確認開啟嘅訊息視窗。"},
+}
+
 for _lot in (LOT_0, LOT_DIALOGUES, LOT_NOMS, LOT_VOIX, LOT_DIVERS,
-             LOT_GENERATION, LOT_AIDE, LOT_MUET):
+             LOT_GENERATION, LOT_AIDE, LOT_MUET, LOT_5_NOV,
+             LOT_AIDE_ANNULER):
     for _code, _textes in _lot.items():
         TEXTES[_code].update(_textes)
 

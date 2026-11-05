@@ -17,7 +17,7 @@ ready to copy onto the radio's SD card.
 
 <img src="captures/fenetre-v2-en.png" alt="The Vox-Pack window" width="820">
 
-*Captured during system sound creation, with HAL 9000: the LEDs, ticked boxes and progress thermometer are visible.*
+*Captured during system sound creation, with HAL 9000: the LEDs, ticked boxes and dotted progress gauge are visible.*
 
 You write your phrases, pick a voice, tick the lines to generate, and press
 **Let's Go**.
@@ -66,7 +66,7 @@ is not modified; your phrases, list and settings are untouched.
 
 ## Robot voices and HAL 9000
 
-On the right of the window, **three dots Robot 1 to 3 and the HAL 9000 dot** transform the
+On the left of the window, **three dots Robot 1 to 3 and the HAL 9000 dot** transform the
 chosen voice. None lit: the normal voice. Click a dot, then **Listen**; click
 the lit dot again to return to normal. The effect also applies to the list
 files and the system sounds.
@@ -116,6 +116,10 @@ The **File** menu lets you:
   a comma. The application asks for confirmation before replacing anything;
 - **Load the default list**, the one shipped with the application, in the
   language of your voices.
+
+A multi-line deletion offers **Undo**. **Cmd+Z** (Ctrl+Z on Windows) undoes the
+last deletion, even a single line. **Enter** activates the default button of
+the message window.
 
 ## Requirements
 

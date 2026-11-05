@@ -79,6 +79,17 @@ def main() -> int:
     print(f"        écran {app.winfo_screenwidth()}x{app.winfo_screenheight()}"
           f" | fenêtre {app.winfo_width()}x{app.winfo_height()}"
           f" | format {app._format}")
+    # Le 5 novembre, `overrideredirect(True)` recréait la fenêtre et lui
+    # faisait perdre sa géométrie : elle s'ouvrait en haut à gauche (34, 96
+    # sur un écran 2560 x 1440). On vérifie le centre, avec une tolérance
+    # pour les arrondis de Tk et les écrans Windows à l'échelle.
+    attendu_x = max((app.winfo_screenwidth() - app._format) // 2, 0)
+    attendu_y = max((app.winfo_screenheight() - app._format) // 2 - 15, 0)
+    verifier("la fenêtre est centrée",
+             abs(app.winfo_x() - attendu_x) <= 12
+             and abs(app.winfo_y() - attendu_y) <= 12,
+             f"({app.winfo_x()}, {app.winfo_y()}) "
+             f"au lieu de ({attendu_x}, {attendu_y})")
     verifier("pastille de fermeture", getattr(app, "_pastille", None)
              is not None and app._pastille.winfo_exists())
     verifier("bouton de menu", getattr(app, "_bouton_menu", None)
@@ -493,6 +504,162 @@ def main() -> int:
     app._ajouter_ligne_ui("essai", "phrase d'essai")
     app._dessiner_liste()
     verifier("une ligne s'ajoute toujours", len(app.lignes) == avant + 1)
+
+    print("Changement de langue pendant une saisie")
+    # Deux listes distinctes, puis une saisie non validée dans la première.
+    # Le 5 novembre, changer de langue à ce moment-là écrivait la liste
+    # française dans le fichier anglais et effaçait la liste anglaise.
+    with open(voxpack2.chemin_liste("en"), "w", encoding="utf-8") as fichier:
+        fichier.write("english-one,My English phrase\n")
+    app.changer_langue_ui("fr")
+    app.update()
+    app._editer_ligne(0, 1)
+    app.update()
+    entree = app._edition[2]
+    entree.delete(0, "end")
+    entree.insert(0, "saisie non validée")
+    app.changer_langue_ui("en")
+    app.update()
+    contenu_en = open(voxpack2.chemin_liste("en"), encoding="utf-8").read()
+    contenu_fr = open(voxpack2.chemin_liste("fr"), encoding="utf-8").read()
+    verifier("changer de langue n'écrase pas l'autre liste",
+             "english-one" in contenu_en, contenu_en[:60])
+    verifier("la saisie en cours est enregistrée dans sa langue",
+             "saisie non validée" in contenu_fr)
+    app.changer_langue_ui("fr")
+    app.update()
+
+    print("Aide unique")
+    app._ouvrir_aide()
+    app.update()
+    aide = app._aide
+    app._ouvrir_aide()
+    app.update()
+    verifier("un second appel ne crée pas une deuxième aide",
+             app._aide is aide,
+             f"({app._aide} au lieu de {aide})")
+    app.focus_force()
+    app.update()
+    app.event_generate("<Escape>")
+    app.update()
+    time.sleep(0.1)
+    app.update()
+    try:
+        vivante = aide.winfo_exists()
+    except tk.TclError:
+        vivante = False
+    verifier("Échap ferme l'aide depuis la fenêtre principale", not vivante)
+
+    print("Menu des voix")
+    voxpack2.VOIX["en"] = list(voxpack2.VOIX_ORIGINE["en"])
+    app.changer_langue_ui("en")
+    app.update()
+    app.combo_voice._clic()
+    app.update()
+    panneau = app.combo_voice._panneau
+    canevas = app.combo_voice._canevas
+    verifier("le menu des voix tient dans la fenêtre",
+             panneau is not None
+             and panneau.winfo_y() + panneau.winfo_height()
+             <= app.winfo_height(),
+             f"({panneau.winfo_y()}+{panneau.winfo_height()} "
+             f"pour {app.winfo_height()})" if panneau is not None else "")
+    verifier("le menu des dix-neuf voix défile", canevas is not None)
+    if canevas is not None:
+        canevas.yview_moveto(1.0)
+        app.update()
+        verifier("la dernière voix est atteignable",
+                 canevas.yview()[1] >= 0.999, canevas.yview())
+    app.combo_voice.fermer()
+    app.update()
+
+    print("Annuler une suppression")
+    app.changer_langue_ui("fr")
+    app.update()
+    total = len(app.lignes)
+    app._ajouter_ligne_ui("temp-un", "un")
+    app._ajouter_ligne_ui("temp-deux", "deux")
+    app._dessiner_liste()
+    cibles = app.lignes[-2:]
+    supprimees = app._supprimer_lignes(cibles)
+    verifier("deux lignes supprimées", len(app.lignes) == total)
+    app._restaurer_lignes(supprimees)
+    verifier("les deux lignes sont restaurées", len(app.lignes) == total + 2)
+    verifier("elles retrouvent leur place",
+             [ligne["nom"] for ligne in app.lignes[-2:]]
+             == ["temp-un", "temp-deux"])
+    app._supprimer_lignes(app.lignes[-2:])
+
+    print("Annuler au clavier")
+    touche = "<Command-z>" if sys.platform == "darwin" else "<Control-z>"
+    total = len(app.lignes)
+    app._ajouter_ligne_ui("undo-un", "un")
+    app._dessiner_liste()
+    app._supprimer_et_proposer([app.lignes[-1]])
+    verifier("une ligne supprimée", len(app.lignes) == total)
+    app.focus_force()
+    app.update()
+    app.event_generate(touche)
+    app.update()
+    verifier("Cmd/Ctrl+Z restaure une ligne", len(app.lignes) == total + 1)
+    verifier("l'annulation est consommée", app._annulation is None)
+
+    app._ajouter_ligne_ui("undo-deux", "deux")
+    app._ajouter_ligne_ui("undo-trois", "trois")
+    app._dessiner_liste()
+    app._supprimer_et_proposer(app.lignes[-2:])
+    app.update()
+    verifier("deux lignes supprimées", len(app.lignes) == total + 1)
+    verifier("le message d'annulation est ouvert", len(app._alertes) == 1)
+    app.focus_force()
+    app.update()
+    app.event_generate("<Return>")
+    app.update()
+    verifier("Entrée annule la suppression", len(app.lignes) == total + 3)
+    verifier("le message d'annulation est fermé", not app._alertes)
+    app._supprimer_lignes(app.lignes[-3:])
+
+    print("Entrée dans les fenêtres de message")
+    marques = []
+    app._message("Essai", boutons=[("Oui", lambda: marques.append("oui")),
+                                   ("Non", None)])
+    app.update()
+    alerte = app._alertes[-1]
+    app.focus_force()
+    app.update()
+    app.event_generate("<Return>")
+    app.update()
+    verifier("Entrée valide le bouton par défaut", marques == ["oui"], marques)
+    verifier("la fenêtre de message est fermée", not alerte.winfo_exists())
+
+    print("Entrée sur une confirmation destructive")
+    total = len(app.lignes)
+    app.tout_cocher()
+    app.update()
+    app.supprimer_selection()
+    app.update()
+    verifier("la confirmation « Tout supprimer » est ouverte",
+             len(app._alertes) == 1)
+    app.focus_force()
+    app.update()
+    app.event_generate("<Return>")
+    app.update()
+    # Le bouton par défaut de cette confirmation est « Annuler » : une touche
+    # Entrée ne doit pas vider la liste.
+    verifier("Entrée annule « Tout supprimer »",
+             len(app.lignes) == total, f"{len(app.lignes)} au lieu de {total}")
+    verifier("la confirmation est fermée", not app._alertes)
+    app.rien_cocher()
+    app.update()
+
+    print("Bouton désactivé")
+    app.btn_letsgo.configure(state="disabled", fg_color="#083137")
+    app.update()
+    couleur = str(app.btn_letsgo.itemcget(app.btn_letsgo._forme, "fill"))
+    verifier("la couleur d'un bouton désactivé est appliquée",
+             couleur.lower() == "#083137", couleur)
+    app.btn_letsgo.configure(state="normal", fg_color="#0B2E36")
+    app.update()
 
     app.destroy()
 

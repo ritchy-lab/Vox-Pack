@@ -17,7 +17,7 @@ Anwendung erzeugt die Dateien in genau dem Format, das EdgeTX erwartet
 
 <img src="captures/fenetre-v2-de.png" alt="Das Fenster von Vox-Pack" width="820">
 
-*Aufgenommen während der Erstellung der System-Ansagen, mit HAL 9000: Leuchten, Kästchen und Fortschritts-Thermometer sind sichtbar.*
+*Aufgenommen während der Erstellung der System-Ansagen, mit HAL 9000: Leuchten, Kästchen und die Punkt-Jauge sind sichtbar.*
 
 Sie schreiben Ihre Sätze, wählen eine Stimme, markieren die Zeilen zum
 Erzeugen und drücken **Let's Go**.
@@ -78,7 +78,7 @@ Ihre Einstellungen bleiben unberührt.
 
 ## Roboterstimmen und HAL 9000
 
-Rechts im Fenster verwandeln **drei Punkte Roboter 1 bis 3 und der Punkt
+Links im Fenster verwandeln **drei Punkte Roboter 1 bis 3 und der Punkt
 HAL 9000** die gewählte Stimme. Kein Punkt markiert: die normale Stimme. Klicken
 Sie auf einen Punkt und dann auf **Anhören**; ein erneuter Klick auf den
 leuchtenden Punkt bringt die normale Stimme zurück. Der Effekt gilt auch für die
@@ -129,6 +129,10 @@ Das Menü **Datei** erlaubt Ihnen:
   ein Komma getrennt. Die Anwendung fragt vorher nach;
 - die **Standardliste laden**, die mit der Anwendung geliefert wird, in der
   Sprache Ihrer Stimmen.
+
+Eine Löschung mehrerer Zeilen bietet **Rückgängig**. **Cmd+Z** (Strg+Z unter
+Windows) macht die letzte Löschung rückgängig, auch bei einer einzelnen Zeile.
+Die **Eingabetaste** löst die Standardschaltfläche des Meldungsfensters aus.
 
 ## Voraussetzungen
 

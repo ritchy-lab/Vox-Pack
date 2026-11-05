@@ -6,6 +6,7 @@
 
 import asyncio
 import csv
+import hashlib
 import io
 import json
 import locale
@@ -62,6 +63,10 @@ ANCIEN_DIR = os.path.expanduser("~/Documents/VoixEdgeTX")
 DATA_DIR = os.path.expanduser("~/Documents/Vox-Pack")
 CSV_FILE = os.path.join(DATA_DIR, "liste_des_voix.csv")
 VOLUME = "+50%"
+# Au-delà, une requête edge-tts est considérée comme perdue. Les annonces
+# sont courtes : 45 s laissent largement le temps au service, sans laisser
+# une génération bloquée des minutes sur une phrase.
+DELAI_TTS = 45
 AFCONVERT = "/usr/bin/afconvert"        # macOS : présent d'origine, très rapide
 AFPLAY = "/usr/bin/afplay"              # macOS : lecture d'un son
 FORMAT_EDGETX = (32000, 1)             # 32 kHz, mono (ce que lit la radio)
@@ -856,6 +861,33 @@ def reprendre_ancienne_liste():
     except OSError:
         pass
 
+
+def nettoyer_apercus():
+    """Efface les WAV/MP3 d'aperçu laissés par une session interrompue.
+
+    L'aperçu supprime ses fichiers en temps normal (voir _jouer_apercu),
+    mais un arrêt brutal ou une fenêtre fermée pendant la fabrication en
+    laisse derrière elle. Ils vivaient dans ~/Documents/Vox-Pack, au milieu
+    des listes : on ne garde que ceux qui pourraient encore servir (moins
+    d'une heure), pour ne pas toucher à un aperçu en cours dans une autre
+    instance.
+    """
+    try:
+        noms = os.listdir(DATA_DIR)
+    except OSError:
+        return
+    for nom in noms:
+        if not (nom.startswith("apercu_")
+                and nom.endswith((".mp3", ".wav"))):
+            continue
+        chemin = os.path.join(DATA_DIR, nom)
+        try:
+            if time.time() - os.path.getmtime(chemin) > 3600:
+                os.remove(chemin)
+        except OSError:
+            pass
+
+
 # Chemin du logo. En version compilée, PyInstaller range les fichiers joints
 # (le logo) dans un dossier temporaire : on regarde donc à plusieurs endroits.
 DOSSIER_SCRIPT = os.path.dirname(os.path.abspath(__file__))
@@ -1235,7 +1267,7 @@ TEXTES = {
             "voix et même vitesse que sur la radio.",
         "aide_robot_titre": "🤖  Voix de robot",
         "aide_robot1":
-            "À droite de la fenêtre, quatre pastilles : Robot 1 à 3 et HAL 9000. "
+            "À gauche de la fenêtre, quatre pastilles : Robot 1 à 3 et HAL 9000. "
             "HAL 9000 impose sa propre voix, indépendamment du menu. "
             "Aucune cochée : la voix normale.",
         "aide_robot2":
@@ -1607,7 +1639,7 @@ TEXTES = {
             "voice and same speed as on the radio.",
         "aide_robot_titre": "🤖  Robot voices",
         "aide_robot1":
-            "On the right of the window, four dots: Robot 1 to 3 and HAL 9000. "
+            "On the left of the window, four dots: Robot 1 to 3 and HAL 9000. "
             "HAL 9000 uses its own voice, regardless of the menu. "
             "None ticked: the normal voice.",
         "aide_robot2":
@@ -1919,7 +1951,7 @@ TEXTES["de"] = {
         "aide_1a": "Die Anwendung gibt es in fünfzehn Sprachen; beim ersten Start öffnet sie sich in der Systemsprache. Das Menü bietet die Stimmen der gewählten Sprache, und die aktuelle Stimme ist markiert. Die Sprache lässt sich im Menü ändern.",
         "aide_officielle": "Der ★ kennzeichnet die offizielle EdgeTX-Stimme dieser Sprache: gleiche Stimme und gleiches Tempo wie auf der Fernsteuerung.",
         "aide_robot_titre": "🤖  Roboterstimmen",
-        "aide_robot1": "Rechts im Fenster vier Punkte: Roboter 1 bis 3 und HAL 9000. HAL 9000 nutzt seine eigene Stimme, unabhängig vom Menü. Kein Punkt markiert: die normale Stimme.",
+        "aide_robot1": "Links im Fenster vier Punkte: Roboter 1 bis 3 und HAL 9000. HAL 9000 nutzt seine eigene Stimme, unabhängig vom Menü. Kein Punkt markiert: die normale Stimme.",
         "aide_robot2": "Klicken Sie auf einen Punkt und dann auf „Anhören“: Der Effekt gilt für die gewählte Stimme. Klicken Sie erneut auf den leuchtenden Punkt, um zur normalen Stimme zurückzukehren.",
         "aide_robot3": "Der Effekt gilt auch für die Listendateien und die System-Ansagen.",
         "aide_1b": "Zum Sprachwechsel: Menü „Datei“, dann „Sprache“. Texte, Stimmen und Liste ändern sich gemeinsam, und Ihre Stimme wird beim nächsten Start wiederverwendet.",
@@ -2265,7 +2297,9 @@ async def sauver_voix(texte, voice_id, chemin, pitch=None, rate=None):
     """Fabrique le MP3, avec un second essai si le service répond mal.
 
     Le service de Microsoft renvoie parfois une réponse tronquée ou
-    illisible ; un nouvel essai suffit presque toujours.
+    illisible ; un nouvel essai suffit presque toujours. Un flux qui ne
+    répond plus est coupé au bout de DELAI_TTS : sans cela, une génération
+    pouvait rester bloquée plusieurs minutes sur une seule phrase.
     """
     derniere = None
     for tentative in range(2):
@@ -2277,7 +2311,13 @@ async def sauver_voix(texte, voice_id, chemin, pitch=None, rate=None):
                 # Un pitch demandé (robot) passe avant la hauteur officielle
                 # de la voix ; sinon on applique celle de la recette EdgeTX.
                 pitch=pitch or regle.get("pitch") or "+0Hz")
-            await communicate.save(chemin)
+            try:
+                await asyncio.wait_for(communicate.save(chemin),
+                                       timeout=DELAI_TTS)
+            except asyncio.TimeoutError:
+                # Un message explicite : raison_lisible le traduit en
+                # « le service met trop de temps à répondre ».
+                raise TimeoutError("timeout") from None
             return
         except Exception as e:
             derniere = e
@@ -2759,7 +2799,11 @@ def derniere_version_publiee():
             nom = str(element.get("name", ""))
             url = str(element.get("browser_download_url", ""))
             if nom and url:
-                assets.append({"name": nom, "url": url})
+                assets.append({"name": nom, "url": url,
+                               # GitHub fournit « sha256:… » depuis 2023. Il
+                               # peut manquer sur une ancienne publication :
+                               # le contrôle est alors simplement ignoré.
+                               "digest": str(element.get("digest") or "")})
         return {"tag": etiquette, "assets": assets}
     except Exception:
         # Hors ligne, API limitée, dépôt injoignable : on ne dérange pas.
@@ -2798,6 +2842,26 @@ def choisir_asset(assets):
         if str(asset.get("name", "")).lower().endswith(extension):
             return asset
     return None
+
+
+def digest_valide(chemin, attendu):
+    """Le fichier a-t-il l'empreinte annoncée par GitHub ?
+
+    « sha256:… » est comparé ; une empreinte absente ou d'un autre algorithme
+    ne bloque pas le téléchargement (les anciennes publications n'en ont
+    pas). Le calcul se fait par blocs : le fichier peut peser 40 Mo.
+    """
+    attendu = str(attendu or "").strip().lower()
+    if not attendu.startswith("sha256:"):
+        return True
+    h = hashlib.sha256()
+    try:
+        with open(chemin, "rb") as fichier:
+            for bloc in iter(lambda: fichier.read(1 << 20), b""):
+                h.update(bloc)
+    except OSError:
+        return False
+    return h.hexdigest() == attendu.split(":", 1)[1].strip()
 
 # Largeur unique de tous les boutons (homogènes)
 BTN_W = 170
@@ -3002,6 +3066,11 @@ def probleme_nom(nom):
         return t("pb_long", n=len(nom), max=LIMITE_NOM)
     if " " in nom or "\t" in nom:
         return t("pb_espace")
+    # Windows réserve ces noms pour ses périphériques : « con.wav » ne peut
+    # pas être créé sur un PC, même s'il est parfaitement valide sur un Mac.
+    # Une liste préparée ici doit rester utilisable partout.
+    if re.fullmatch(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])", nom.upper()):
+        return t("pb_reserve")
     mauvais = sorted({c for c in nom if c not in CARACTERES_AUTORISES})
     if mauvais:
         if any(c in ACCENTS for c in mauvais):
@@ -3358,9 +3427,9 @@ class BarreV2(tk.Canvas):
     # La couleur réglée par Richard le 4 novembre à 19 h 16.
     JAUGE = "#FF0D00"
     CREUX = "#040B0C"      # le fond de la fente
-    OMBRE = "#24383C"      # le trait clair du bas
+    OMBRE = "#324C51"      # le trait clair du bas
     NOIR = "#000000"       # le trait noir du haut
-    ESPACE = 2             # pixels entre deux ronds
+    ESPACE = 1             # pixels entre deux ronds
 
     def __init__(self, parent, largeur, hauteur, fond, commande=None):
         super().__init__(parent, width=largeur, height=hauteur, bg=fond,
@@ -3404,7 +3473,7 @@ class BarreV2(tk.Canvas):
         L'entraxe est réparti sur toute la largeur, de sorte que la rangée
         se termine sur un rond entier et non sur une moitié.
         """
-        diametre = max(2, self._hauteur - 2)
+        diametre = max(2, self._hauteur)
         pas = diametre + self.ESPACE
         nombre = max(1, int(self._largeur / pas))
         pas = self._largeur / nombre
@@ -3777,16 +3846,19 @@ class BoutonV2(tk.Canvas):
             if commande is not None:
                 self._commande = commande
             etat = options.pop("state", None)
-            if etat is not None:
-                self._actif = etat != "disabled"
-                if self._actif:
-                    self._face = self._face_repos
-                self.itemconfig(self._forme, fill=self._face)
             couleur = options.pop("fg_color", None)
-            if couleur is not None and etat is None:
+            # Les deux options vont ensemble dans le moteur :
+            # « configure(state='disabled', fg_color=…) ». La couleur était
+            # ignorée dès que l'état était fourni, et le bouton désactivé
+            # gardait son aspect normal.
+            if couleur is not None:
                 self._face_repos = couleur
                 self._face = couleur
-                self.itemconfig(self._forme, fill=couleur)
+            if etat is not None:
+                self._actif = etat != "disabled"
+                self._face = self._face_repos
+            if etat is not None or couleur is not None:
+                self.itemconfig(self._forme, fill=self._face)
         if options:
             tk.Canvas.configure(self, **options)
 
@@ -3880,6 +3952,7 @@ class ChampVoixV2(tk.Frame):
         self._fonte = fonte
         self._couleur = couleur
         self._panneau = None
+        self._canevas = None
         self._label = tk.Label(self, text=texte, bg=fond, fg=couleur,
                                anchor="center", font=fonte)
         self._label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -3913,6 +3986,7 @@ class ChampVoixV2(tk.Frame):
     def fermer(self):
         panneau = self._panneau
         self._panneau = None
+        self._canevas = None
         if panneau is not None and panneau.winfo_exists():
             panneau.destroy()
 
@@ -3923,20 +3997,106 @@ class ChampVoixV2(tk.Frame):
         if not self._valeurs:
             return "break"
         parent = self.winfo_toplevel()
+        largeur = self.winfo_width()
         panneau = tk.Frame(parent, bg="#0A1416",
                            highlightbackground="#3E5559",
                            highlightthickness=1)
+        # Le contenu est enfant du canevas : un enfant du panneau restait
+        # dessiné SOUS le canevas, et le menu paraissait vide.
+        canevas = tk.Canvas(panneau, bg="#0A1416", highlightthickness=0,
+                            bd=0, width=max(60, largeur - 2), height=1)
+        contenu = tk.Frame(canevas, bg="#0A1416")
         for valeur in self._valeurs:
-            ligne = tk.Label(panneau, text=valeur, bg="#0A1416",
+            ligne = tk.Label(contenu, text=valeur, bg="#0A1416",
                              fg=self._couleur, anchor="w", padx=12, pady=4,
                              font=self._fonte, cursor=CURSEUR_MAIN)
             ligne.pack(fill="x")
             ligne.bind("<Enter>", lambda e, l=ligne: l.configure(bg="#14313A"))
             ligne.bind("<Leave>", lambda e, l=ligne: l.configure(bg="#0A1416"))
             ligne.bind("<Button-1>", lambda e, v=valeur: self._prendre(v))
-        panneau.place(x=self.winfo_x(),
-                      y=self.winfo_y() + self.winfo_height() + 2)
+        contenu.update_idletasks()
+        total = contenu.winfo_reqheight()
+        # Le panneau peut être plus large que le champ : en anglais,
+        # « Sonia (United Kingdom) » ne tient pas dans 184 px, et la barre de
+        # défilement lui prendrait encore de la place.
+        besoin = max((ligne.winfo_reqwidth()
+                      for ligne in contenu.winfo_children()),
+                     default=largeur)
+        largeur = max(largeur, besoin + 12)
+
+        # Le panneau ne doit jamais sortir de la fenêtre. En anglais, ses
+        # 19 voix faisaient 591 px pour une fenêtre de 820 : les deux
+        # dernières étaient inaccessibles. On l'ouvre donc en dessous s'il y
+        # a la place, au-dessus sinon, et on le rend défilable quand il reste
+        # trop haut.
+        x = self.winfo_x()
+        dessous = max(0, parent.winfo_height()
+                      - (self.winfo_y() + self.winfo_height()) - 10)
+        dessus = max(0, self.winfo_y() - 10)
+        en_dessous = dessous >= total or dessous >= dessus
+        hauteur_max = dessous if en_dessous else dessus
+        hauteur_max = max(40, min(hauteur_max, 520))
+        hauteur_panneau = min(total, hauteur_max)
+        if not en_dessous:
+            y = max(4, self.winfo_y() - hauteur_panneau - 2)
+        else:
+            y = self.winfo_y() + self.winfo_height() + 2
+        if x + largeur > parent.winfo_width() - 4:
+            x = max(4, parent.winfo_width() - largeur - 4)
+
+        def molette(e):
+            canevas.yview_scroll(
+                -1 if getattr(e, "delta", 0) > 0 else 1, "units")
+            return "break"
+
+        if total <= hauteur_max:
+            largeur_canevas = max(60, largeur - 2)
+            canevas.configure(height=total, width=largeur_canevas)
+            canevas.create_window((0, 0), window=contenu, anchor="nw",
+                                  width=largeur_canevas)
+            canevas.configure(scrollregion=(0, 0, largeur_canevas, total))
+            canevas.pack(fill="x")
+        else:
+            largeur_canevas = max(60, largeur - 10)
+            canevas.configure(height=hauteur_max, width=largeur_canevas)
+            canevas.create_window((0, 0), window=contenu, anchor="nw",
+                                  width=largeur_canevas)
+            barre = tk.Canvas(panneau, width=8, height=hauteur_max,
+                              bg="#0A1416", highlightthickness=0, bd=0,
+                              cursor=CURSEUR_MAIN)
+            pouce = barre.create_rectangle(0, 0, 7, 16,
+                                           fill="#2A5A66", outline="")
+
+            def maj_barre(premier, dernier):
+                haut, bas = float(premier), float(dernier)
+                hauteur = max(1, barre.winfo_height())
+                y0 = haut * hauteur
+                y1 = max(bas * hauteur, y0 + 16)
+                barre.coords(pouce, 0, y0, 7, min(y1, hauteur))
+
+            def glisser(e):
+                hauteur = max(1, barre.winfo_height())
+                canevas.yview_moveto(max(0.0, min(1.0, e.y / hauteur)))
+                return "break"
+
+            canevas.configure(yscrollcommand=maj_barre)
+            contenu.bind(
+                "<Configure>",
+                lambda e: canevas.configure(scrollregion=canevas.bbox("all")))
+            canevas.pack(side="left", fill="both", expand=True)
+            barre.pack(side="right", fill="y")
+            barre.bind("<Button-1>", glisser)
+            barre.bind("<B1-Motion>", glisser)
+            canevas.update_idletasks()
+            canevas.configure(scrollregion=canevas.bbox("all"))
+            maj_barre(*canevas.yview())
+
+        for morceau in (panneau, canevas, contenu,
+                        *contenu.winfo_children()):
+            morceau.bind("<MouseWheel>", molette)
+        panneau.place(x=x, y=y)
         self._panneau = panneau
+        self._canevas = canevas
         # Pas de grab : le panneau se referme au premier clic ailleurs, et ce
         # clic fait ce qu'il a à faire — comme un menu normal. Le grab, lui,
         # obligeait à choisir une voix avant de pouvoir toucher à autre chose.
@@ -4207,11 +4367,22 @@ class VoxPackApp(ctk.CTk):
         # Drapeau d'arrêt de la génération des sons système : None quand rien
         # ne tourne (voir creer_sons_systeme).
         self._sons_stop = None
+        # Même drapeau pour la génération de la liste : une série de 44
+        # annonces prend une minute, et on doit pouvoir renoncer sans fermer
+        # l'application.
+        self._liste_stop = None
         self._logo_image = None
         self._soutien = None
         # Alertes ouvertes, de la plus ancienne à la plus récente : Échap
         # referme la dernière (voir _fermer_derniere_alerte).
         self._alertes = []
+        # Dernière suppression, pour Cmd+Z / Ctrl+Z : liste de (rang, copie).
+        # Une seule marche en arrière suffit ; une nouvelle suppression
+        # remplace la précédente.
+        self._annulation = None
+        # Alerte qui propose « Annuler » pour cette suppression, si elle est
+        # encore ouverte : la refermer évite un doublon.
+        self._alerte_annulation = None
         self._reglages = lire_reglages()
         # Écriture différée des réglages : un curseur qui glisse ne doit pas
         # écrire le fichier à chaque pixel (voir _reglages_bientot).
@@ -4273,6 +4444,7 @@ class VoxPackApp(ctk.CTk):
 
         # ----- Chargement -----
         reprendre_ancienne_liste()
+        nettoyer_apercus()
         self.charger_liste()
         # Les titres NOM et PHRASE se calent sur les champs une fois posés.
         self.after(200, self._aligner_entetes_v2)
@@ -4388,7 +4560,15 @@ class VoxPackApp(ctk.CTk):
         """
         if code not in TEXTES or code == LANGUE_UI:
             return
-        # On range d'abord ce qui appartient à la langue que l'on quitte :
+        # Une saisie en cours appartient à la langue que l'on quitte : il faut
+        # la valider MAINTENANT. Sans cela, charger_liste() la validait après
+        # le changement de langue, et _ecrire_csv() écrivait la liste de
+        # l'ancienne langue dans le fichier de la nouvelle. Deux langues
+        # pouvaient ainsi se retrouver avec la même liste, et celle que l'on
+        # venait de quitter écrasait l'autre.
+        if self._edition is not None:
+            self._valider_edition()
+        # On range ensuite ce qui appartient à la langue que l'on quitte :
         # la voix choisie et la liste de phrases.
         self._memoriser_voix()
         self._ecrire_csv()
@@ -4447,6 +4627,10 @@ class VoxPackApp(ctk.CTk):
 
     def exporter_liste(self):
         """Écrit la liste actuelle dans un fichier choisi (nom,phrase)."""
+        # Le fichier exporté doit contenir la saisie en cours, pas la version
+        # d'il y a un clic : on valide le champ avant d'ouvrir le dialogue.
+        if self._edition is not None:
+            self._valider_edition()
         chemin = filedialog.asksaveasfilename(
             parent=self, title=t("titre_export"),
             defaultextension=".csv", initialfile=t("nom_export"),
@@ -4508,13 +4692,15 @@ class VoxPackApp(ctk.CTk):
             t("msg_import_confirmer", avant=en_place,
               s1="s" if en_place > 1 else "",
               apres=len(paires), s2="s" if len(paires) > 1 else ""),
-            icone="attention",
+            icone="attention", defaut=1,
             boutons=[(t("msg_import_oui"),
                       lambda: self._appliquer_import(paires)),
                      (t("annuler"), None)])
 
-    def _appliquer_import(self, paires):
+    def _appliquer_import(self, paires, message=None):
         """Vide la liste et la remplace par les lignes importées."""
+        self._annulation = None
+        self._alerte_annulation = None
         if self._edition is not None:
             self._valider_edition()
         self.lignes.clear()
@@ -4526,8 +4712,13 @@ class VoxPackApp(ctk.CTk):
         self._on_change()
         self._maj_total_liste()
         self.after_idle(lambda: self._toile.yview_moveto(0.0))
-        self._message(t("msg_import_ok", n=len(paires),
-                        s="s" if len(paires) > 1 else ""), icone="succes")
+        # L'import et le rechargement de la liste par défaut n'ont pas le même
+        # bilan : « lignes importées » était faux après un « Charger la liste
+        # par défaut ».
+        self._message(
+            message or t("msg_import_ok", n=len(paires),
+                         s="s" if len(paires) > 1 else ""),
+            icone="succes")
 
     def charger_liste_defaut(self):
         """Remet la liste livrée avec l'application, dans la langue des voix.
@@ -4540,8 +4731,12 @@ class VoxPackApp(ctk.CTk):
         self._message(
             t("question_defaut", n=len(defaut),
               langue=t("adjectif_" + self.langue)),
-            icone="attention",
-            boutons=[(t("oui_remplacer"), lambda: self._appliquer_import(list(defaut))),
+            icone="attention", defaut=1,
+            boutons=[(t("oui_remplacer"),
+                      lambda: self._appliquer_import(
+                          list(defaut),
+                          t("msg_defaut_ok", n=len(defaut),
+                            langue=t("adjectif_" + self.langue)))),
                      (t("annuler"), None)])
 
     # ------------------------------------------------------------------
@@ -4674,8 +4869,10 @@ class VoxPackApp(ctk.CTk):
         btn_telecharger.configure(command=telecharger)
         # Pas de grab_set : la popup ne bloque pas la fenêtre principale, donc
         # macOS n'affiche plus le curseur « interdit » sur les champs.
-        popup.after(150, popup.focus_force)
-        popup.after(200, popup.lift)
+        # Pas de focus_force non plus : la vérification démarre 2,5 s après
+        # l'ouverture, et voler le clavier à ce moment-là interrompait une
+        # saisie en cours. La fenêtre se contente de passer devant.
+        popup.after(150, popup.lift)
 
     def _ajuster_maj(self, popup):
         """Redimensionne la fenêtre de mise à jour sur son contenu, et la recentre.
@@ -4706,6 +4903,7 @@ class VoxPackApp(ctk.CTk):
         resultat = queue.Queue()
 
         def travail():
+            chemin = ""
             try:
                 dossier = os.path.join(os.path.expanduser("~"), "Downloads")
                 os.makedirs(dossier, exist_ok=True)
@@ -4718,6 +4916,11 @@ class VoxPackApp(ctk.CTk):
                         context=contexte) as reponse, \
                         open(chemin, "wb") as sortie:
                     shutil.copyfileobj(reponse, sortie)
+                # Le fichier doit être exactement celui que GitHub annonce :
+                # un téléchargement tronqué ou remplacé ne doit pas être
+                # proposé à l'utilisateur comme une mise à jour.
+                if not digest_valide(chemin, asset.get("digest")):
+                    raise ValueError("empreinte sha256 incorrecte")
                 if sys.platform == "darwin" and extension.lower() == ".zip":
                     extrait = os.path.join(dossier, f"Vox-Pack-{version}")
                     os.makedirs(extrait, exist_ok=True)
@@ -4726,6 +4929,12 @@ class VoxPackApp(ctk.CTk):
                     chemin = extrait
                 resultat.put(("ok", chemin))
             except Exception:
+                # Ne pas laisser derrière soi un fichier incomplet ou douteux.
+                if chemin and os.path.isfile(chemin):
+                    try:
+                        os.remove(chemin)
+                    except OSError:
+                        pass
                 resultat.put(("erreur", None))
 
         threading.Thread(target=travail, daemon=True).start()
@@ -4961,12 +5170,15 @@ class VoxPackApp(ctk.CTk):
     }
 
     def _message(self, texte, icone="info", boutons=None,
-                 titre="Vox-Pack", largeur=430):
+                 titre="Vox-Pack", largeur=430, defaut=0):
         """Affiche un message dans la présentation de l'écran v2.
 
         Sans barre de titre, fond sombre, cadre gris, boutons à coin coupé :
         une alerte doit ressembler au reste de l'application, pas à une
-        fenêtre du système.
+        fenêtre du système. `defaut` est l'indice du bouton qu'Entrée
+        déclenche : 0 pour le premier, 1 pour le second. Les confirmations
+        destructives passent 1 (Annuler) pour qu'une touche Entrée
+        malencontreuse ne supprime pas la liste.
         """
         symbole, couleur = self.ICONES.get(icone, self.ICONES["info"])
         boutons = boutons or [(t("compris"), None)]
@@ -5064,10 +5276,38 @@ class VoxPackApp(ctk.CTk):
         #
         # L'alerte n'a pas besoin du clavier : elle n'a que des boutons, et
         # c'est la fenêtre principale qui referme l'alerte la plus récente
-        # (voir _echapper).
+        # (voir _echapper). Entrée, elle, valide le premier bouton : la
+        # fenêtre principale le fait quand elle a le clavier (voir
+        # _entree_message), la popup le fait si elle l'a.
+        popup._action_defaut = boutons[
+            min(max(0, defaut), len(boutons) - 1)][1]
         popup.after(60, self._rendre_le_clavier)
         popup.bind("<Escape>", lambda e: self._fermer_alerte(popup))
+        popup.bind("<Return>", lambda e: self._valider_alerte(popup))
         popup.after(120, lambda: self._prendre_grab(popup))
+        return popup
+
+    def _valider_alerte(self, popup):
+        """Entrée : ferme l'alerte et déclenche son premier bouton."""
+        if not popup.winfo_exists():
+            return "break"
+        action = getattr(popup, "_action_defaut", None)
+        self._fermer_alerte(popup)
+        if action:
+            action()
+        return "break"
+
+    def _entree_message(self, _evenement=None):
+        """Entrée sur la fenêtre principale : valide l'alerte du dessus.
+
+        Le clavier reste à la fenêtre principale (fenêtre sans cadre) : sans
+        ce chemin, Entrée ne faisait rien dans les fenêtres de message.
+        """
+        while self._alertes and not self._alertes[-1].winfo_exists():
+            self._alertes.pop()
+        if not self._alertes:
+            return None
+        return self._valider_alerte(self._alertes[-1])
 
     def _rendre_le_clavier(self):
         """Redonne le clavier à la fenêtre principale, une alerte ouverte.
@@ -5137,6 +5377,8 @@ class VoxPackApp(ctk.CTk):
             popup.grab_release()
         except tk.TclError:
             pass
+        if popup is getattr(self, "_alerte_annulation", None):
+            self._alerte_annulation = None
         if popup in self._alertes:
             self._alertes.remove(popup)
         relacher_souris()
@@ -5345,6 +5587,12 @@ class VoxPackApp(ctk.CTk):
         try:
             if not self.winfo_exists():
                 return
+            # Ni fenêtre cachée ni application derrière : le survol ne peut
+            # pas changer. Sonder quatre positions système toutes les 150 ms
+            # pour rien finit par se voir sur une batterie ; on ralentit.
+            if not self.winfo_viewable() or not application_activee(self):
+                self.after(600, self._veiller_survol_robot)
+                return
             x, y = self.winfo_pointerxy()
             trouve = None
             for numero, bouton in self._boutons_robot.items():
@@ -5368,9 +5616,20 @@ class VoxPackApp(ctk.CTk):
         self._maj_robot()
 
     def _ouvrir_aide(self):
+        # Une seule aide à la fois : un second appel la ramène devant au lieu
+        # d'empiler une deuxième fenêtre identique.
+        aide = getattr(self, "_aide", None)
+        if aide is not None and aide.winfo_exists():
+            aide.lift()
+            try:
+                aide.focus_force()
+            except tk.TclError:
+                pass
+            return
         # L'aide au style de l'écran : sans barre de titre, fond sombre,
         # cadre gris, logo en tête et bouton Fermer à coin coupé.
         popup = tk.Toplevel(self)
+        self._aide = popup
         popup.overrideredirect(True)
         popup.configure(bg="#0A1416")
 
@@ -5382,6 +5641,8 @@ class VoxPackApp(ctk.CTk):
             souris jusqu'au clic suivant. On remet l'état de déplacement à
             zéro, on rend le grab s'il y en a un, et on détruit au repos.
             """
+            if self._aide is popup:
+                self._aide = None
             self._deplacement = None
             try:
                 popup.grab_release()
@@ -5534,6 +5795,7 @@ class VoxPackApp(ctk.CTk):
             ("bullet", t("aide_2b")),
             ("bullet", t("aide_2c")),
             ("text", t("aide_2d")),
+            ("bullet", t("aide_annuler")),
             ("space", ""),
             ("warning", t("aide_nom1")),
             ("space", ""),
@@ -5793,8 +6055,17 @@ class VoxPackApp(ctk.CTk):
 
     def charger_liste(self):
         """Reconstruit la liste de la langue courante, puis la dessine."""
+        # La liste change : l'annulation de la suppression précédente ne la
+        # concerne plus.
+        self._annulation = None
+        self._alerte_annulation = None
+        # Une saisie encore ouverte ici appartiendrait à la liste PRÉCÉDENTE,
+        # alors que LANGUE_UI désigne déjà la nouvelle : la valider écrirait
+        # l'ancienne liste dans le nouveau fichier. On la jette plutôt que de
+        # risquer de perdre une langue (voir changer_langue_ui, qui valide
+        # avant de changer).
         if self._edition is not None:
-            self._valider_edition()
+            self._annuler_edition()
         self.lignes.clear()
         contenu = []
         fichier = chemin_liste(self.langue)
@@ -6311,27 +6582,101 @@ class VoxPackApp(ctk.CTk):
         if len(cochees) == len(self.lignes):
             self._message(
                 t("msg_supprimer_tout"),
-                icone="attention",
+                icone="attention", defaut=1,
                 boutons=[(t("btn_supprimer"),
-                          lambda: self._supprimer_lignes(cochees)),
+                          lambda: self._supprimer_et_proposer(cochees)),
                          (t("annuler"), None)],
             )
             return
 
-        self._supprimer_lignes(cochees)
+        self._supprimer_et_proposer(cochees)
+
+    def _supprimer_et_proposer(self, cochees):
+        """Supprime, puis propose d'annuler quand plusieurs lignes partent.
+
+        Une seule ligne se supprime sans dialogue : le geste est banal, et
+        Cmd+Z / Ctrl+Z reste disponible. Pour un lot, l'erreur coûte cher ;
+        le message offre un « Annuler » qui remet les lignes exactement à
+        leur place.
+        """
+        supprimees = self._supprimer_lignes(cochees)
+        if not supprimees:
+            return
+        self._annulation = supprimees
+        self._alerte_annulation = None
+        if len(supprimees) > 1:
+            n = len(supprimees)
+            self._alerte_annulation = self._message(
+                t("msg_supprime", n=n, s="s" if n > 1 else ""),
+                icone="info",
+                boutons=[(t("annuler"), self._annuler_suppression),
+                         (t("fermer"), None)])
+
+    def _annuler_suppression(self):
+        """Remet la dernière suppression, pour Cmd+Z / Ctrl+Z.
+
+        Renvoie True si quelque chose a été restauré. Une seule marche en
+        arrière : après restauration, `_annulation` est vidé.
+        """
+        if getattr(self, "_edition", None) is not None:
+            return False
+        supprimees = getattr(self, "_annulation", None)
+        if not supprimees:
+            return False
+        self._annulation = None
+        alerte = getattr(self, "_alerte_annulation", None)
+        self._alerte_annulation = None
+        if alerte is not None and alerte.winfo_exists():
+            self._fermer_alerte(alerte)
+        self._restaurer_lignes(supprimees)
+        return True
+
+    def _annuler_suppression_touche(self, _evenement=None):
+        """Cmd+Z (macOS) ou Ctrl+Z : annule la dernière suppression."""
+        if self._edition is not None or isinstance(
+                self.focus_get(), (tk.Entry, tk.Text)):
+            # Le champ a la main : on ne défait pas la liste sous ses doigts.
+            return None
+        # Une alerte étrangère (import, erreur…) garde la main. L'alerte
+        # d'annulation, elle, peut être refermée par le même geste.
+        alerte = self._alertes[-1] if self._alertes else None
+        if alerte is not None and alerte is not self._alerte_annulation:
+            return None
+        if self._annuler_suppression():
+            return "break"
+        return None
 
     def _supprimer_lignes(self, cochees):
+        """Retire les lignes cochées ; renvoie (rang, copie) pour l'annulation."""
         if self._edition is not None:
             self._valider_edition()
-        for ligne in list(cochees):
-            if ligne in self.lignes:
-                self.lignes.remove(ligne)
+        # L'identité, et non l'égalité : deux lignes identiques ne doivent
+        # pas se confondre, et une ligne non cochée ne doit jamais partir
+        # parce qu'elle ressemble à une ligne cochée.
+        selection = {id(ligne) for ligne in cochees}
+        supprimees = [(rang, dict(ligne))
+                      for rang, ligne in enumerate(self.lignes)
+                      if id(ligne) in selection]
+        for rang in reversed([rang for rang, _ in supprimees]):
+            del self.lignes[rang]
         # les numéros de ligne ont changé : le point de départ n'est plus valable
         self._ancre_selection = None
         self._verifier_noms(redessiner=False)
         self._dessiner_liste()
         self._on_change()
         self._maj_total_liste()
+        return supprimees
+
+    def _restaurer_lignes(self, supprimees):
+        """Remet les lignes supprimées à leur rang, dans l'ordre d'origine."""
+        for rang, ligne in sorted(supprimees, key=lambda entree: entree[0]):
+            self.lignes.insert(min(rang, len(self.lignes)), dict(ligne))
+        self._ancre_selection = None
+        self._verifier_noms(redessiner=False)
+        self._dessiner_liste()
+        self._on_change()
+        self._maj_total_liste()
+        self._sync_toutes_v2()
 
     def tout_cocher(self):
         for ligne in self.lignes:
@@ -6614,15 +6959,38 @@ class VoxPackApp(ctk.CTk):
 
         voice_id = identifiant_voix(self.langue, self.combo_voice.get())
 
-        self.btn_letsgo.configure(state="disabled", fg_color="#083137")
+        # Le bouton « Let's Go » devient « Arrêter » : une série de 44
+        # annonces prend une minute, et on doit pouvoir renoncer sans fermer
+        # l'application (les fichiers déjà écrits restent).
+        self._total_v2 = len(taches)
         self._genere = True
+        self._liste_stop = threading.Event()
+        self.btn_letsgo.dire(t("arreter"), arret=True)
+        self.btn_letsgo.configure(
+            command=self._arreter_liste, fg_color="#083137")
         self.progress.set(0.0)
+        self._dire(t("etat_recherche_service"))
 
         threading.Thread(
             target=self._run_async_loop,
             args=(taches, voice_id, refuses),
             daemon=True,
         ).start()
+
+    def _arreter_liste(self):
+        """Demande l'arrêt de la génération de la liste.
+
+        Le fichier en cours se termine, puis la boucle s'arrête : un WAV
+        tronqué serait pire qu'un fichier de plus.
+        """
+        stop = self._liste_stop
+        if stop is not None:
+            stop.set()
+        try:
+            self.btn_letsgo.configure(state="disabled", fg_color="#083137")
+        except Exception:
+            pass
+        self._dire(t("etat_sons_arret"))
 
     def _run_async_loop(self, taches, voice_id, refuses=None):
         loop = asyncio.new_event_loop()
@@ -6646,9 +7014,13 @@ class VoxPackApp(ctk.CTk):
         donc à « 0 / ce qui reste coché ».
         """
         self._genere = False
+        self._liste_stop = None
         self._total_v2 = self._total_a_faire()
         try:
-            self.btn_letsgo.configure(state="normal", fg_color="#0B2E36")
+            self.btn_letsgo.dire(t("lets_go"), arret=False)
+            self.btn_letsgo.configure(
+                state="normal", command=self._lancer_generation_v2,
+                fg_color="#0B2E36")
         except Exception:
             pass
 
@@ -6667,10 +7039,17 @@ class VoxPackApp(ctk.CTk):
         faits = 0                          # succès réels, pas « non échoués »
         reseau_suite = 0
         coupe_reseau = False
+        arrete = False
 
         self._dire(t("etat_recherche_service"))
 
         for idx, (nom, texte) in enumerate(taches):
+            # Arrêt demandé : on laisse le fichier en cours se terminer, puis
+            # on sort. Les WAV déjà écrits restent sur le disque.
+            stop = getattr(self, "_liste_stop", None)
+            if stop is not None and stop.is_set():
+                arrete = True
+                break
             final_wav = os.path.join(self.output_dir, f"{nom}.wav")
             fait = idx + 1
             try:
@@ -6710,6 +7089,12 @@ class VoxPackApp(ctk.CTk):
             self._dire(t("etat_avance", fait=fait, total=total, nom=nom,
                          s="s" if fait > 1 else ""))
 
+        # « Arrêter » cliqué pendant le dernier fichier : la boucle est finie,
+        # mais l'utilisateur a demandé l'arrêt ; on le dit.
+        stop = getattr(self, "_liste_stop", None)
+        if stop is not None and stop.is_set():
+            arrete = True
+
         # On laisse la barre complète visible avant qu'elle redescende :
         # c'est le seul moment où l'on voit la dernière led allumée.
         await asyncio.sleep(PAUSE_LEDS)
@@ -6717,12 +7102,28 @@ class VoxPackApp(ctk.CTk):
         self._dire("")
 
         reussis = faits
-        if echecs:
-            detail = "\n".join(f"• {nom} : {raison}" for nom, raison in echecs[:6])
-            if len(echecs) > 6:
-                detail += "\n" + t("msg_autres", n=len(echecs) - 6)
-            if coupe_reseau:
-                detail = t("msg_reseau_coupe") + "\n" + detail
+        detail = "\n".join(f"• {nom} : {raison}" for nom, raison in echecs[:6])
+        if len(echecs) > 6:
+            detail += "\n" + t("msg_autres", n=len(echecs) - 6)
+        if coupe_reseau:
+            detail = t("msg_reseau_coupe") + "\n" + detail
+
+        if arrete:
+            texte = t("msg_sons_arrete", n=faits,
+                      s="s" if faits > 1 else "",
+                      dossier=chemin_lisible(self.output_dir))
+            if echecs:
+                texte += "\n\n" + t("msg_sons_problemes",
+                                    problemes=len(echecs),
+                                    s2="s" if len(echecs) > 1 else "",
+                                    detail=detail)
+            out = self.output_dir
+            self.after(0, lambda: self._message(
+                texte, icone="attention",
+                boutons=[(t("ouvrir_dossier"),
+                          lambda: self._ouvrir_dossier(out)),
+                         (t("fermer"), None)]))
+        elif echecs:
             self.after(0, lambda: self._message(
                 t("msg_bilan_echecs", reussis=reussis,
                   s1="s" if reussis > 1 else "", total=total + nb_refuses,
@@ -6758,40 +7159,10 @@ class VoxPackApp(ctk.CTk):
             self._message(t("msg_genere_deja"), icone="attention")
             return
 
-        # La ligne d'état prévient pendant le téléchargement (moins d'une
-        # seconde en temps normal) : sans elle, on croirait que rien ne se
-        # passe. update_idletasks() la fait s'afficher tout de suite.
-        self._dire(t("etat_csv_telechargement"))
-        self.update_idletasks()
-        try:
-            lignes, dossier_sd, depuis_cache = csv_officiel_sons_systeme(
-                self.langue)
-        except Exception as e:
-            self._dire("")
-            self._message(
-                t("msg_csv_officiel_echec", err=str(e)[:160]), icone="erreur")
-            return
-        if not lignes:
-            self._dire("")
-            self._message(t("msg_csv_aucun_systeme"), icone="attention")
-            return
-
-        taches, refuses = trier_sons_systeme(lignes)
-        self._dire("")
-        if not taches:
-            # Tous les noms ont été refusés : autant le dire tout de suite,
-            # avec les raisons, plutôt que de créer un dossier vide.
-            detail = "\n".join(f"• {nom} : {raison}"
-                               for nom, raison in refuses[:6])
-            if len(refuses) > 6:
-                detail += "\n" + t("msg_autres", n=len(refuses) - 6)
-            self._message(
-                t("msg_sons_bilan", reussis=0, s1="",
-                  total=len(refuses), problemes=len(refuses),
-                  s2="s" if len(refuses) > 1 else "", detail=detail),
-                icone="erreur")
-            return
-
+        # Le dossier est demandé AVANT le téléchargement : la feuille de choix
+        # doit rester sur le fil principal, et le téléchargement du CSV (jusqu'à
+        # 15 s sur un réseau lent) se fera dans le fil de travail, sans figer
+        # la fenêtre.
         dossier = self._choisir_dossier(
             t("titre_dossier_systeme"),
             self._reglages.get("dernier_dossier_systeme")
@@ -6799,7 +7170,6 @@ class VoxPackApp(ctk.CTk):
             or os.path.expanduser("~"),
         )
         if not dossier:
-            self._dire("")
             return
         self._reglages["dernier_dossier_systeme"] = dossier
         ecrire_reglages(self._reglages)
@@ -6818,13 +7188,13 @@ class VoxPackApp(ctk.CTk):
         # Le bouton « Let's Go » devient « Arrêter » : des centaines de
         # fichiers, c'est plusieurs minutes, et on doit pouvoir renoncer.
         self._genere = True
-        self._total_v2 = len(taches)
+        self._total_v2 = 0
         self._sons_stop = threading.Event()
         self.btn_letsgo.dire(t("arreter"), arret=True)
         self.btn_letsgo.configure(
             command=self._arreter_sons_systeme, fg_color="#083137")
         self.progress.set(0.0)
-        self._dire(t("etat_recherche_service"))
+        self._dire(t("etat_csv_telechargement"))
         # Le voyant s'allume et bat tant que ça travaille ; il s'éteindra
         # dans _fin_sons_systeme, que l'on arrête ou que ça se termine.
         self._voyant_systeme.allumer()
@@ -6832,7 +7202,7 @@ class VoxPackApp(ctk.CTk):
 
         threading.Thread(
             target=self._lancer_sons_systeme,
-            args=(taches, refuses, sortie, dossier_sd, voice_id, depuis_cache),
+            args=(sortie, voice_id),
             daemon=True,
         ).start()
 
@@ -6852,12 +7222,10 @@ class VoxPackApp(ctk.CTk):
             pass
         self._dire(t("etat_sons_arret"))
 
-    def _lancer_sons_systeme(self, taches, refuses, sortie, dossier_sd,
-                             voice_id, depuis_cache=False):
-        """Fil de travail : la boucle asyncio de la création des sons."""
+    def _lancer_sons_systeme(self, sortie, voice_id=""):
+        """Fil de travail : téléchargement de la liste, puis les sons."""
         try:
-            asyncio.run(self._generer_sons_systeme(
-                taches, refuses, sortie, dossier_sd, voice_id, depuis_cache))
+            asyncio.run(self._generer_sons_systeme(sortie, voice_id))
         finally:
             try:
                 self.after(0, self._fin_sons_systeme)
@@ -6878,15 +7246,48 @@ class VoxPackApp(ctk.CTk):
         except Exception:
             pass
 
-    async def _generer_sons_systeme(self, taches, refuses, sortie,
-                                    dossier_sd="", voice_id="",
-                                    depuis_cache=False):
+    async def _generer_sons_systeme(self, sortie, voice_id=""):
         """Fabrique un WAV par ligne du CSV, dans <dossier>/SYSTEM/.
 
         Même pipeline que la génération normale (edge-tts puis conversion),
-        mais la liste affichée n'est jamais lue ni modifiée.
+        mais la liste affichée n'est jamais lue ni modifiée. Le téléchargement
+        du CSV officiel se fait ici, dans le fil de travail : la fenêtre
+        reste vivante même si GitHub met plusieurs secondes à répondre.
         """
         voice_id = self._robot_voice() or voice_id
+        try:
+            lignes, dossier_sd, depuis_cache = csv_officiel_sons_systeme(
+                self.langue)
+        except Exception as e:
+            self._dire("")
+            self.after(0, lambda err=e: self._message(
+                t("msg_csv_officiel_echec", err=str(err)[:160]),
+                icone="erreur"))
+            return
+        if not lignes:
+            self._dire("")
+            self.after(0, lambda: self._message(
+                t("msg_csv_aucun_systeme"), icone="attention"))
+            return
+
+        taches, refuses = trier_sons_systeme(lignes)
+        if not taches:
+            # Tous les noms ont été refusés : autant le dire tout de suite,
+            # avec les raisons, plutôt que de créer un dossier vide.
+            detail = "\n".join(f"• {nom} : {raison}"
+                               for nom, raison in refuses[:6])
+            if len(refuses) > 6:
+                detail += "\n" + t("msg_autres", n=len(refuses) - 6)
+            self.after(0, lambda detail=detail, refuses=list(refuses):
+                       self._message(
+                           t("msg_sons_bilan", reussis=0, s1="",
+                             total=len(refuses), problemes=len(refuses),
+                             s2="s" if len(refuses) > 1 else "",
+                             detail=detail),
+                           icone="erreur"))
+            return
+
+        self._total_v2 = len(taches)
         try:
             os.makedirs(sortie, exist_ok=True)
         except OSError as e:
@@ -6895,6 +7296,7 @@ class VoxPackApp(ctk.CTk):
                 t("msg_dossier_echec", err=err), icone="erreur"))
             return
 
+        self._dire(t("etat_recherche_service"))
         total = len(taches)
         echecs = list(refuses or [])       # noms refusés avant même d'essayer
         nb_refuses = len(echecs)
@@ -7666,6 +8068,12 @@ class VoxPackApp(ctk.CTk):
                              "style", self._w, "plain", "none")
             except Exception:
                 pass
+        # `overrideredirect(True)` recrée la fenêtre Tk : elle perd la
+        # géométrie calculée plus haut et réapparaît en haut à gauche. On la
+        # recentre tout de suite, puis une seconde fois au repos, quand le
+        # système a fini de recréer la fenêtre.
+        self._centrer_fenetre()
+        self.after(120, self._centrer_fenetre)
         self.lift()
         if sys.platform == "darwin":
             try:
@@ -7692,11 +8100,38 @@ class VoxPackApp(ctk.CTk):
         self.bind("<FocusIn>",
                   lambda e: setattr(self, "_deplacement", None), add="+")
         self.bind("<Escape>", self._echapper, add="+")
+        # Entrée valide la fenêtre de message du dessus (le clavier reste à
+        # la fenêtre principale : le binding de la popup ne suffirait pas).
+        self.bind("<Return>", self._entree_message, add="+")
+        self.bind("<KP_Enter>", self._entree_message, add="+")
+        # Cmd+Z sur macOS, Ctrl+Z ailleurs : la dernière suppression revient.
+        # Le binding est posé sur les deux, au cas où un clavier Mac envoie
+        # Control-Z ; dans un champ, la fonction laisse la main au champ.
+        for touche in ("<Command-z>", "<Control-z>"):
+            self.bind(touche, self._annuler_suppression_touche, add="+")
         # Deux touches seulement : haut et bas font défiler la liste d'une
         # ligne. Le reste du parcours clavier est retiré (décision de
         # Richard, 4 novembre au soir).
         self.bind("<Up>", lambda e: self._fleche_liste(-1), add="+")
         self.bind("<Down>", lambda e: self._fleche_liste(1), add="+")
+
+    def _centrer_fenetre(self):
+        """Place la fenêtre sans cadre au milieu de l'écran.
+
+        La taille est carrée et fixe (`_format`). Le décalage de 15 px vers
+        le haut tient compte de la barre de menus de macOS, sinon la fenêtre
+        paraît trop basse. Sur un écran plus petit que la fenêtre, on colle
+        au bord au lieu de sortir de l'écran.
+        """
+        largeur = hauteur = self._format
+        ecran_l = self.winfo_screenwidth()
+        ecran_h = self.winfo_screenheight()
+        x = max((ecran_l - largeur) // 2, 0)
+        y = max((ecran_h - hauteur) // 2 - 15, 0)
+        try:
+            self.geometry(f"{largeur}x{hauteur}+{x}+{y}")
+        except tk.TclError:
+            pass
 
     def _relacher_topmost(self):
         try:
@@ -7850,16 +8285,42 @@ class VoxPackApp(ctk.CTk):
         self._toile.yview_scroll(sens * self._hauteur_ligne, "units")
         return "break"
 
+    def _fermer_aide(self):
+        """Referme l'aide si elle est ouverte ; dit si oui.
+
+        Échap reste au clavier de la fenêtre principale (fenêtre sans cadre
+        oblige) : c'est donc ce chemin qui ferme l'aide quand elle n'a pas
+        le clavier. Sans lui, Échap ne faisait rien tant que l'aide était
+        ouverte.
+        """
+        aide = getattr(self, "_aide", None)
+        if aide is None or not aide.winfo_exists():
+            self._aide = None
+            return False
+        self._aide = None
+        self._deplacement = None
+        try:
+            aide.grab_release()
+        except tk.TclError:
+            pass
+        relacher_souris()
+        aide.after_idle(lambda: (relacher_souris(), aide.destroy()))
+        return True
+
     def _echapper(self, _evenement=None):
-        """Échap : referme l'alerte ouverte, puis la fenêtre des langues, puis les menus.
+        """Échap : referme l'alerte, la fenêtre des langues, l'aide, les menus.
 
         L'alerte passe en premier : c'est la fenêtre du dessus, et c'est
-        celle qu'on veut voir disparaître. Si elle n'a pas réussi à prendre
-        le clavier (fenêtre sans cadre), c'est ce chemin-là qui la ferme.
+        celle qu'on veut voir disparaître. Viennent ensuite les fenêtres
+        dans leur ordre d'empilement (la fenêtre des langues est ouverte
+        au-dessus de l'aide). Si elles n'ont pas réussi à prendre le clavier
+        (fenêtre sans cadre), c'est ce chemin-là qui les ferme.
         """
         if self._fermer_derniere_alerte():
             return "break"
         if self._fermer_langues():
+            return "break"
+        if self._fermer_aide():
             return "break"
         self._fermer_menus()
 
@@ -7967,5 +8428,17 @@ class VoxPackApp(ctk.CTk):
 
 
 if __name__ == "__main__":
+    if "--smoke-test" in sys.argv:
+        # Ce que la CI lance sur le binaire compilé : construire la fenêtre,
+        # vérifier qu'elle existe, puis quitter. Un paquet auquel il manque
+        # `voxpack_data` (ou une image de la carcasse) échoue ici, au lieu de
+        # ne se voir qu'une fois installé chez quelqu'un.
+        app = VoxPackApp()
+        app.update()
+        if not app.winfo_exists():
+            raise SystemExit(1)
+        app.destroy()
+        print("smoke-test: ok")
+        raise SystemExit(0)
     app = VoxPackApp()
     app.mainloop()
