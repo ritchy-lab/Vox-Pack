@@ -82,6 +82,56 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+# ------------------------------------------------------------------
+# La jauge animée du splash
+# ------------------------------------------------------------------
+# Le splash de PyInstaller ne sait afficher qu'une image et une ligne de
+# texte. Pour avoir la jauge rouge de l'application, on ajoute du Tcl au
+# script qu'il exécute : la jauge avance pendant la décompression et une
+# ligne d'état défile. Le script est construit par Splash.generate_script :
+# on remplace la fonction de template le temps de la compilation.
+import PyInstaller.building.splash_templates as _splash_templates
+
+_JAUGE_SPLASH = r"""
+font create splashTexte {*}[font actual TkDefaultFont]
+font configure splashTexte -size 9
+.root.canvas create rectangle 20 184 620 192 -fill "#040B0C" -outline ""
+set barreJauge [.root.canvas create rectangle 20 186 20 190 -fill "#FF0D00" -outline ""]
+.root.canvas create text 20 232 -anchor sw -fill "#7C959A" -font splashTexte -text "Chargement de Vox-Pack..." -tag texteEtat
+set departJauge [clock milliseconds]
+set etats [list "Chargement de Vox-Pack..." "Décompression des fichiers..." "Ouverture de l'interface..."]
+set numeroEtat 0
+proc animerJauge {} {
+    global departJauge barreJauge
+    set ecoule [expr {[clock milliseconds] - $departJauge}]
+    set part [expr {1.0 - exp(-$ecoule / 6500.0)}]
+    if {$part > 0.93} { set part 0.93 }
+    set x [expr {20.0 + 600.0 * $part}]
+    .root.canvas coords $barreJauge 20 186 $x 190
+    after 50 animerJauge
+}
+proc faireDefilerEtat {} {
+    global etats numeroEtat
+    incr numeroEtat
+    if {$numeroEtat >= [llength $etats]} { set numeroEtat 0 }
+    .root.canvas itemconfigure texteEtat -text [lindex $etats $numeroEtat]
+    after 3000 faireDefilerEtat
+}
+after 50 animerJauge
+after 3000 faireDefilerEtat
+"""
+
+_build_script_origine = _splash_templates.build_script
+
+
+def _build_script_voxpack(text_options=None, always_on_top=False):
+    return (_build_script_origine(text_options=None,
+                                  always_on_top=always_on_top)
+            + "\n" + _JAUGE_SPLASH)
+
+
+_splash_templates.build_script = _build_script_voxpack
+
 # Windows : un écran de démarrage pendant que PyInstaller décompresse le
 # .exe (9 à 14 s sur un PC, voir la passation du 5 novembre). Le splash ne
 # raccourcit pas l'attente, mais il la montre : l'application ne paraît plus
