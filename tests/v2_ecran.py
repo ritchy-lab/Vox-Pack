@@ -16,6 +16,7 @@ le fait qu'un clic sur un curseur ne déplace pas la fenêtre.
 import json
 import os
 import sys
+import threading
 import tkinter as tk
 import tempfile
 import time
@@ -144,6 +145,39 @@ def main() -> int:
     verifier("le compteur suit la barre",
              app.lbl_compteur.itemcget(app.lbl_compteur._item, "text")
              == "5 / 10")
+
+    print("Jauge")
+    hauteur = app.progress._hauteur
+    echelle = app.progress.ECHELLE
+    _cx, cy, _rx, ry = app.progress._ronds[0]
+    verifier("le rond a la même marge en haut et en bas",
+             abs((cy - ry) - echelle) < 0.01
+             and abs((cy + ry) - (hauteur - 1) * echelle) < 0.01,
+             f"({cy - ry}, {cy + ry})")
+    verifier("le rond garde deux pixels de moins que la fente",
+             abs(2 * ry / echelle - (hauteur - 2)) < 0.01,
+             f"({2 * ry / echelle} pour {hauteur})")
+
+    print("File d'attente des fils")
+    # Un fil de travail ne doit jamais appeler Tk directement : il dépose
+    # dans la file, et le fil principal exécute. C'est ce qui évite le gel
+    # quand une fenêtre ouvre une boucle modale pendant une génération.
+    def travail():
+        for i in range(50):
+            app._dire(f"fil {i}")
+        app._poster(app.progress.set, 0.25)
+
+    fil = threading.Thread(target=travail)
+    fil.start()
+    fil.join()
+    fin = time.time() + 1.0
+    while time.time() < fin:
+        app.update()
+        time.sleep(0.01)
+    verifier("un fil de travail met la ligne d'état à jour",
+             app.lbl_etat.cget("text") == "fil 49",
+             app.lbl_etat.cget("text"))
+    verifier("la file d'attente est vidée", app._ui_queue.empty())
 
     print("Géométrie")
     # Ces trois contrôles ont été ajoutés après un essai Windows où la liste

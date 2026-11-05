@@ -3408,15 +3408,14 @@ class VoyantV2(tk.Canvas):
 class BarreV2(tk.Canvas):
     """La fente de progression, avec des ronds allumés dedans.
 
-    L'ordre de dessin vient de Richard (4 novembre au soir), et c'est lui qui
-    donne le relief :
+    Le dessin vient de Richard (4 novembre au soir) : fond très sombre, trait
+    noir en haut, ombre claire en bas, et une rangée de ronds espacés.
 
-    1. le fond de la fente, très sombre ;
-    2. les ronds, espacés, sur toute la largeur ;
-    3. la fente et ses deux traits PAR-DESSUS — le trait noir du haut et le
-       trait clair du bas passent devant la rangée et la coupent. Dessinés
-       avant, les ronds paraissaient posés sur le métal au lieu d'être
-       dedans.
+    La fente, ses deux traits et les ronds sont dessinés dans une seule image
+    (quatre fois plus grande, puis réduite) : le rond et la fente partagent
+    donc le même repère, et le centrage ne dépend plus de la façon dont Tk
+    arrondit ses ovales et ses traits. C'est ce qui règle le décalage vu sur
+    Windows, où les traits ne recouvrent pas les bords comme sur macOS.
 
     Seuls les ronds de la partie faite sont rouges : le reste de la fente
     reste vide, pas une rangée de trous gris. Les ronds sont espacés et le
@@ -3430,6 +3429,7 @@ class BarreV2(tk.Canvas):
     OMBRE = "#324C51"      # le trait clair du bas
     NOIR = "#000000"       # le trait noir du haut
     ESPACE = 1             # pixels entre deux ronds
+    ECHELLE = 4            # dessin en grand, puis réduction lissée
 
     def __init__(self, parent, largeur, hauteur, fond, commande=None):
         super().__init__(parent, width=largeur, height=hauteur, bg=fond,
@@ -3444,39 +3444,41 @@ class BarreV2(tk.Canvas):
         self._anim = False
         self._allumes = 0
 
-        # 1. Le fond de la fente.
-        self.create_rectangle(0, 0, largeur, hauteur, fill=self.CREUX,
-                              outline="")
-        # 2. Les ronds.
+        # La fente, le trait noir et l'ombre sont dessinés dans une seule
+        # image, en grand puis réduite : les ronds et la fente partagent donc
+        # exactement le même repère, et le centrage ne dépend plus de la
+        # façon dont Tk arrondit ses ovales et ses traits.
+        self._base = self._dessiner_fente()
         self._ronds = []
         self._creer_ronds()
-        # 3. La fente par-dessus : ses deux traits coupent la rangée.
-        self.create_line(0, 0, largeur, 0, fill=self.NOIR)
-        self.create_line(0, hauteur - 1, largeur, hauteur - 1,
-                         fill=self.OMBRE)
+        self._item = self.create_image(0, 0, anchor="nw")
+        self._photo = None
+        self._dessiner()
+
+    def _dessiner_fente(self):
+        """Le fond de la fente et ses deux traits, en grand."""
+        e = self.ECHELLE
+        largeur = self._largeur * e
+        hauteur = self._hauteur * e
+        image = Image.new("RGB", (largeur, hauteur), self.CREUX)
+        dessin = ImageDraw.Draw(image)
+        dessin.rectangle([0, 0, largeur - 1, hauteur - 1], fill=self.CREUX)
+        # Le trait noir du haut et l'ombre du bas font un pixel logique.
+        dessin.rectangle([0, 0, largeur - 1, e - 1], fill=self.NOIR)
+        dessin.rectangle([0, (self._hauteur - 1) * e, largeur - 1,
+                          hauteur - 1], fill=self.OMBRE)
+        return image
 
     def _creer_ronds(self):
-        """Crée la rangée, une fois pour toutes.
+        """Calcule la rangée, une fois pour toutes.
 
         Les ronds sont posés ENTRE les deux traits, avec la MÊME marge
-        entière au-dessus et au-dessous. Un rond à un pixel des bords se
-        lisait comme un tiret coupé par les traits ; c'est la marge qui
-        donne des ronds, et c'est elle aussi qui les centre.
+        entière au-dessus et au-dessous. Le rond garde la largeur de la fente
+        et deux pixels de moins en hauteur : ces deux pixels sont les deux
+        traits, un en haut et un en bas. Il n'est donc jamais coupé par eux.
 
-        Le rond dessiné garde la largeur de la fente et deux pixels de moins
-        en hauteur, et ces deux pixels sont les deux traits : un en haut, un
-        en bas. Le rond n'est donc jamais coupé par eux. Son empreinte
-        visible reste celle validée sur le Mac, mais elle ne dépend plus de
-        la façon dont Tk dessine les traits. Sur Windows, ceux-ci ne
-        recouvrent pas les bords de la même manière que sur macOS : les ronds
-        paraissaient décalés vers le bas. Avec une marge entière, le centrage
-        est le même sur les deux systèmes.
-
-        L'entraxe et le nombre de ronds restent, eux, calculés sur la hauteur
-        de la fente : la rangée garde exactement la densité validée sur le
-        Mac. Pour des ronds plus gros, il faut une fente plus haute : 7 px
-        donnent des ronds de 5.
-
+        L'entraxe et le nombre de ronds sont calculés sur la hauteur de la
+        fente : la rangée garde exactement la densité validée sur le Mac.
         L'entraxe est réparti sur toute la largeur, de sorte que la rangée
         se termine sur un rond entier et non sur une moitié.
         """
@@ -3484,16 +3486,15 @@ class BarreV2(tk.Canvas):
         pas = largeur_rond + self.ESPACE
         nombre = max(1, int(self._largeur / pas))
         pas = self._largeur / nombre
-        # Le rond visible laisse un pixel de marge en haut et en bas : les
-        # traits ne le coupent plus.
         hauteur_rond = max(2, largeur_rond - 2)
         rayon = largeur_rond / 2
-        haut = (self._hauteur - hauteur_rond) // 2
+        rayon_vertical = hauteur_rond / 2
+        centre_y = self._hauteur / 2
+        e = self.ECHELLE
         for i in range(nombre):
             centre = pas * (i + 0.5)
-            self._ronds.append(self.create_oval(
-                centre - rayon, haut, centre + rayon, haut + hauteur_rond,
-                fill=self.CREUX, outline=""))
+            self._ronds.append((centre * e, centre_y * e,
+                                rayon * e, rayon_vertical * e))
 
     def set(self, valeur):
         self._cible = max(0.0, min(1.0, float(valeur)))
@@ -3528,14 +3529,16 @@ class BarreV2(tk.Canvas):
         allumes = int(round(len(self._ronds) * self._valeur))
         if self._valeur >= 1.0:
             allumes = len(self._ronds)
-        # Seuls les ronds qui changent d'état sont repeints : la jauge
-        # avance de quelques ronds par image, pas de la rangée entière.
-        debut = min(self._allumes, allumes)
-        fin = max(self._allumes, allumes)
-        for i in range(debut, fin):
-            self.itemconfigure(
-                self._ronds[i],
-                fill=self.JAUGE if i < allumes else self.CREUX)
+        image = self._base.copy()
+        if allumes:
+            dessin = ImageDraw.Draw(image)
+            for cx, cy, rx, ry in self._ronds[:allumes]:
+                dessin.ellipse((cx - rx, cy - ry, cx + rx, cy + ry),
+                               fill=self.JAUGE)
+        photo = ImageTk.PhotoImage(
+            image.resize((self._largeur, self._hauteur), Image.LANCZOS))
+        self._photo = photo
+        self.itemconfigure(self._item, image=photo)
         self._allumes = allumes
         if self._commande:
             try:
@@ -4345,6 +4348,13 @@ class VoxPackApp(ctk.CTk):
                 pass
         super().__init__()
 
+        # File des actions d'interface venues des fils de travail. Tkinter
+        # n'est pas thread-safe : un `after` appelé depuis le fil de
+        # génération peut se bloquer dès que le fil principal est dans une
+        # boucle modale (Finder, aide), et l'application se fige. Les fils
+        # déposent donc ici, et le fil principal vide la file (voir
+        # _pomper_ui).
+        self._ui_queue = queue.Queue()
 
         choisir_police()
         # Avant de créer le moindre élément : l'interface s'adapte à la place
@@ -4487,6 +4497,10 @@ class VoxPackApp(ctk.CTk):
         # Habillage v2 : la fenêtre de la maquette (sans barre de titre),
         # posée sur la 1.5.1 intacte. Voir docs/v2-passation.md, §7 et §8.
         self._habiller_fenetre()
+        # Le fil principal vide la file des actions d'interface. Trente
+        # millisecondes : assez court pour que la ligne d'état suive, assez
+        # long pour ne pas peser pendant une génération.
+        self._ui_pompe = self.after(30, self._pomper_ui)
 
     # ------------------------------------------------------------------
     # Menu : exporter / importer une liste, et langue de l'interface
@@ -5576,12 +5590,13 @@ class VoxPackApp(ctk.CTk):
         """
         if self._robot == 4:
             return self.langue if self.langue in VOIX_ROBOT else "en"
-        try:
-            voix = identifiant_voix(self.langue, self.combo_voice.get())
-        except Exception:
-            return "en"
-        return ("fr" if voix.startswith("fr-")
-                else "de" if voix.startswith("de-") else "en")
+        # La langue de l'interface commande aussi la liste des voix : la voix
+        # choisie est donc toujours de cette langue. On ne lit pas
+        # `combo_voice` ici : cette fonction est appelée depuis les fils de
+        # génération, et Tk ne doit pas être touché depuis un autre fil.
+        if self.langue in ("fr", "de"):
+            return self.langue
+        return "en"
 
     def _robot_voice(self):
         """Voix imposée par HAL 9000 (None pour les autres presets)."""
@@ -5829,7 +5844,9 @@ class VoxPackApp(ctk.CTk):
             try:
                 img = Image.open(LOGO_AIDE_PATH)
                 ratio = img.height / img.width
-                largeur = self.largeur_logo
+                # Le bandeau occupe la largeur de la fenêtre d'aide, au lieu
+                # de rester à la taille du petit logo de la 1.5.1.
+                largeur = min(560, max(320, w_popup - 56))
                 img = img.resize((largeur, int(largeur * ratio)),
                                  Image.Resampling.LANCZOS)
                 self._logo_aide = ImageTk.PhotoImage(img)
@@ -6598,19 +6615,50 @@ class VoxPackApp(ctk.CTk):
         self._reglages["langue_ui"] = LANGUE_UI
         ecrire_reglages(self._reglages)
 
+    def _poster(self, action, *args, **kwargs):
+        """Exécute une action d'interface dans le fil principal.
+
+        Depuis le fil principal, l'action part tout de suite. Depuis un fil
+        de travail, elle est déposée dans la file : c'est le fil principal
+        qui l'exécutera (voir _pomper_ui). Aucun fil de travail ne touche
+        donc directement à Tk.
+        """
+        if threading.current_thread() is threading.main_thread():
+            try:
+                action(*args, **kwargs)
+            except Exception:
+                pass
+        else:
+            self._ui_queue.put((action, args, kwargs))
+
+    def _pomper_ui(self):
+        """Vide la file des actions d'interface, puis se replanifie."""
+        while True:
+            try:
+                action, args, kwargs = self._ui_queue.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                action(*args, **kwargs)
+            except Exception:
+                pass
+        try:
+            self._ui_pompe = self.after(30, self._pomper_ui)
+        except Exception:
+            pass
+
     def _dire(self, texte):
         """Écrit une information dans la ligne, sous la barre de progression.
 
-        Appelée depuis un fil de travail (génération, aperçu) : le changement
-        d'affichage est donc confié à la boucle d'événements avec after().
-        L'appel est protégé : si la fenêtre est en train de se fermer, on
-        préfère perdre un message plutôt que de tuer le fil en cours.
+        Appelée aussi bien depuis le fil principal que depuis un fil de
+        travail (génération, aperçu) : dans ce cas, l'affichage passe par la
+        file d'attente, jamais par un `after` direct.
         """
-        def ecrire(txt=texte):
-            self.lbl_etat.configure(text=txt or "waiting...")
+        self._poster(self._ecrire_etat, texte)
 
+    def _ecrire_etat(self, texte):
         try:
-            self.after(0, ecrire)
+            self.lbl_etat.configure(text=texte or "waiting...")
         except Exception:
             pass
 
@@ -6825,8 +6873,9 @@ class VoxPackApp(ctk.CTk):
             # Une seule alerte par session : sinon chaque frappe en ouvrirait une
             if not self._erreur_sauvegarde:
                 self._erreur_sauvegarde = True
-                self.after(0, lambda err=e: self._message(
-                    t("msg_sauvegarde_echec", err=err), icone="erreur"))
+                self._poster(self._message,
+                             t("msg_sauvegarde_echec", err=e),
+                             icone="erreur")
 
     # ------------------------------------------------------------------
     # Aperçu audio
@@ -6944,8 +6993,9 @@ class VoxPackApp(ctk.CTk):
                         raison = raison_lisible(e)
                         if raison == t("err_reseau"):
                             raison = t("err_reseau_detail")
-                        self.after(0, lambda r=raison: self._message(
-                            t("msg_apercu_echec", err=r), icone="erreur"))
+                        self._poster(self._message,
+                                     t("msg_apercu_echec", err=raison),
+                                     icone="erreur")
                     break
                 # Pendant la lecture qui suit, la phrase suivante se prépare.
                 if rang < total:
@@ -6959,8 +7009,8 @@ class VoxPackApp(ctk.CTk):
                 self._lecture = lecture
                 if lecture.erreur is not None:
                     if self._apercu_no == numero:
-                        self.after(0, lambda: self._message(
-                            t("msg_audio_absent"), icone="attention"))
+                        self._poster(self._message, t("msg_audio_absent"),
+                                     icone="attention")
                     break
                 # On attend la fin de la lecture SANS bloquer la boucle : c'est
                 # ce qui laisse le téléchargement de la suite avancer.
@@ -6979,12 +7029,9 @@ class VoxPackApp(ctk.CTk):
             # « Arrêter » a déjà tout remis en place, ou un autre aperçu a
             # pris le relais : ne pas toucher à son bouton ni à son message.
             return
-        try:
-            self.after(0, self._fin_apercu)
-        except Exception:
-            # La fenêtre se ferme : tant pis pour le bouton, l'important est
-            # que le fil se termine proprement.
-            pass
+        # Le fil de travail ne touche pas au bouton : le fil principal s'en
+        # charge via la file.
+        self._poster(self._fin_apercu)
         self._dire("")
 
     # ------------------------------------------------------------------
@@ -7084,12 +7131,10 @@ class VoxPackApp(ctk.CTk):
         finally:
             loop.close()
             self._genere = False
-            try:
-                # On ne lit plus les BooleanVar Tk depuis ce fil : la remise
-                # en place se fait sur le fil principal (voir _apres_generation).
-                self.after(0, self._apres_generation)
-            except Exception:
-                pass  # la fenêtre se ferme : tant pis pour le bouton
+            # On ne lit plus les BooleanVar Tk depuis ce fil : la remise en
+            # place se fait sur le fil principal (voir _apres_generation),
+            # par la file d'attente.
+            self._poster(self._apres_generation)
 
     def _apres_generation(self):
         """Remet le bouton et le compteur en place, sur le fil principal.
@@ -7114,8 +7159,8 @@ class VoxPackApp(ctk.CTk):
             os.makedirs(self.output_dir, exist_ok=True)
         except OSError as e:
             self._dire("")
-            self.after(0, lambda err=e: self._message(
-                t("msg_dossier_echec", err=err), icone="erreur"))
+            self._poster(self._message, t("msg_dossier_echec", err=e),
+                         icone="erreur")
             return
         total = len(taches)
         echecs = list(refuses or [])       # noms refusés avant même d'essayer
@@ -7169,7 +7214,7 @@ class VoxPackApp(ctk.CTk):
                     reseau_suite = 0
 
             val = fait / total
-            self.after(0, lambda v=val: self.progress.set(v))
+            self._poster(self.progress.set, val)
             self._dire(t("etat_avance", fait=fait, total=total, nom=nom,
                          s="s" if fait > 1 else ""))
 
@@ -7182,7 +7227,7 @@ class VoxPackApp(ctk.CTk):
         # On laisse la barre complète visible avant qu'elle redescende :
         # c'est le seul moment où l'on voit la dernière led allumée.
         await asyncio.sleep(PAUSE_LEDS)
-        self.after(0, lambda: self.progress.reset())
+        self._poster(self.progress.reset)
         self._dire("")
 
         reussis = faits
@@ -7202,26 +7247,26 @@ class VoxPackApp(ctk.CTk):
                                     s2="s" if len(echecs) > 1 else "",
                                     detail=detail)
             out = self.output_dir
-            self.after(0, lambda: self._message(
-                texte, icone="attention",
-                boutons=[(t("ouvrir_dossier"),
-                          lambda: self._ouvrir_dossier(out)),
-                         (t("fermer"), None)]))
+            self._poster(self._message, texte, icone="attention",
+                         boutons=[(t("ouvrir_dossier"),
+                                   lambda: self._ouvrir_dossier(out)),
+                                  (t("fermer"), None)])
         elif echecs:
-            self.after(0, lambda: self._message(
+            self._poster(
+                self._message,
                 t("msg_bilan_echecs", reussis=reussis,
                   s1="s" if reussis > 1 else "", total=total + nb_refuses,
                   problemes=len(echecs), s2="s" if len(echecs) > 1 else "",
                   detail=detail),
-                icone="erreur"))
+                icone="erreur")
         else:
             out = self.output_dir
-            self.after(0, lambda: self._message(
-                t("msg_succes", dossier=chemin_lisible(out)),
-                icone="succes",
-                boutons=[(t("ouvrir_dossier"),
-                          lambda: self._ouvrir_dossier(out)),
-                         (t("fermer"), None)]))
+            self._poster(self._message,
+                         t("msg_succes", dossier=chemin_lisible(out)),
+                         icone="succes",
+                         boutons=[(t("ouvrir_dossier"),
+                                   lambda: self._ouvrir_dossier(out)),
+                                  (t("fermer"), None)])
 
     # ------------------------------------------------------------------
     # Sons système d'EdgeTX
@@ -7311,10 +7356,7 @@ class VoxPackApp(ctk.CTk):
         try:
             asyncio.run(self._generer_sons_systeme(sortie, voice_id))
         finally:
-            try:
-                self.after(0, self._fin_sons_systeme)
-            except Exception:
-                pass  # la fenêtre se ferme : tant pis pour le bouton
+            self._poster(self._fin_sons_systeme)
 
     def _fin_sons_systeme(self):
         """Le bouton redevient « Let's Go » une fois la génération terminée."""
@@ -7344,14 +7386,15 @@ class VoxPackApp(ctk.CTk):
                 self.langue)
         except Exception as e:
             self._dire("")
-            self.after(0, lambda err=e: self._message(
-                t("msg_csv_officiel_echec", err=str(err)[:160]),
-                icone="erreur"))
+            self._poster(
+                self._message,
+                t("msg_csv_officiel_echec", err=str(e)[:160]),
+                icone="erreur")
             return
         if not lignes:
             self._dire("")
-            self.after(0, lambda: self._message(
-                t("msg_csv_aucun_systeme"), icone="attention"))
+            self._poster(self._message, t("msg_csv_aucun_systeme"),
+                         icone="attention")
             return
 
         taches, refuses = trier_sons_systeme(lignes)
@@ -7362,13 +7405,12 @@ class VoxPackApp(ctk.CTk):
                                for nom, raison in refuses[:6])
             if len(refuses) > 6:
                 detail += "\n" + t("msg_autres", n=len(refuses) - 6)
-            self.after(0, lambda detail=detail, refuses=list(refuses):
-                       self._message(
-                           t("msg_sons_bilan", reussis=0, s1="",
-                             total=len(refuses), problemes=len(refuses),
-                             s2="s" if len(refuses) > 1 else "",
-                             detail=detail),
-                           icone="erreur"))
+            self._poster(
+                self._message,
+                t("msg_sons_bilan", reussis=0, s1="",
+                  total=len(refuses), problemes=len(refuses),
+                  s2="s" if len(refuses) > 1 else "", detail=detail),
+                icone="erreur")
             return
 
         self._total_v2 = len(taches)
@@ -7376,8 +7418,8 @@ class VoxPackApp(ctk.CTk):
             os.makedirs(sortie, exist_ok=True)
         except OSError as e:
             self._dire("")
-            self.after(0, lambda err=e: self._message(
-                t("msg_dossier_echec", err=err), icone="erreur"))
+            self._poster(self._message, t("msg_dossier_echec", err=e),
+                         icone="erreur")
             return
 
         self._dire(t("etat_recherche_service"))
@@ -7440,7 +7482,7 @@ class VoxPackApp(ctk.CTk):
                         except OSError:
                             pass
 
-                self.after(0, lambda v=traite / total: self.progress.set(v))
+                self._poster(self.progress.set, traite / total)
                 # Arrêt demandé : on garde « Arrêt demandé… » à l'écran plutôt
                 # que d'afficher gaiement une progression.
                 if stop is not None and stop.is_set():
@@ -7453,7 +7495,7 @@ class VoxPackApp(ctk.CTk):
 
         # On laisse la barre complète visible, comme la génération normale.
         await asyncio.sleep(PAUSE_LEDS)
-        self.after(0, lambda: self.progress.reset())
+        self._poster(self.progress.reset)
         self._dire("")
 
         sortie_texte = chemin_lisible(sortie)
@@ -7493,11 +7535,10 @@ class VoxPackApp(ctk.CTk):
             # travaillé sur la copie enregistrée lors d'un précédent essai.
             texte += "\n\n" + t("msg_sons_cache")
 
-        self.after(0, lambda: self._message(
-            texte, icone=icone,
-            boutons=[(t("ouvrir_dossier"),
-                      lambda: self._ouvrir_dossier(sortie)),
-                     (t("fermer"), None)]))
+        self._poster(self._message, texte, icone=icone,
+                     boutons=[(t("ouvrir_dossier"),
+                               lambda: self._ouvrir_dossier(sortie)),
+                              (t("fermer"), None)])
 
 
     # ------------------------------------------------------------------

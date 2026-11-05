@@ -81,6 +81,11 @@ def tester_bilan_generation():
         def _dire(self, texte):
             pass
 
+        def _poster(self, action, *args, **kwargs):
+            # Le vrai _poster passe par la file d'attente ; ici, tout est
+            # synchrone.
+            action(*args, **kwargs)
+
         def after(self, delai, fonction):
             fonction()
 
