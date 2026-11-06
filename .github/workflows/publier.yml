@@ -19,6 +19,11 @@ name: Publier une version
 
 on:
   push:
+    # Un envoi sur la branche de test fabrique les fichiers pour les essais,
+    # sans rien publier : le job « publier » exige une étiquette (ou une
+    # étiquette passée à la main).
+    branches:
+      - v2.0.0-pc-test
     tags:
       # GitHub met une majuscule toute seule dans son champ d'étiquette :
       # on accepte donc les deux, sinon la publication reste sans fichier.
