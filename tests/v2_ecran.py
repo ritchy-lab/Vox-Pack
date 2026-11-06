@@ -425,21 +425,29 @@ def main() -> int:
     # Le message de nom doit suivre la frappe, comme dans la 1.5.1. On ne
     # réécrit pas la liste pour autant : le contrôle en direct ne touche
     # qu'au dessin de la ligne.
+    nom_avant = app.lignes[1]["nom"]
     app._editer_ligne(1, 0)
     entree = app._edition[2]
     entree.delete(0, "end")
     entree.insert(0, "beaucouptroplong")
     app._verifier_nom_live(1)
-    app.update()
     verifier("le message de nom suit la frappe",
              "caractères" in app.lignes[1]["souci"], app.lignes[1]["souci"])
+    # La fenêtre du test est retirée : un FocusOut peut fermer le champ et
+    # valider le nom. On ne dépend donc pas de son état.
+    if app._edition is None:
+        app._editer_ligne(1, 0)
+    entree = app._edition[2]
     entree.delete(0, "end")
     entree.insert(0, "court")
     app._verifier_nom_live(1)
-    app.update()
     verifier("le message disparaît quand le nom redevient valide",
              app.lignes[1]["souci"] == "", app.lignes[1]["souci"])
     app._annuler_edition()
+    if app.lignes[1]["nom"] != nom_avant:
+        app.lignes[1]["nom"] = nom_avant
+        app._on_change()
+        app._dessiner_liste()
 
     # Un nom corrigé sans changer de souci ne doit pas rester l'ancien texte
     # dessiné sous le champ (le modèle était bon, l'écran non).
