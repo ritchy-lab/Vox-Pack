@@ -26,14 +26,16 @@ cd "$(dirname "$0")/.."
 
 SOURCES="assets/sources"
 BANDEAU="$SOURCES/bandeau-vox-pack.png"
-# Le dessin de la v3 (6 novembre 2026) : l'émetteur seul, sans le mot,
-# lisible en 16 px. Plein cadre, sans la marge de 824 px.
-ICONE="$SOURCES/icone-vox-pack-v3.png"
+# Deux dessins : le détaillé de la v2 pour les grandes tailles (1024 px,
+# plein cadre, sans la marge de 824 px) et l'émetteur seul de la v3 pour
+# les petites (16/24), où le détaillé serait illisible.
+ICONE="$SOURCES/icone-vox-pack-v2.png"
+PETITE="$SOURCES/icone-vox-pack-v3.png"
 TRAVAIL="/tmp/voxpack-images"
 COTE=1024          # côté de l'icône macOS moderne
 mkdir -p "$TRAVAIL" icon.iconset
 
-for f in "$BANDEAU" "$ICONE"; do
+for f in "$BANDEAU" "$ICONE" "$PETITE"; do
   [ -f "$f" ] || { echo "Fichier manquant : $f"; exit 1; }
 done
 

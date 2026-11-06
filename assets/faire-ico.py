@@ -20,23 +20,22 @@ import sys
 from PIL import Image
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Le dessin de la v2 (3 novembre 2026) : l'émetteur avec le mot VOX-PACK.
-GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
+# Deux dessins : le détaillé (avec le mot) pour les grandes tailles, et
+# l'émetteur seul pour les petites (16/24), où le détaillé serait illisible.
+GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2.png")
+PETITE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
 
-# Un seul dessin, à toutes les tailles : Richard veut son émetteur partout.
-# Le dessin de la v3 est l'émetteur seul, sans le mot VOX-PACK : il reste
-# lisible en 16 px. Les tailles 20/30/36/40/96 couvrent les mises à l'échelle
-# Windows (125 %, 150 %) sans rééchantillonnage.
+# 16/20/24 : le petit dessin. 30 et au-dessus : le dessin détaillé.
 TAILLES = (16, 20, 24, 30, 32, 36, 40, 48, 64, 96, 128, 256)
+PETITES = (16, 20, 24)
 
 
 def recadrer(image, respiration=0.0):
     """Rase les bords transparents, sans ajouter de marge.
 
     Windows n'impose aucune grille : ses applications remplissent leur case.
-    Le dessin de la v3 est un carré plein : il n'y a rien à rogner. On ne
-    garde aucune respiration, pour qu'aucun contour blanc n'apparaisse dans la
-    barre des tâches.
+    On ne garde aucune respiration, pour qu'aucun contour blanc
+    n'apparaisse dans la barre des tâches.
     """
     boite = image.getbbox()
     if boite is None:
@@ -82,15 +81,18 @@ def ecrire_ico(images, chemin):
 
 
 def main():
-    if not os.path.exists(GRANDE):
+    if not os.path.exists(GRANDE) or not os.path.exists(PETITE):
         print("     (dessins manquants : icon.ico non refait)")
         return 1
 
     grande = recadrer(Image.open(GRANDE).convert("RGBA"))
-    images = [grande.resize((c, c), Image.LANCZOS) for c in TAILLES]
+    petite = recadrer(Image.open(PETITE).convert("RGBA"))
+    images = [(petite if c in PETITES else grande).resize((c, c),
+                                                          Image.LANCZOS)
+              for c in TAILLES]
     ecrire_ico(images, os.path.join(RACINE, "icon.ico"))
-    print("     icon.ico : le dessin à toutes les tailles ("
-          + "/".join(map(str, TAILLES)) + "), recadré pour remplir sa case")
+    print("     icon.ico : " + "/".join(map(str, TAILLES))
+          + " ; 16/20/24 en petit format, 30+ en détaillé")
     return 0
 
 

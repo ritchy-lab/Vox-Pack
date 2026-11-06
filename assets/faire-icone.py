@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """Fabrique icon.png et le dossier icon.iconset à partir du dessin de la v2.
 
-Le dessin de Richard (`assets/sources/icone-vox-pack-v3.png`, 539 x 539)
-est un carré plein : l'émetteur sur fond noir, sans le mot VOX-PACK. Il est
-posé à 1024 px, sans marge. La marge de 824 px de la grille d'Apple faisait
-apparaître un contour blanc dans le Dock ; Richard a demandé le plein cadre,
-et macOS accepte très bien les grandes icônes.
+Deux dessins, deux usages :
 
-Windows, lui, n'impose pas de grille : `faire-ico.py` reprend le même dessin
-et le fait remplir chaque taille.
+- `icone-vox-pack-v2.png` (le dessin détaillé, avec le mot VOX-PACK) fait
+  l'icône 1024 px et les grandes tailles ;
+- `icone-vox-pack-v3.png` (l'émetteur seul, sur fond noir) fait les petites
+  tailles 16/24, où le dessin détaillé serait illisible.
+
+L'icône 1024 est plein cadre, sans la marge de 824 px de la grille d'Apple
+qui faisait apparaître un contour blanc dans le Dock.
 
     venv/bin/python assets/faire-icone.py
 
@@ -21,7 +22,8 @@ import sys
 from PIL import Image
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SOURCE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
+SOURCE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2.png")
+PETITE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
 
 COTE = 1024        # côté du carré macOS moderne
 DESSIN = 1024      # plein cadre : plus de marge blanche (demande de Richard)
@@ -55,8 +57,8 @@ def carre(image):
 
 
 def main():
-    if not os.path.exists(SOURCE):
-        print("     (dessin de la v2 manquant : icon.png non refait)")
+    if not os.path.exists(SOURCE) or not os.path.exists(PETITE):
+        print("     (dessins manquants : icon.png non refait)")
         return 1
 
     dessin = carre(Image.open(SOURCE).convert("RGBA"))
@@ -65,15 +67,18 @@ def main():
     maitre.alpha_composite(reduit, ((COTE - DESSIN) // 2,
                                     (COTE - DESSIN) // 2))
     maitre.save(os.path.join(RACINE, "icon.png"))
-    print(f"     icon.png : {COTE} x {COTE}, dessin sur {DESSIN} px "
-          "(la grille du Mac)")
+    print(f"     icon.png : {COTE} x {COTE}, dessin détaillé sur {DESSIN} px")
 
+    petite = carre(Image.open(PETITE).convert("RGBA"))
     dossier = os.path.join(RACINE, "icon.iconset")
     os.makedirs(dossier, exist_ok=True)
     for nom, taille in ICONSET:
-        image = maitre.resize((taille, taille), Image.LANCZOS)
+        # Les deux cases 16 pt (16 et 32 px) prennent le dessin petit format.
+        source = petite if taille <= 32 else maitre
+        image = source.resize((taille, taille), Image.LANCZOS)
         image.save(os.path.join(dossier, nom))
-    print(f"     icon.iconset : {len(ICONSET)} tailles, de 16 à 1024 px")
+    print(f"     icon.iconset : {len(ICONSET)} tailles ; "
+          "16/32 en petit format, 64+ en détaillé")
     return 0
 
 
