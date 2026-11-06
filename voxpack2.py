@@ -4492,6 +4492,11 @@ class VoxPackApp(ctk.CTk):
         # Dernière ligne cochée à la souris : sert de point de départ quand on
         # étend la sélection avec la touche Majuscule.
         self._ancre_selection = None
+        # La ligne créée par « Ajouter », le temps de saisir son nom puis sa
+        # phrase. On garde l'objet lui-même, et non son rang : un défilement,
+        # une suppression ou un import ne peut pas le confondre avec une autre
+        # ligne.
+        self._ligne_neuve = None
         # UNE seule langue : celle de l'interface. Elle commande les textes,
         # les voix ET la liste de phrases. Au premier lancement c'est celle du
         # système ; ensuite, celle que l'utilisateur a choisie dans le menu.
@@ -6503,8 +6508,20 @@ class VoxPackApp(ctk.CTk):
         « nouveau / Texte à prononcer » de plus, cochée, qui partait ensuite
         à la génération. « Ajouter » reste le seul chemin vers une ligne
         neuve.
+
+        Sur une ligne qui vient d'être ajoutée, Entrée dans le nom ouvre le
+        champ phrase : la phrase de départ (« Texte à prononcer ») ne doit pas
+        rester telle quelle dans le fichier. Entrée dans la phrase, elle,
+        referme.
         """
+        if self._edition is None:
+            return "break"
+        rang, colonne, _entree = self._edition
+        neuve = (0 <= rang < len(self.lignes)
+                 and self.lignes[rang] is self._ligne_neuve)
         self._valider_edition()
+        if neuve and colonne == 0 and 0 <= rang < len(self.lignes):
+            self._editer_ligne(rang, 1)
         return "break"
 
     def _valider_edition(self):
@@ -6527,6 +6544,9 @@ class VoxPackApp(ctk.CTk):
         # seulement si elle existe encore.
         if 0 <= rang < len(self.lignes):
             self.lignes[rang]["nom" if colonne == 0 else "texte"] = valeur
+            # La phrase est saisie : la ligne n'est plus « neuve ».
+            if colonne == 1 and self.lignes[rang] is self._ligne_neuve:
+                self._ligne_neuve = None
             self._on_change()
 
     def _rendre_le_focus(self):
@@ -6581,6 +6601,7 @@ class VoxPackApp(ctk.CTk):
 
     def ajouter_ligne(self):
         rang = self._ajouter_ligne_ui(t("nouvelle_ligne"), t("texte_a_dire"))
+        self._ligne_neuve = self.lignes[rang]
         # La ligne ajoutée est active d'office : cochée, prête à être tapée.
         self.lignes[rang]["coche"] = True
         self._verifier_noms(redessiner=False)
