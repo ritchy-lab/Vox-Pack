@@ -6481,6 +6481,13 @@ class VoxPackApp(ctk.CTk):
         entree.bind("<Return>", self._entree_valide)
         entree.bind("<Escape>", self._echapper_liste)
         entree.bind("<FocusOut>", lambda e: self._valider_edition())
+        if colonne == 0:
+            # Le message de nom (trop long, accent, doublon…) doit suivre la
+            # frappe, comme dans la 1.5.1. On ne réécrit pas la liste pour
+            # autant : seul le dessin de la ligne est mis à jour.
+            entree.bind(
+                "<KeyRelease>",
+                lambda e, r=rang: self._verifier_nom_live(r))
         self._edition = (rang, colonne, entree)
         entree.focus_set()
         try:
@@ -6524,6 +6531,54 @@ class VoxPackApp(ctk.CTk):
             self._editer_ligne(rang, 1)
         return "break"
 
+    def _verifier_nom_live(self, rang):
+        """Suit la frappe du nom : message et couleur, sans enregistrer.
+
+        La 1.5.1 appelait _on_change() à chaque touche : le message était
+        immédiat, mais la liste était réécrite à chaque lettre. Ici on ne
+        touche qu'au dessin de la ligne ; _valider_edition() fera le vrai
+        contrôle et l'écriture quand le champ se referme.
+        """
+        if self._edition is None:
+            return
+        r, colonne, entree = self._edition
+        if r != rang or colonne != 0 or not (0 <= rang < len(self.lignes)):
+            return
+        try:
+            nom = entree.get()
+        except tk.TclError:
+            return
+        souci = self._souci_live(rang, nom)
+        if self.lignes[rang]["souci"] != souci:
+            self.lignes[rang]["souci"] = souci
+            self._dessiner_ligne(rang)
+            # Le champ est une fenêtre du canevas : il doit rester au-dessus
+            # de la ligne que l'on vient de redessiner.
+            self._toile.tag_raise("edition")
+        try:
+            entree.configure(fg=DANGER if souci else self.ACCENT_V2)
+        except tk.TclError:
+            pass
+
+    def _souci_live(self, rang, nom):
+        """Le souci d'un nom en cours de frappe, selon la règle de la liste.
+
+        _verifier_noms() parcourt les lignes dans l'ordre : c'est la PREMIÈRE
+        occurrence d'un nom qui le garde, la suivante qui est signalée. On ne
+        regarde donc que les lignes d'avant.
+        """
+        nom = nom.strip()
+        souci = probleme_nom(nom)
+        if souci:
+            return souci
+        for i, ligne in enumerate(self.lignes):
+            if i >= rang:
+                break
+            autre = ligne["nom"].strip()
+            if probleme_nom(autre) is None and autre.lower() == nom.lower():
+                return t("pb_doublon", n=i + 1)
+        return ""
+
     def _valider_edition(self):
         """Écrit ce que le champ contient dans le modèle, et referme le champ."""
         if self._edition is None:
@@ -6564,11 +6619,16 @@ class VoxPackApp(ctk.CTk):
         """Échap dans un champ : on jette la saisie, sans rien enregistrer."""
         if self._edition is None:
             return
-        _, _, entree = self._edition
+        rang, _, entree = self._edition
         self._edition = None
         self._rendre_le_focus()
         entree.destroy()
         self._toile.delete("edition")
+        # Le message affiché pendant la frappe concernait le texte abandonné :
+        # on le recalcule depuis le nom réellement gardé.
+        if 0 <= rang < len(self.lignes):
+            self._verifier_noms(redessiner=False)
+            self._dessiner_ligne(rang)
 
     def _echapper_liste(self, _evenement=None):
         """Échap dans un champ : on jette la saisie, et on referme les menus."""

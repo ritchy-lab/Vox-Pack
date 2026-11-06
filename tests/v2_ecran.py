@@ -417,6 +417,25 @@ def main() -> int:
     verifier("Échap jette la saisie",
              app.lignes[0]["texte"] == "phrase corrigée")
 
+    # Le message de nom doit suivre la frappe, comme dans la 1.5.1. On ne
+    # réécrit pas la liste pour autant : le contrôle en direct ne touche
+    # qu'au dessin de la ligne.
+    app._editer_ligne(1, 0)
+    entree = app._edition[2]
+    entree.delete(0, "end")
+    entree.insert(0, "beaucouptroplong")
+    app._verifier_nom_live(1)
+    app.update()
+    verifier("le message de nom suit la frappe",
+             "caractères" in app.lignes[1]["souci"], app.lignes[1]["souci"])
+    entree.delete(0, "end")
+    entree.insert(0, "court")
+    app._verifier_nom_live(1)
+    app.update()
+    verifier("le message disparaît quand le nom redevient valide",
+             app.lignes[1]["souci"] == "", app.lignes[1]["souci"])
+    app._annuler_edition()
+
     # Sous Windows, un champ créé juste après un clic sur un bouton dessiné
     # ne recevait rien : « focus_set » ne fait rien quand la fenêtre n'est pas
     # encore la fenêtre active du système. C'est « focus_force » qui sauve.
