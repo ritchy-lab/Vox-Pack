@@ -6598,11 +6598,20 @@ class VoxPackApp(ctk.CTk):
         # fermeture (suppression, import, changement de langue) : on écrit
         # seulement si elle existe encore.
         if 0 <= rang < len(self.lignes):
-            self.lignes[rang]["nom" if colonne == 0 else "texte"] = valeur
+            cle = "nom" if colonne == 0 else "texte"
+            change = self.lignes[rang][cle] != valeur
+            self.lignes[rang][cle] = valeur
             # La phrase est saisie : la ligne n'est plus « neuve ».
             if colonne == 1 and self.lignes[rang] is self._ligne_neuve:
                 self._ligne_neuve = None
             self._on_change()
+            # _verifier_noms() ne redessine que les lignes dont le SOUCI
+            # change. Un nom ou une phrase corrigé sans changer de souci
+            # gardait donc l'ancien texte dessiné sous le champ : la ligne
+            # affichait encore « nouveau » après la correction. On redessine
+            # la ligne éditée, avec son souci à jour.
+            if change:
+                self._dessiner_ligne(rang)
 
     def _rendre_le_focus(self):
         """Rend le focus au canevas avant de détruire un champ.

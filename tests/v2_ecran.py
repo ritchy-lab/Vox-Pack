@@ -408,6 +408,11 @@ def main() -> int:
     app._valider_edition()
     verifier("le champ écrit dans la liste",
              app.lignes[0]["texte"] == "phrase corrigée")
+    textes = [app._toile.itemcget(i, "text")
+              for i in app._toile.find_withtag("l0")
+              if app._toile.type(i) == "text"]
+    verifier("la phrase corrigée est redessinée",
+             "phrase corrigée" in textes, textes)
     verifier("le champ se referme après validation",
              app._edition is None and not app._toile.find_withtag("edition"))
     app._editer_ligne(0, 1)
@@ -435,6 +440,22 @@ def main() -> int:
     verifier("le message disparaît quand le nom redevient valide",
              app.lignes[1]["souci"] == "", app.lignes[1]["souci"])
     app._annuler_edition()
+
+    # Un nom corrigé sans changer de souci ne doit pas rester l'ancien texte
+    # dessiné sous le champ (le modèle était bon, l'écran non).
+    avant_nom = app.lignes[1]["nom"]
+    app._editer_ligne(1, 0)
+    entree = app._edition[2]
+    entree.delete(0, "end")
+    entree.insert(0, "essai")
+    app._valider_edition()
+    textes = [app._toile.itemcget(i, "text")
+              for i in app._toile.find_withtag("l1")
+              if app._toile.type(i) == "text"]
+    verifier("le nom corrigé est redessiné", "essai" in textes, textes)
+    app.lignes[1]["nom"] = avant_nom
+    app._on_change()
+    app._dessiner_liste()
 
     # Sous Windows, un champ créé juste après un clic sur un bouton dessiné
     # ne recevait rien : « focus_set » ne fait rien quand la fenêtre n'est pas
