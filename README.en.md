@@ -170,23 +170,29 @@ application again:
 
 ### Windows
 
-1. Download **`Vox-Pack.exe`** from the
+1. Download **`Vox-Pack-Setup.exe`** from the
    [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) page.
 2. Double-click it. Windows shows **"Windows protected your PC"**: click
    **More info**, then **Run anyway**.
+3. The installer installs Vox-Pack **for your user**, without an administrator
+   password, and adds a Start Menu shortcut. You can also tick "Create a
+   desktop shortcut". Vox-Pack starts at the end.
 
-   Again, this is because the application is not signed. It asks for no special
-   rights: it simply creates the `.wav` files in the folder you choose.
+   The **portable `Vox-Pack.exe`** is still on the Releases page: run it
+   directly, nothing to install.
+
+   Uninstalling (Settings → Apps) does not touch your lists: they stay in
+   `Documents\Vox-Pack`.
 
 <details>
-<summary>If Windows offers to open it with Notepad</summary>
+<summary>If Windows offers to open the file with Notepad</summary>
 
 That is not Vox-Pack: the download did not arrive in one piece. The file must
-be named **exactly `Vox-Pack.exe`** and weigh **several dozen MB**. If it is a
-few KB, ends in `.crdownload`, `.part` or `.txt`, or has no extension, delete
-it and download it again from the Releases page — click the `Vox-Pack.exe`
-file, not "Download ZIP". Right-click → **Properties** shows the full name
-and size.
+be named **exactly `Vox-Pack-Setup.exe`** (or `Vox-Pack.exe` for the portable
+version) and weigh **several dozen MB**. If it is a few KB, ends in
+`.crdownload`, `.part` or `.txt`, or has no extension, delete it and download
+it again from the Releases page — click the file, not "Download ZIP".
+Right-click → **Properties** shows the full name and size.
 
 </details>
 

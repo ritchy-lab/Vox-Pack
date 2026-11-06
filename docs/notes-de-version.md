@@ -161,8 +161,11 @@ vol : « Moteur armé », « Train sorti », « Chrono démarré »…
   l'application dans ton dossier Applications.
 - **macOS Intel** : `Vox-Pack-Intel.zip` — même chose, pour les Mac à
   processeur Intel.
-- **Windows** : `Vox-Pack.exe` — à lancer directement, rien à installer. Ne
-  prends pas `Vox-Pack.zip` : c'est la version macOS.
+- **Windows** : `Vox-Pack-Setup.exe` — l'installeur (recommandé). Il installe
+  Vox-Pack pour ton utilisateur, sans mot de passe administrateur, avec un
+  raccourci dans le menu Démarrer. La version portable `Vox-Pack.exe` reste
+  disponible : elle se lance directement, sans rien installer. Ne prends pas
+  `Vox-Pack.zip` : c'est la version macOS.
 
 **Au tout premier lancement**, ton système affichera un avertissement
 (l'application n'a pas de certificat payant) : les deux clics à faire sont
@@ -335,8 +338,10 @@ Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
   your Applications folder.
 - **macOS Intel**: `Vox-Pack-Intel.zip` — same thing, for Macs with an Intel
   processor.
-- **Windows**: `Vox-Pack.exe` — just run it, nothing to install. Do not take
-  `Vox-Pack.zip`: that one is for macOS.
+- **Windows**: `Vox-Pack-Setup.exe` — the installer (recommended). It installs
+  Vox-Pack for your user, without an administrator password, with a Start Menu
+  shortcut. The portable `Vox-Pack.exe` is still available: run it directly,
+  nothing to install. Do not take `Vox-Pack.zip`: that one is for macOS.
 
 **The very first time**, your system will show a warning (the app has no paid
 certificate): the two clicks to make are explained in the

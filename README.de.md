@@ -184,24 +184,30 @@ und starten Sie die Anwendung erneut:
 
 ### Windows
 
-1. Laden Sie **`Vox-Pack.exe`** von der
+1. Laden Sie **`Vox-Pack-Setup.exe`** von der
    [Releases](https://github.com/ritchy-lab/Vox-Pack/releases)-Seite.
 2. Doppelklick. Windows zeigt **„Der Computer wurde durch Windows geschützt“**:
    auf **Weitere Informationen** und dann auf **Trotzdem ausführen** klicken.
+3. Der Installeur installiert Vox-Pack **für Ihren Benutzer**, ohne
+   Administratorkennwort, und legt eine Verknüpfung im Startmenü an. Sie können
+   auch „Desktop-Verknüpfung erstellen“ ankreuzen. Am Ende startet Vox-Pack.
 
-   Auch das liegt an der fehlenden Signatur. Die Anwendung verlangt keine
-   besonderen Rechte: Sie legt die `.wav`-Dateien im gewählten Ordner an.
+   Die **portable `Vox-Pack.exe`** bleibt auf der Releases-Seite: direkt
+   starten, nichts zu installieren.
+
+   Beim Deinstallieren (Einstellungen → Apps) bleiben Ihre Listen erhalten: Sie
+   liegen in `Documents\Vox-Pack`.
 
 <details>
 <summary>Wenn Windows vorschlägt, die Datei mit dem Editor zu öffnen</summary>
 
 Das liegt nicht an Vox-Pack: Der Download ist nicht vollständig angekommen.
-Die Datei muss **genau `Vox-Pack.exe`** heißen und **mehrere Dutzend MB**
-groß sein. Ist sie nur wenige KB groß, endet sie auf `.crdownload`, `.part`
-oder `.txt`, oder hat sie keine Endung, löschen Sie sie und laden Sie sie
-erneut von der Releases-Seite herunter — klicken Sie dabei auf die Datei
-`Vox-Pack.exe`, nicht auf „Download ZIP“. Ein Rechtsklick → **Eigenschaften**
-zeigt den vollständigen Namen und die Größe.
+Die Datei muss **genau `Vox-Pack-Setup.exe`** heißen (oder `Vox-Pack.exe` für
+die portable Version) und **mehrere Dutzend MB** groß sein. Ist sie nur wenige
+KB groß, endet sie auf `.crdownload`, `.part` oder `.txt`, oder hat sie keine
+Endung, löschen Sie sie und laden Sie sie erneut von der Releases-Seite
+herunter — klicken Sie auf die Datei, nicht auf „Download ZIP“. Ein Rechtsklick
+→ **Eigenschaften** zeigt den vollständigen Namen und die Größe.
 
 </details>
 

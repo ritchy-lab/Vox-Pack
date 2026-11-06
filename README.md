@@ -173,26 +173,31 @@ cette ligne, puis relance l'application :
 
 ### Windows
 
-1. Télécharge **`Vox-Pack.exe`** depuis la page
+1. Télécharge **`Vox-Pack-Setup.exe`** depuis la page
    [Releases](https://github.com/ritchy-lab/Vox-Pack/releases).
 2. Double-clique dessus. Windows affiche **« Windows a protégé votre
    ordinateur »** : clique sur **Informations complémentaires**, puis sur
    **Exécuter quand même**.
+3. L'installeur installe Vox-Pack **pour ton utilisateur**, sans mot de passe
+   administrateur, et ajoute un raccourci au menu Démarrer. Tu peux cocher
+   « Créer un raccourci sur le Bureau ». À la fin, Vox-Pack se lance.
 
-   Là encore, c'est parce que l'application n'est pas signée. Elle ne demande
-   aucun droit particulier : elle crée juste les fichiers `.wav` dans le
-   dossier que tu choisis.
+   La version **portable `Vox-Pack.exe`** reste disponible sur la page
+   Releases : elle se lance directement, sans rien installer.
+
+   La désinstallation (Paramètres → Applications) ne touche pas à tes
+   listes : elles restent dans `Documents\Vox-Pack`.
 
 <details>
-<summary>Si Windows propose de l'ouvrir avec le Bloc-notes</summary>
+<summary>Si Windows propose d'ouvrir le fichier avec le Bloc-notes</summary>
 
 Ce n'est pas Vox-Pack : c'est le téléchargement qui n'est pas arrivé entier.
-Le fichier doit s'appeler **exactement `Vox-Pack.exe`** et peser **plusieurs
-dizaines de Mo**. S'il pèse quelques kilo-octets, s'il finit par
-`.crdownload`, `.part` ou `.txt`, ou s'il n'a pas d'extension, supprime-le et
-télécharge-le à nouveau depuis la page Releases — clique sur le fichier
-`Vox-Pack.exe`, pas sur « Download ZIP ». Un clic droit → **Propriétés**
-affiche le nom complet et la taille.
+Le fichier doit s'appeler **exactement `Vox-Pack-Setup.exe`** (ou
+`Vox-Pack.exe` pour la version portable) et peser **plusieurs dizaines de
+Mo**. S'il pèse quelques kilo-octets, s'il finit par `.crdownload`, `.part` ou
+`.txt`, ou s'il n'a pas d'extension, supprime-le et télécharge-le à nouveau
+depuis la page Releases — clique sur le fichier, pas sur « Download ZIP ». Un
+clic droit → **Propriétés** affiche le nom complet et la taille.
 
 </details>
 

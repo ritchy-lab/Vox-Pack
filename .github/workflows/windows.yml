@@ -53,33 +53,105 @@ jobs:
           python tests/v2_ecran.py
           python tests/v2_adaptation.py
 
+      # Onedir : l'application démarre sans décompresser 50 Mo. C'est ce
+      # dossier que l'installeur emballe.
       - name: Compiler l'application
         run: python -m PyInstaller Vox-Pack.spec --noconfirm
 
-      - name: Vérifier que le .exe existe
+      - name: Vérifier que l'application démarre
         shell: pwsh
         run: |
-          if (-not (Test-Path "dist/Vox-Pack.exe")) {
-            Write-Error "Le .exe n'a pas été fabriqué."
+          $exe = "dist\Vox-Pack\Vox-Pack.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Le dossier Vox-Pack n'a pas été fabriqué."
             exit 1
           }
-          Get-Item "dist/Vox-Pack.exe" | Format-List Name, Length
-
-      # Test-Path ne dit rien : un .exe dont il manque voxpack_data existe
-      # quand même. On le fait vraiment démarrer, puis quitter.
-      - name: Vérifier que le .exe démarre
-        shell: pwsh
-        run: |
-          $processus = Start-Process -FilePath "dist\Vox-Pack.exe" `
+          $processus = Start-Process -FilePath $exe `
             -ArgumentList "--smoke-test" -PassThru -Wait
           if ($processus.ExitCode -ne 0) {
             Write-Error "Vox-Pack.exe ne démarre pas (code $($processus.ExitCode))."
             exit 1
           }
 
-      - name: Déposer le .exe
+      - name: Installer Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Fabriquer l'installeur
+        shell: pwsh
+        run: |
+          $version = (python -c "import version; print(version.VERSION)").Trim()
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=$version" "installer\Vox-Pack.iss"
+          if (-not (Test-Path "dist\Vox-Pack-Setup.exe")) {
+            Write-Error "L'installeur n'a pas été fabriqué."
+            exit 1
+          }
+          Get-Item "dist\Vox-Pack-Setup.exe" | Format-List Name, Length
+
+      # On installe pour de vrai, on démarre l'application installée, puis on
+      # désinstalle : un installeur qui compile mais qui n'installe rien ne
+      # doit pas partir chez quelqu'un.
+      - name: Vérifier l'installeur (installation silencieuse)
+        shell: pwsh
+        run: |
+          $cible = Join-Path $env:RUNNER_TEMP "VoxPackTest"
+          if (Test-Path $cible) { Remove-Item $cible -Recurse -Force }
+          $installation = Start-Process -FilePath "dist\Vox-Pack-Setup.exe" `
+            -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/DIR=$cible" `
+            -PassThru -Wait
+          if ($installation.ExitCode -ne 0) {
+            Write-Error "L'installation a échoué (code $($installation.ExitCode))."
+            exit 1
+          }
+          $exe = Join-Path $cible "Vox-Pack.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "L'application n'est pas dans le dossier d'installation."
+            exit 1
+          }
+          $processus = Start-Process -FilePath $exe `
+            -ArgumentList "--smoke-test" -PassThru -Wait
+          if ($processus.ExitCode -ne 0) {
+            Write-Error "L'application installée ne démarre pas (code $($processus.ExitCode))."
+            exit 1
+          }
+          $desinstallation = Join-Path $cible "unins000.exe"
+          if (Test-Path $desinstallation) {
+            Start-Process -FilePath $desinstallation `
+              -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          }
+
+      # La version portable de secours : l'ancien fichier unique, avec le
+      # splash. Elle ne remplace pas l'installeur, elle le double.
+      - name: Compiler la version portable (fichier unique)
+        env:
+          VOXPACK_ONEFILE: '1'
+        run: python -m PyInstaller Vox-Pack.spec --noconfirm --distpath dist/portable --workpath build/portable
+
+      - name: Vérifier la version portable
+        shell: pwsh
+        run: |
+          $exe = "dist\portable\Vox-Pack.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "La version portable n'a pas été fabriquée."
+            exit 1
+          }
+          $processus = Start-Process -FilePath $exe `
+            -ArgumentList "--smoke-test" -PassThru -Wait
+          if ($processus.ExitCode -ne 0) {
+            Write-Error "La version portable ne démarre pas (code $($processus.ExitCode))."
+            exit 1
+          }
+
+      - name: Déposer l'installeur
         uses: actions/upload-artifact@v7
         with:
           name: Vox-Pack-Windows
-          path: dist/Vox-Pack.exe
+          path: dist/Vox-Pack-Setup.exe
+          if-no-files-found: error
+
+      - name: Déposer la version portable
+        uses: actions/upload-artifact@v7
+        with:
+          name: Vox-Pack-Portable
+          path: dist/portable/Vox-Pack.exe
           if-no-files-found: error

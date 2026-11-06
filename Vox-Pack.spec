@@ -8,6 +8,7 @@
 #
 # Ce fichier est du Python : il s'adapte donc au système sur lequel il tourne.
 # ============================================================
+import os
 import sys
 
 from version import VERSION
@@ -162,29 +163,62 @@ if sys.platform == 'darwin':
         },
     )
 else:
-    # ---------- Windows : un seul fichier .exe ----------
-    # Un fichier unique est bien plus simple à télécharger et à lancer pour
-    # quelqu'un qui veut juste essayer l'application.
-    exe = EXE(
-        pyz,
-        a.scripts,
-        a.binaries,
-        a.datas,
-        splash,
-        splash.binaries,
-        [],
-        name='Vox-Pack',
-        debug=False,
-        bootloader_ignore_signals=False,
-        strip=False,
-        upx=False,
-        upx_exclude=[],
-        runtime_tmpdir=None,
-        console=False,      # pas de fenêtre noire derrière l'application
-        disable_windowed_traceback=False,
-        argv_emulation=False,
-        target_arch=None,
-        codesign_identity=None,
-        entitlements_file=None,
-        icon='icon.ico',
-    )
+    # ---------- Windows : un dossier, que l'installeur emballe ----------
+    # Le dossier (onedir) démarre tout de suite : plus de décompression de
+    # 50 Mo à chaque lancement. L'installeur Inno Setup le transforme en un
+    # seul fichier à télécharger (voir installer/Vox-Pack.iss).
+    #
+    # VOXPACK_ONEFILE=1 refait l'ancien fichier unique, avec le splash :
+    # c'est la version portable de secours, si l'installation ne plaît pas.
+    if os.environ.get("VOXPACK_ONEFILE") == "1":
+        exe = EXE(
+            pyz,
+            a.scripts,
+            a.binaries,
+            a.datas,
+            splash,
+            splash.binaries,
+            [],
+            name='Vox-Pack',
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=False,
+            upx_exclude=[],
+            runtime_tmpdir=None,
+            console=False,      # pas de fenêtre noire derrière l'application
+            disable_windowed_traceback=False,
+            argv_emulation=False,
+            target_arch=None,
+            codesign_identity=None,
+            entitlements_file=None,
+            icon='icon.ico',
+        )
+    else:
+        exe = EXE(
+            pyz,
+            a.scripts,
+            [],
+            exclude_binaries=True,
+            name='Vox-Pack',
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=False,
+            console=False,
+            disable_windowed_traceback=False,
+            argv_emulation=False,
+            target_arch=None,
+            codesign_identity=None,
+            entitlements_file=None,
+            icon='icon.ico',
+        )
+        coll = COLLECT(
+            exe,
+            a.binaries,
+            a.datas,
+            strip=False,
+            upx=False,
+            upx_exclude=[],
+            name='Vox-Pack',
+        )
