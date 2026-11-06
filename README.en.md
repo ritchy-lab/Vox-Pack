@@ -47,8 +47,9 @@ help.
 2. **Type your phrases.** The list comes pre-filled with 44 common
    announcements (engine, flaps, gear, timer, flight modes…). You can edit,
    add or remove any line.
-3. **Tick** the lines you want, or click **All**. To tick several at once:
-   click the first box, then **Shift + click** on the last one.
+3. **Tick** the lines you want, or tick the **header box** (above NAME) to
+   select them all. To tick several at once: click the first box, then
+   **Shift + click** on the last one.
 4. **Press Let's Go** and choose a folder: the `.wav` files are created.
 
 The **Listen** button plays **every ticked line**, one after another, before
@@ -127,7 +128,7 @@ the message window.
 
 ## Requirements
 
-- **macOS 11 or newer** (Apple Silicon) or **Windows 10 or newer**.
+- **macOS 11 or newer** (Apple Silicon or Intel) or **Windows 10 or newer**.
 - **An Internet connection**: the voices are synthesised by Microsoft Edge's
   online service. The text of your phrases is therefore sent to Microsoft when
   you generate. Without a connection, no voice can be created.
@@ -140,8 +141,10 @@ the message window.
 
 ### macOS
 
-1. Download **`Vox-Pack.zip`** from the
-   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) page and unzip it.
+1. Download **`Vox-Pack.zip`** (Apple Silicon) or **`Vox-Pack-Intel.zip`**
+   (Intel Mac) from the
+   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) page and unzip
+   it. Both contain the same application: take the one that matches your Mac.
 2. Drag **Vox-Pack.app** into your **Applications** folder.
 
 3. **The very first time, macOS will refuse to open it**: the application does
@@ -214,6 +217,8 @@ that avoids the "application is damaged" warning.
 
     ~/Documents/Vox-Pack/liste_fr.csv     (French list)
     ~/Documents/Vox-Pack/liste_en.csv     (English list)
+    ~/Documents/Vox-Pack/liste_de.csv     (German list)
+    … and so on, one per language
 
 One list per language. If you used the previous version (RadioVox), your list
 is picked up automatically as the French list on first launch. The old folder

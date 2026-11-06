@@ -48,9 +48,10 @@ droite ouvre cette aide.
 2. **Écris tes phrases.** La liste est pré-remplie avec 44 annonces courantes
    (moteur, volets, train, chrono, modes de vol…). Tu peux tout modifier,
    ajouter ou supprimer des lignes.
-3. **Coche** les lignes que tu veux générer, ou clique sur **Tout**. Pour en
-   cocher plusieurs d'un coup : clique sur la première case, puis
-   **Majuscule + clic** sur la dernière.
+3. **Coche** les lignes que tu veux générer, ou coche la **case de l'en-tête**
+   (au-dessus de NOM) pour tout sélectionner. Pour en cocher plusieurs d'un
+   coup : clique sur la première case, puis **Majuscule + clic** sur la
+   dernière.
 4. **Appuie sur Let's Go**, choisis un dossier : les fichiers `.wav` sont créés.
 
 Le bouton **Écouter** fait entendre **toutes les lignes cochées**, l'une après
@@ -130,7 +131,8 @@ active le bouton par défaut de la fenêtre de message.
 
 ## Prérequis
 
-- **macOS 11 ou plus récent** (Apple Silicon) ou **Windows 10 ou plus récent**.
+- **macOS 11 ou plus récent** (Apple Silicon ou Intel) ou **Windows 10 ou plus
+  récent**.
 - **Une connexion Internet** : les voix sont synthétisées par le service en
   ligne de Microsoft Edge. Le texte de tes phrases est donc envoyé à Microsoft
   au moment de la génération. Sans connexion, aucune voix ne peut être créée.
@@ -143,8 +145,11 @@ active le bouton par défaut de la fenêtre de message.
 
 ### macOS
 
-1. Télécharge **`Vox-Pack.zip`** depuis la page
-   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) et décompresse-le.
+1. Télécharge **`Vox-Pack.zip`** (Apple Silicon) ou **`Vox-Pack-Intel.zip`**
+   (Mac Intel) depuis la page
+   [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) et
+   décompresse-le. Les deux contiennent la même application : prends celui
+   qui correspond à ton Mac.
 2. Glisse **Vox-Pack.app** dans ton dossier **Applications**.
 
 3. **Au tout premier lancement, macOS refusera de l'ouvrir** : l'application
@@ -219,6 +224,8 @@ recette qui évite l'avertissement « application endommagée ».
 
     ~/Documents/Vox-Pack/liste_fr.csv     (liste française)
     ~/Documents/Vox-Pack/liste_en.csv     (liste anglaise)
+    ~/Documents/Vox-Pack/liste_de.csv     (liste allemande)
+    … et ainsi de suite, une par langue
 
 Une liste par langue. Si tu utilisais la version précédente (RadioVox), ta
 liste est reprise automatiquement comme liste française au premier démarrage.

@@ -49,9 +49,9 @@ Hilfe.
 2. **Sätze schreiben.** Die Liste ist mit gängigen Ansagen vorbereitet — 28 auf
    Deutsch, 44 auf Französisch und Englisch (Motor, Klappen, Fahrwerk, Timer,
    Flugmodi …). Jede Zeile lässt sich ändern, ergänzen oder löschen.
-3. **Markieren** Sie die gewünschten Zeilen, oder klicken Sie auf **Alle**.
-   Mehrere auf einmal: erst das erste Kästchen anklicken, dann **Umschalt +
-   Klick** auf das letzte.
+3. **Markieren** Sie die gewünschten Zeilen, oder setzen Sie den **Haken in
+   der Kopfzeile** (über NAME), um alle zu markieren. Mehrere auf einmal:
+   erst das erste Kästchen anklicken, dann **Umschalt + Klick** auf das letzte.
 4. **Let's Go drücken** und einen Ordner wählen: Die `.wav`-Dateien entstehen.
 
 Die Schaltfläche **Anhören** spielt **alle markierten Zeilen** nacheinander ab,
@@ -140,7 +140,8 @@ Die **Eingabetaste** löst die Standardschaltfläche des Meldungsfensters aus.
 
 ## Voraussetzungen
 
-- **macOS 11 oder neuer** (Apple Silicon) oder **Windows 10 oder neuer**.
+- **macOS 11 oder neuer** (Apple Silicon oder Intel) oder **Windows 10 oder
+  neuer**.
 - **Eine Internetverbindung**: Die Stimmen werden vom Onlinedienst von Microsoft
   Edge erzeugt. Der Text Ihrer Sätze wird beim Erzeugen an Microsoft gesendet.
   Ohne Verbindung entsteht keine Stimme.
@@ -153,9 +154,11 @@ Die **Eingabetaste** löst die Standardschaltfläche des Meldungsfensters aus.
 
 ### macOS
 
-1. Laden Sie **`Vox-Pack.zip`** von der
+1. Laden Sie **`Vox-Pack.zip`** (Apple Silicon) oder **`Vox-Pack-Intel.zip`**
+   (Intel-Mac) von der
    [Releases](https://github.com/ritchy-lab/Vox-Pack/releases)-Seite und
-   entpacken Sie es.
+   entpacken Sie es. Beide enthalten dieselbe Anwendung: Nehmen Sie die, die
+   zu Ihrem Mac passt.
 2. Ziehen Sie **Vox-Pack.app** in Ihren Ordner **Programme**.
 
 3. **Beim allerersten Start verweigert macOS das Öffnen**: Die Anwendung stammt
@@ -230,6 +233,7 @@ das die Warnung „beschädigt“ vermeidet.
     ~/Documents/Vox-Pack/liste_fr.csv     (französische Liste)
     ~/Documents/Vox-Pack/liste_en.csv     (englische Liste)
     ~/Documents/Vox-Pack/liste_de.csv     (deutsche Liste)
+    … und so weiter, eine pro Sprache
 
 Eine Liste pro Sprache. Wenn Sie die frühere Version (RadioVox) benutzt haben,
 wird Ihre Liste beim ersten Start automatisch als französische Liste übernommen.
