@@ -1433,6 +1433,7 @@ TEXTES = {
             "Nouvelles versions  ·  github.com/ritchy-lab/Vox-Pack/releases",
         "aide_credits": "Créé avec un brainstorming avec une IA",
         "aide_merci": "Merci à Ralf pour la traduction allemande.",
+        "aide_visage": "Le code est libre. Le visage ne l'est pas.",
         "aide_ecran": "Version {version} — écran {ecran} — fenêtre {fenetre}",
     },
 
@@ -1796,6 +1797,7 @@ TEXTES = {
             "New versions  ·  github.com/ritchy-lab/Vox-Pack/releases",
         "aide_credits": "Created with AI brainstorming",
         "aide_merci": "Thanks to Ralf for the German translation.",
+        "aide_visage": "The code is free. The face is not.",
         "aide_ecran": "Version {version} — screen {ecran} — window {fenetre}",
     },
 }
@@ -2039,6 +2041,7 @@ TEXTES["de"] = {
         "aide_github": "Neue Versionen  ·  github.com/ritchy-lab/Vox-Pack/releases",
         "aide_credits": "Mit KI-Unterstützung erstellt",
         "aide_merci": "Danke an Ralf für die deutsche Übersetzung.",
+        "aide_visage": "Der Code ist frei. Das Gesicht nicht.",
         "aide_ecran": "Version {version} — Bildschirm {ecran} — Fenster {fenetre}",
 }
 
@@ -6084,6 +6087,7 @@ class VoxPackApp(ctk.CTk):
                         fenetre=f"{self.winfo_width()} × {self.winfo_height()}")),
             ("italic", t("aide_credits")),
             ("italic", t("aide_merci")),
+            ("petit", t("aide_visage")),
         ]
 
         for kind, txt in contenu:

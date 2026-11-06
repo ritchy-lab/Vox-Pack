@@ -729,3 +729,25 @@ LOT_AIDE = {
         "aide_sys_titre": "📻  建立遙控器的系統音效",
     },
 }
+
+# La phrase d'identité, en petit au bas de l'aide. Les trois langues
+# historiques (fr, en, de) la portent dans voxpack2.py ; ces douze-ci
+# complètent les quinze.
+LOT_VISAGE = {
+    "es": {"aide_visage": "El código es libre. La cara no."},
+    "it": {"aide_visage": "Il codice è libero. Il volto no."},
+    "pt": {"aide_visage": "O código é livre. O rosto não."},
+    "ru": {"aide_visage": "Код свободен. Лицо — нет."},
+    "sv": {"aide_visage": "Koden är fri. Ansiktet är det inte."},
+    "uk": {"aide_visage": "Код вільний. Обличчя — ні."},
+    "cs": {"aide_visage": "Kód je svobodný. Tvář ne."},
+    "da": {"aide_visage": "Koden er fri. Ansigtet er det ikke."},
+    "ja": {"aide_visage": "コードは自由。顔はそうではない。"},
+    "cn": {"aide_visage": "代码是自由的。面孔不是。"},
+    "tw": {"aide_visage": "程式碼是自由的。臉孔不是。"},
+    "hk": {"aide_visage": "程式碼是自由的。臉孔不是。"},
+}
+
+for _code, _valeurs in LOT_VISAGE.items():
+    LOT_AIDE[_code].update(_valeurs)
+
