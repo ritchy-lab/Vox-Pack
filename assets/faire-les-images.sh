@@ -26,10 +26,10 @@ cd "$(dirname "$0")/.."
 
 SOURCES="assets/sources"
 BANDEAU="$SOURCES/bandeau-vox-pack.png"
-# Deux dessins : le détaillé de la v2 pour les grandes tailles (1024 px,
-# plein cadre, sans la marge de 824 px) et l'émetteur seul de la v3 pour
-# les petites (16/24), où le détaillé serait illisible.
-ICONE="$SOURCES/icone-vox-pack-v2.png"
+# Le dessin détaillé 1024 de Richard (plein cadre, sans la marge de 824 px)
+# fait l'icône du Mac à toutes les tailles. Sur PC, seul l'émetteur seul de
+# la v3 sert aux plus petites tailles (16/24).
+ICONE="$SOURCES/icone-vox-pack-v2-1024.png"
 PETITE="$SOURCES/icone-vox-pack-v3.png"
 TRAVAIL="/tmp/voxpack-images"
 COTE=1024          # côté de l'icône macOS moderne

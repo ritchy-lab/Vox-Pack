@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 """Fabrique icon.png et le dossier icon.iconset à partir du dessin de la v2.
 
-Deux dessins, deux usages :
-
-- `icone-vox-pack-v2.png` (le dessin détaillé, avec le mot VOX-PACK) fait
-  l'icône 1024 px et les grandes tailles ;
-- `icone-vox-pack-v3.png` (l'émetteur seul, sur fond noir) fait les petites
-  tailles 16/24, où le dessin détaillé serait illisible.
-
-L'icône 1024 est plein cadre, sans la marge de 824 px de la grille d'Apple
-qui faisait apparaître un contour blanc dans le Dock.
+Le dessin détaillé fourni par Richard (`icone-vox-pack-v2-1024.png`,
+1024 x 1024) fait l'icône du Mac à **toutes** les tailles. Il est plein cadre,
+sans la marge de 824 px de la grille d'Apple qui faisait apparaître un contour
+blanc dans le Dock. Le Mac ne prend pas le petit dessin 16/24 : il garde ce
+dessin détaillé partout.
 
     venv/bin/python assets/faire-icone.py
 
@@ -22,8 +18,7 @@ import sys
 from PIL import Image
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SOURCE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2.png")
-PETITE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
+SOURCE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2-1024.png")
 
 COTE = 1024        # côté du carré macOS moderne
 DESSIN = 1024      # plein cadre : plus de marge blanche (demande de Richard)
@@ -57,8 +52,8 @@ def carre(image):
 
 
 def main():
-    if not os.path.exists(SOURCE) or not os.path.exists(PETITE):
-        print("     (dessins manquants : icon.png non refait)")
+    if not os.path.exists(SOURCE):
+        print("     (dessin manquant : icon.png non refait)")
         return 1
 
     dessin = carre(Image.open(SOURCE).convert("RGBA"))
@@ -69,16 +64,13 @@ def main():
     maitre.save(os.path.join(RACINE, "icon.png"))
     print(f"     icon.png : {COTE} x {COTE}, dessin détaillé sur {DESSIN} px")
 
-    petite = carre(Image.open(PETITE).convert("RGBA"))
     dossier = os.path.join(RACINE, "icon.iconset")
     os.makedirs(dossier, exist_ok=True)
     for nom, taille in ICONSET:
-        # Les deux cases 16 pt (16 et 32 px) prennent le dessin petit format.
-        source = petite if taille <= 32 else maitre
-        image = source.resize((taille, taille), Image.LANCZOS)
+        image = maitre.resize((taille, taille), Image.LANCZOS)
         image.save(os.path.join(dossier, nom))
-    print(f"     icon.iconset : {len(ICONSET)} tailles ; "
-          "16/32 en petit format, 64+ en détaillé")
+    print(f"     icon.iconset : {len(ICONSET)} tailles, "
+          "le dessin détaillé partout")
     return 0
 
 

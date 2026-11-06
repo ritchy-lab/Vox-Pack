@@ -22,7 +22,7 @@ from PIL import Image
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Deux dessins : le détaillé (avec le mot) pour les grandes tailles, et
 # l'émetteur seul pour les petites (16/24), où le détaillé serait illisible.
-GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2.png")
+GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2-1024.png")
 PETITE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
 
 # 16/20/24 : le petit dessin. 30 et au-dessus : le dessin détaillé.
