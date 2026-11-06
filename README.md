@@ -183,6 +183,19 @@ cette ligne, puis relance l'application :
    aucun droit particulier : elle crée juste les fichiers `.wav` dans le
    dossier que tu choisis.
 
+<details>
+<summary>Si Windows propose de l'ouvrir avec le Bloc-notes</summary>
+
+Ce n'est pas Vox-Pack : c'est le téléchargement qui n'est pas arrivé entier.
+Le fichier doit s'appeler **exactement `Vox-Pack.exe`** et peser **plusieurs
+dizaines de Mo**. S'il pèse quelques kilo-octets, s'il finit par
+`.crdownload`, `.part` ou `.txt`, ou s'il n'a pas d'extension, supprime-le et
+télécharge-le à nouveau depuis la page Releases — clique sur le fichier
+`Vox-Pack.exe`, pas sur « Download ZIP ». Un clic droit → **Propriétés**
+affiche le nom complet et la taille.
+
+</details>
+
 ## Installation depuis les sources
 
     python3.11 -m venv venv

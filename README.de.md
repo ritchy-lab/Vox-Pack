@@ -192,6 +192,19 @@ und starten Sie die Anwendung erneut:
    Auch das liegt an der fehlenden Signatur. Die Anwendung verlangt keine
    besonderen Rechte: Sie legt die `.wav`-Dateien im gewählten Ordner an.
 
+<details>
+<summary>Wenn Windows vorschlägt, die Datei mit dem Editor zu öffnen</summary>
+
+Das liegt nicht an Vox-Pack: Der Download ist nicht vollständig angekommen.
+Die Datei muss **genau `Vox-Pack.exe`** heißen und **mehrere Dutzend MB**
+groß sein. Ist sie nur wenige KB groß, endet sie auf `.crdownload`, `.part`
+oder `.txt`, oder hat sie keine Endung, löschen Sie sie und laden Sie sie
+erneut von der Releases-Seite herunter — klicken Sie dabei auf die Datei
+`Vox-Pack.exe`, nicht auf „Download ZIP“. Ein Rechtsklick → **Eigenschaften**
+zeigt den vollständigen Namen und die Größe.
+
+</details>
+
 ## Installation aus dem Quellcode
 
     python3.11 -m venv venv

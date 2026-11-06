@@ -178,6 +178,18 @@ application again:
    Again, this is because the application is not signed. It asks for no special
    rights: it simply creates the `.wav` files in the folder you choose.
 
+<details>
+<summary>If Windows offers to open it with Notepad</summary>
+
+That is not Vox-Pack: the download did not arrive in one piece. The file must
+be named **exactly `Vox-Pack.exe`** and weigh **several dozen MB**. If it is a
+few KB, ends in `.crdownload`, `.part` or `.txt`, or has no extension, delete
+it and download it again from the Releases page — click the `Vox-Pack.exe`
+file, not "Download ZIP". Right-click → **Properties** shows the full name
+and size.
+
+</details>
+
 ## Installing from source
 
     python3.11 -m venv venv
