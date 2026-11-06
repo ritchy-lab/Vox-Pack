@@ -4639,6 +4639,16 @@ class VoxPackApp(ctk.CTk):
         """
         if code not in TEXTES or code == LANGUE_UI:
             return
+        # Pendant une génération, la langue est figée : les phrases et la voix
+        # ont été choisies au départ, et les fichiers en cours sont déjà
+        # écrits avec elles. Changer l'interface maintenant donnerait des
+        # fichiers dans l'ancienne langue et un message de fin dans la
+        # nouvelle. On refuse, et on remet la coche du menu sur la langue
+        # courante (le bouton radio l'a déjà déplacée avant d'appeler ici).
+        if getattr(self, "_genere", False):
+            self._var_langue_ui.set(LANGUE_UI)
+            self._message(t("msg_genere_deja"), icone="attention")
+            return
         # Une saisie en cours appartient à la langue que l'on quitte : il faut
         # la valider MAINTENANT. Sans cela, charger_liste() la validait après
         # le changement de langue, et _ecrire_csv() écrivait la liste de
@@ -6463,7 +6473,7 @@ class VoxPackApp(ctk.CTk):
         self._toile.create_window(
             x, y, anchor="nw", window=entree, width=largeur, height=hauteur,
             tags=("ligne", "edition"))
-        entree.bind("<Return>", self._entree_puis_ligne)
+        entree.bind("<Return>", self._entree_valide)
         entree.bind("<Escape>", self._echapper_liste)
         entree.bind("<FocusOut>", lambda e: self._valider_edition())
         self._edition = (rang, colonne, entree)
@@ -6477,12 +6487,24 @@ class VoxPackApp(ctk.CTk):
         except tk.TclError:
             pass
         entree.icursor("end")
+        # Le texte de départ d'une ligne neuve (« nouveau », « Texte à
+        # prononcer ») est là pour être remplacé : on le sélectionne. Sans
+        # cela, taper le nom l'ajoutait à la suite (« nouveaumoteur »).
+        if entree.get() == t("nouvelle_ligne" if colonne == 0
+                             else "texte_a_dire"):
+            entree.select_range(0, "end")
         self._montrer_ligne(rang)
 
-    def _entree_puis_ligne(self, _evenement=None):
-        """Entrée dans un champ : on valide, et on enchaîne une ligne."""
+    def _entree_valide(self, _evenement=None):
+        """Entrée dans un champ : on valide, et on referme.
+
+        On ajoutait autrefois une ligne à la suite : corriger une phrase
+        existante et appuyer sur Entrée par habitude créait une ligne
+        « nouveau / Texte à prononcer » de plus, cochée, qui partait ensuite
+        à la génération. « Ajouter » reste le seul chemin vers une ligne
+        neuve.
+        """
         self._valider_edition()
-        self.ajouter_ligne()
         return "break"
 
     def _valider_edition(self):
@@ -8415,6 +8437,12 @@ class VoxPackApp(ctk.CTk):
     @staticmethod
     def _fermer_splash():
         """Referme l'écran de démarrage du .exe Windows, s'il existe."""
+        if not sys.platform.startswith("win"):
+            # Sur macOS, le .app n'a pas de splash. PyInstaller livre quand
+            # même `pyi_splash`, dont l'import écrit un traceback
+            # (« KeyError: _PYI_SPLASH_IPC ») à chaque lancement : on ne
+            # l'importe donc pas du tout ici.
+            return
         try:
             import pyi_splash
             pyi_splash.close()
@@ -8745,15 +8773,85 @@ class VoxPackApp(ctk.CTk):
             self._deplacement = None
 
 
+_VERROU_INSTANCE = None
+
+
+def _activer_instance_mac():
+    """Ramène au premier plan l'instance déjà ouverte, si c'est possible.
+
+    `runningApplicationsWithBundleIdentifier_` ne trouve que l'application
+    compilée (son Info.plist porte l'identifiant) ; lancée depuis les
+    sources, la deuxième instance se contente de quitter.
+    """
+    try:
+        from AppKit import NSRunningApplication
+    except Exception:
+        return False
+    try:
+        moi = os.getpid()
+        for application in (
+                NSRunningApplication
+                .runningApplicationsWithBundleIdentifier_(
+                    "com.ritchy-lab.vox-pack")):
+            # La deuxième instance porte le même identifiant : elle est dans
+            # la liste, et s'activer elle-même ne montrerait rien.
+            if application.processIdentifier() == moi:
+                continue
+            # 2 = NSApplicationActivateIgnoringOtherApps : l'utilisateur vient
+            # de demander Vox-Pack, c'est bien lui qu'il veut voir.
+            if application.activateWithOptions_(2):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _prendre_verrou_posix():
+    """Une seule instance sur macOS et Linux, par un verrou de fichier.
+
+    Le système relâche le verrou quand le processus meurt : il ne reste donc
+    jamais bloqué après un plantage, contrairement à un simple fichier
+    témoin. Le verrou vit dans le dossier des données, comme les listes.
+    """
+    global _VERROU_INSTANCE
+    try:
+        import errno
+        import fcntl
+    except ImportError:
+        return False
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        verrou = open(os.path.join(DATA_DIR, ".instance"), "a+")
+        try:
+            fcntl.flock(verrou.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as e:
+            verrou.close()
+            # Un autre Vox-Pack tient le verrou. Tout autre échec (système de
+            # fichiers sans verrou, par exemple) ne doit pas empêcher
+            # l'application de démarrer.
+            if e.errno not in (errno.EACCES, errno.EAGAIN):
+                return False
+            if sys.platform == "darwin":
+                _activer_instance_mac()
+            return True
+        _VERROU_INSTANCE = verrou
+        return False
+    except Exception:
+        return False
+
+
 def _revenir_a_instance_existante():
-    """Windows : ramène au premier Vox-Pack, ou laisse démarrer celui-ci.
+    """Une seule instance : ramène la première, ou laisse démarrer celle-ci.
 
     Sans cela, relancer le raccourci ouvre une deuxième application : deux
     fenêtres, deux listes, et un risque d'écrire le même fichier de liste.
-    Le nom « Local\\ » limite le verrou à la session Windows.
+
+    Sous Windows, un mutex nommé (« Local\\ » : limité à la session) et
+    l'énumération des fenêtres. Ailleurs, un verrou de fichier (voir
+    _prendre_verrou_posix).
     """
     if not sys.platform.startswith("win"):
-        return False
+        return _prendre_verrou_posix()
     try:
         import ctypes
         from ctypes import wintypes
