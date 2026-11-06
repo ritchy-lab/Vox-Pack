@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """Fabrique icon.png et le dossier icon.iconset à partir du dessin de la v2.
 
-Le dessin de Richard (`assets/sources/icone-vox-pack-v2.png`, 516 x 512)
-remplit toute son image, coins arrondis compris. Sur macOS, les icônes
-s'alignent sur une grille commune : le dessin occupe 824 px d'un carré de
-1024, le reste est transparent. Sans cette marge, l'icône paraît plus grosse
-que ses voisines dans le Dock.
+Le dessin de Richard (`assets/sources/icone-vox-pack-v3.png`, 539 x 539)
+est un carré plein : l'émetteur sur fond noir, sans le mot VOX-PACK. Il est
+posé à 1024 px, sans marge. La marge de 824 px de la grille d'Apple faisait
+apparaître un contour blanc dans le Dock ; Richard a demandé le plein cadre,
+et macOS accepte très bien les grandes icônes.
 
-Windows, lui, n'impose pas de grille : `faire-ico.py` recadre le dessin et le
-fait remplir sa case.
+Windows, lui, n'impose pas de grille : `faire-ico.py` reprend le même dessin
+et le fait remplir chaque taille.
 
     venv/bin/python assets/faire-icone.py
 
@@ -21,10 +21,10 @@ import sys
 from PIL import Image
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SOURCE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2.png")
+SOURCE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
 
 COTE = 1024        # côté du carré macOS moderne
-DESSIN = 824       # ce que le dessin occupe dans ce carré (grille d'Apple)
+DESSIN = 1024      # plein cadre : plus de marge blanche (demande de Richard)
 
 # Les fichiers attendus par iconutil, avec leur taille en pixels.
 ICONSET = (

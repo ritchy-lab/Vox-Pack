@@ -26,8 +26,9 @@ cd "$(dirname "$0")/.."
 
 SOURCES="assets/sources"
 BANDEAU="$SOURCES/bandeau-vox-pack.png"
-# Le dessin de la v2 (3 novembre 2026) : l'émetteur avec le mot VOX-PACK.
-ICONE="$SOURCES/icone-vox-pack-v2.png"
+# Le dessin de la v3 (6 novembre 2026) : l'émetteur seul, sans le mot,
+# lisible en 16 px. Plein cadre, sans la marge de 824 px.
+ICONE="$SOURCES/icone-vox-pack-v3.png"
 TRAVAIL="/tmp/voxpack-images"
 COTE=1024          # côté de l'icône macOS moderne
 mkdir -p "$TRAVAIL" icon.iconset

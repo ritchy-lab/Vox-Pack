@@ -21,23 +21,22 @@ from PIL import Image
 
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Le dessin de la v2 (3 novembre 2026) : l'émetteur avec le mot VOX-PACK.
-GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v2.png")
+GRANDE = os.path.join(RACINE, "assets", "sources", "icone-vox-pack-v3.png")
 
 # Un seul dessin, à toutes les tailles : Richard veut son émetteur partout.
-# Le monogramme VP, pourtant plus net en 16 px, a été écarté par Richard — il
-# ne veut pas deux icônes selon l'endroit où on regarde.
-TAILLES = (16, 24, 32, 48, 64, 128, 256)
+# Le dessin de la v3 est l'émetteur seul, sans le mot VOX-PACK : il reste
+# lisible en 16 px. Les tailles 20/30/36/40/96 couvrent les mises à l'échelle
+# Windows (125 %, 150 %) sans rééchantillonnage.
+TAILLES = (16, 20, 24, 30, 32, 36, 40, 48, 64, 96, 128, 256)
 
 
-def recadrer(image, respiration=0.01):
-    """Rase les bords transparents, en gardant à peine 1 % de respiration.
+def recadrer(image, respiration=0.0):
+    """Rase les bords transparents, sans ajouter de marge.
 
     Windows n'impose aucune grille : ses applications remplissent leur case.
-    Le monogramme de Richard n'occupait que 69 % de son image, et le dessin
-    détaillé 87 % — une fois posés dans la barre des tâches, ils paraissaient
-    plus petits que les autres applications. Sur macOS, la marge est au
-    contraire imposée par Apple (toutes les icônes s'alignent sur une grille) :
-    elle est donc conservée dans le .icns, et retirée ici.
+    Le dessin de la v3 est un carré plein : il n'y a rien à rogner. On ne
+    garde aucune respiration, pour qu'aucun contour blanc n'apparaisse dans la
+    barre des tâches.
     """
     boite = image.getbbox()
     if boite is None:

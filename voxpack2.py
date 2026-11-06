@@ -5805,7 +5805,13 @@ class VoxPackApp(ctk.CTk):
         # cadre gris, logo en tête et bouton Fermer à coin coupé.
         popup = tk.Toplevel(self)
         self._aide = popup
+        # On construit l'aide ENTIÈREMENT cachée, puis on l'affiche une
+        # seule fois. Sinon, la fenêtre apparaît vide, se remplit, se
+        # redimensionne et se replace : c'est le « rebond » visible à
+        # l'ouverture, comme si elle s'écrivait deux fois.
+        popup.withdraw()
         popup.overrideredirect(True)
+        popup.withdraw()
         popup.configure(bg="#0A1416")
 
         def fermer_aide(_evenement=None):
@@ -5824,7 +5830,21 @@ class VoxPackApp(ctk.CTk):
             except tk.TclError:
                 pass
             relacher_souris()
-            popup.after_idle(lambda: (relacher_souris(), popup.destroy()))
+
+            def finir():
+                try:
+                    popup.destroy()
+                except tk.TclError:
+                    pass
+                # L'aide avait le clavier : détruite, elle l'emporte avec
+                # elle. On le rend à la fenêtre principale, sinon Échap et
+                # Entrée restent sans effet après la fermeture.
+                try:
+                    self.focus_force()
+                except tk.TclError:
+                    pass
+
+            popup.after_idle(finir)
 
         popup.bind("<Escape>", fermer_aide)
         popup.bind("<ButtonRelease-1>",
@@ -6143,7 +6163,11 @@ class VoxPackApp(ctk.CTk):
             morceau.bind("<Button-1>", prendre)
             morceau.bind("<B1-Motion>", tirer)
 
+        # Tout est construit : on mesure, on montre, puis on place.
+        popup.update_idletasks()
+        popup.deiconify()
         popup.transient(self)
+        popup.geometry(f"{w_popup}x{h_popup}+{max(x, 0)}+{max(y, 0)}")
         popup.lift()
         popup.focus_force()
 
@@ -8586,7 +8610,19 @@ class VoxPackApp(ctk.CTk):
         except tk.TclError:
             pass
         relacher_souris()
-        aide.after_idle(lambda: (relacher_souris(), aide.destroy()))
+
+        def finir():
+            try:
+                aide.destroy()
+            except tk.TclError:
+                pass
+            # Rendre le clavier à la fenêtre principale après l'aide.
+            try:
+                self.focus_force()
+            except tk.TclError:
+                pass
+
+        aide.after_idle(finir)
         return True
 
     def _echapper(self, _evenement=None):
