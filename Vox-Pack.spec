@@ -94,8 +94,11 @@ if sys.platform != 'darwin':
         datas=a.datas,
         # La ligne de texte réelle de la décompression : c'est le seul
         # retour d'information que le splash de PyInstaller sait animer.
-        text_pos=(24, 206),
-        text_size=-9,
+        # Elle se pose dans le faux écran du dessin, sous la barre de leds.
+        # L'ancre est « sud-ouest » : (28, 204) est le coin bas-gauche du
+        # texte, à 10 px du bord gauche de l'écran et 6 px du bas.
+        text_pos=(28, 204),
+        text_size=-10,
         text_color='#0FBBD0',
         text_default='Chargement de Vox-Pack...',
         always_on_top=True,
