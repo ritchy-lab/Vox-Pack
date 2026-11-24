@@ -681,7 +681,7 @@ def main() -> int:
              <= app.winfo_height(),
              f"({panneau.winfo_y()}+{panneau.winfo_height()} "
              f"pour {app.winfo_height()})" if panneau is not None else "")
-    verifier("le menu des dix-neuf voix défile", canevas is not None)
+    verifier("le menu des voix défile", canevas is not None)
     if canevas is not None:
         canevas.yview_moveto(1.0)
         app.update()
@@ -735,6 +735,32 @@ def main() -> int:
     verifier("Entrée annule la suppression", len(app.lignes) == total + 3)
     verifier("le message d'annulation est fermé", not app._alertes)
     app._supprimer_lignes(app.lignes[-3:])
+
+    print("Une modification de la liste vide la mémoire d'annulation")
+    # Le 24 novembre au soir, Richard a trouvé le défaut : ajouter une ligne
+    # puis appuyer sur Cmd+Z ne défaisait pas l'ajout, mais ramenait les
+    # lignes supprimées bien avant. La mémoire d'annulation ne doit plus
+    # survivre à un changement de liste par un autre chemin.
+    app._ajouter_ligne_ui("undo-quatre", "quatre")
+    app._dessiner_liste()
+    app._supprimer_et_proposer([app.lignes[-1]])
+    verifier("la ligne à oublier est supprimée", len(app.lignes) == total)
+    app.ajouter_ligne()
+    app.update()
+    if app._edition is not None:
+        app._annuler_edition()
+    app.update()
+    verifier("l'ajout vide la mémoire d'annulation",
+             app._annulation is None, app._annulation)
+    app.focus_force()
+    app.update()
+    app.event_generate(touche)
+    app.update()
+    verifier("Cmd+Z après un ajout ne ramène pas les lignes d'avant",
+             len(app.lignes) == total + 1, len(app.lignes))
+    app._supprimer_lignes(app.lignes[-1:])
+    verifier("nettoyage : retour au compte de départ",
+             len(app.lignes) == total, len(app.lignes))
 
     print("Entrée dans les fenêtres de message")
     marques = []

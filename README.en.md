@@ -38,12 +38,11 @@ help.
 
 ## How it works
 
-1. **Pick a voice.** The menu offers the voices of the chosen language: 11 in
-   French (France, Switzerland, Belgium, Quebec), 19 in English (United
-   States, United Kingdom, Ireland), 4 in German, and more in the other twelve
-   languages. The menu shows the accent — "Denise (France)", "Emily (Ireland)"
-   — the current voice is ticked, and **★** marks EdgeTX's official voice
-   (Denise in French, Emily in English, Katja in German).
+1. **Pick a voice.** The menu offers the voices of the chosen language, with
+   their accent: "Denise (France)", "Emily (Ireland)", "Ingrid (Austria)".
+   The current voice is ticked, and **★** marks EdgeTX's official voice
+   (Denise in French, Emily in English, Tanja in German — she carries
+   Katja's sound, which Microsoft retired).
 2. **Type your phrases.** The list comes pre-filled with 44 common
    announcements (engine, flaps, gear, timer, flight modes…). You can edit,
    add or remove any line.
@@ -232,9 +231,12 @@ The application explains itself: click the **?** in the bottom right corner.
 
 - The voices come from the **edge-tts** service, which relies on Microsoft
   Edge's speech synthesis. Vox-Pack only converts them to the right format.
-- On startup, the application **checks that the voices it offers still exist**
-  at Microsoft's end, and drops the ones that have disappeared. If that check
-  fails (no connection), the list is left untouched.
+- On startup, the application **checks the voices it offers against
+  Microsoft**: it drops the ones that have disappeared, adds the ones that
+  have appeared in the countries already offered, and a window warns — once
+  — when a voice disappears or appears. A simple rename stays silent: the
+  star follows the replacement. If that check fails (no connection), the
+  list is left untouched.
 - Microsoft's service can change without notice: if generation suddenly stops
   with an error, it almost always means the `edge-tts` library needs updating
   (`pip install --upgrade edge-tts`).

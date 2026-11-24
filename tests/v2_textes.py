@@ -144,6 +144,14 @@ def main() -> int:
     vides = [(code, cle) for code, table in TEXTES.items()
              for cle, texte in table.items() if not str(texte).strip()]
     verifier("aucun texte vide", not vides, f"({vides[:3]})")
+
+    # Les tables du paquet sont fusionnées avec celles de voxpack2.py (fr, en,
+    # de). C'est cette fusion que voit l'écran : une clé ajoutée d'un seul
+    # côté s'afficherait en anglais au milieu d'un écran allemand.
+    import voxpack2
+    manquantes = voxpack2.cles_manquantes()
+    verifier("aucune clé manquante d'une langue à l'autre",
+             not manquantes, f"({manquantes[:5]})")
     identiques = [cle for cle in TEXTES["fr"]
                   if TEXTES["fr"][cle] == TEXTES["en"].get(cle)]
     # Mots légitimement identiques dans les deux langues : « Let's Go » ne se

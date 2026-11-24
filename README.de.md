@@ -39,13 +39,12 @@ Hilfe.
 
 ## So funktioniert es
 
-1. **Stimme wählen.** Das Menü bietet die Stimmen der gewählten Sprache:
-   11 französische (Frankreich, Schweiz, Belgien, Québec), 19 englische (USA,
-   Großbritannien, Irland), 4 deutsche und weitere in den zwölf anderen
-   Sprachen. Das Menü zeigt den Akzent — „Katja (Deutschland)“, „Emily
-   (Irland)“ —, die aktuelle Stimme ist markiert, und **★** kennzeichnet die
+1. **Stimme wählen.** Das Menü bietet die Stimmen der gewählten Sprache mit
+   ihrem Akzent: „Denise (Frankreich)“, „Emily (Irland)“, „Ingrid
+   (Österreich)“. Die aktuelle Stimme ist markiert, und **★** kennzeichnet die
    offizielle Stimme von EdgeTX (Denise für Französisch, Emily für Englisch,
-   Katja für Deutsch).
+   Tanja für Deutsch — sie übernimmt den Klang von Katja, die Microsoft
+   zurückgezogen hat).
 2. **Sätze schreiben.** Die Liste ist mit gängigen Ansagen vorbereitet — 28 auf
    Deutsch, 44 auf Französisch und Englisch (Motor, Klappen, Fahrwerk, Timer,
    Flugmodi …). Jede Zeile lässt sich ändern, ergänzen oder löschen.
@@ -247,9 +246,12 @@ Die Anwendung erklärt sich selbst: Klicken Sie auf **?** unten rechts.
 
 - Die Stimmen kommen vom Dienst **edge-tts**, der auf der Sprachsynthese von
   Microsoft Edge beruht. Vox-Pack wandelt sie nur in das richtige Format um.
-- Beim Start **prüft die Anwendung, ob die angebotenen Stimmen bei Microsoft
-  noch existieren**, und entfernt die verschwundenen. Schlägt diese Prüfung fehl
-  (keine Verbindung), bleibt die Liste unverändert.
+- Beim Start **prüft die Anwendung die angebotenen Stimmen bei Microsoft**:
+  Sie entfernt die verschwundenen, ergänzt die neu erschienenen in den bereits
+  angebotenen Ländern, und ein Fenster warnt — einmal —, wenn eine Stimme
+  verschwindet oder hinzukommt. Eine bloße Umbenennung bleibt still: Der
+  Stern folgt der Ersatzstimme. Schlägt diese Prüfung fehl (keine
+  Verbindung), bleibt die Liste unverändert.
 - Der Dienst von Microsoft kann sich ohne Vorwarnung ändern: Wenn das Erzeugen
   plötzlich mit einem Fehler abbricht, muss fast immer die Bibliothek
   `edge-tts` aktualisiert werden (`pip install --upgrade edge-tts`).

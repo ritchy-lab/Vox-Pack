@@ -27,6 +27,10 @@ LANGUES_TEXTES = ("fr", "en", "de", "es", "it", "pt", "ru", "sv", "uk",
 
 TEXTES: dict[str, dict[str, str]] = {
     "fr": {
+        "msg_voix_retirees_une": "La voix {noms} n'est pas disponible sur le service de voix de Microsoft.",
+        "msg_voix_retirees_plusieurs": "Les voix {noms} ne sont pas disponibles sur le service de voix de Microsoft.",
+        "msg_voix_ajoutees_une": "La voix {noms} a été ajoutée par le service de voix de Microsoft.",
+        "msg_voix_ajoutees_plusieurs": "Les voix {noms} ont été ajoutées par le service de voix de Microsoft.",
         "liste_indisponible": "Liste indisponible : le réseau n'a pas répondu.",
         "maj_titre": 'Mise à jour disponible',
         "maj_texte": 'La version {version} est disponible. Vous utilisez la {actuelle}.',
@@ -78,6 +82,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Dossier de sortie',
     },
     "en": {
+        "msg_voix_retirees_une": "The voice {noms} is not available on Microsoft's voice service.",
+        "msg_voix_retirees_plusieurs": "The voices {noms} are not available on Microsoft's voice service.",
+        "msg_voix_ajoutees_une": "The voice {noms} has been added by Microsoft's voice service.",
+        "msg_voix_ajoutees_plusieurs": "The voices {noms} have been added by Microsoft's voice service.",
         "liste_indisponible": 'List unavailable: the network did not answer.',
         "maj_titre": 'Update available',
         "maj_texte": 'Version {version} is available. You are using {actuelle}.',
@@ -129,6 +137,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Output folder',
     },
     "de": {
+        "msg_voix_retirees_une": "Die Stimme {noms} ist im Sprachdienst von Microsoft nicht verfügbar.",
+        "msg_voix_retirees_plusieurs": "Die Stimmen {noms} sind im Sprachdienst von Microsoft nicht verfügbar.",
+        "msg_voix_ajoutees_une": "Die Stimme {noms} wurde vom Sprachdienst von Microsoft hinzugefügt.",
+        "msg_voix_ajoutees_plusieurs": "Die Stimmen {noms} wurden vom Sprachdienst von Microsoft hinzugefügt.",
         "liste_indisponible": 'Liste nicht verfügbar: das Netzwerk hat nicht geantwortet.',
         "maj_titre": 'Aktualisierung verfügbar',
         "maj_texte": 'Version {version} ist verfügbar. Sie nutzen {actuelle}.',
@@ -180,6 +192,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Ausgabeordner',
     },
     "es": {
+        "msg_voix_retirees_une": "La voz {noms} no está disponible en el servicio de voz de Microsoft.",
+        "msg_voix_retirees_plusieurs": "Las voces {noms} no están disponibles en el servicio de voz de Microsoft.",
+        "msg_voix_ajoutees_une": "El servicio de voz de Microsoft ha añadido la voz {noms}.",
+        "msg_voix_ajoutees_plusieurs": "El servicio de voz de Microsoft ha añadido las voces {noms}.",
         "liste_indisponible": 'Lista no disponible: la red no respondió.',
         "maj_titre": 'Actualización disponible',
         "maj_texte": 'La versión {version} está disponible. Usa la {actuelle}.',
@@ -231,6 +247,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Carpeta de salida',
     },
     "it": {
+        "msg_voix_retirees_une": "La voce {noms} non è disponibile nel servizio vocale di Microsoft.",
+        "msg_voix_retirees_plusieurs": "Le voci {noms} non sono disponibili nel servizio vocale di Microsoft.",
+        "msg_voix_ajoutees_une": "Il servizio vocale di Microsoft ha aggiunto la voce {noms}.",
+        "msg_voix_ajoutees_plusieurs": "Il servizio vocale di Microsoft ha aggiunto le voci {noms}.",
         "liste_indisponible": 'Lista non disponibile: la rete non ha risposto.',
         "maj_titre": 'Aggiornamento disponibile',
         "maj_texte": 'La versione {version} è disponibile. Usa la {actuelle}.',
@@ -282,6 +302,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Cartella di uscita',
     },
     "pt": {
+        "msg_voix_retirees_une": "A voz {noms} não está disponível no serviço de voz da Microsoft.",
+        "msg_voix_retirees_plusieurs": "As vozes {noms} não estão disponíveis no serviço de voz da Microsoft.",
+        "msg_voix_ajoutees_une": "O serviço de voz da Microsoft adicionou a voz {noms}.",
+        "msg_voix_ajoutees_plusieurs": "O serviço de voz da Microsoft adicionou as vozes {noms}.",
         "liste_indisponible": 'Lista indisponível: a rede não respondeu.',
         "maj_titre": 'Atualização disponível',
         "maj_texte": 'A versão {version} está disponível. Você usa a {actuelle}.',
@@ -333,6 +357,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Pasta de saída',
     },
     "ru": {
+        "msg_voix_retirees_une": "Голос {noms} недоступен в голосовом сервисе Microsoft.",
+        "msg_voix_retirees_plusieurs": "Голоса {noms} недоступны в голосовом сервисе Microsoft.",
+        "msg_voix_ajoutees_une": "Голосовой сервис Microsoft добавил голос {noms}.",
+        "msg_voix_ajoutees_plusieurs": "Голосовой сервис Microsoft добавил голоса {noms}.",
         "liste_indisponible": 'Список недоступен: сеть не ответила.',
         "maj_titre": 'Доступно обновление',
         "maj_texte": 'Доступна версия {version}. Вы используете {actuelle}.',
@@ -384,6 +412,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Папка вывода',
     },
     "sv": {
+        "msg_voix_retirees_une": "Rösten {noms} finns inte i Microsofts rösttjänst.",
+        "msg_voix_retirees_plusieurs": "Rösterna {noms} finns inte i Microsofts rösttjänst.",
+        "msg_voix_ajoutees_une": "Microsofts rösttjänst har lagt till rösten {noms}.",
+        "msg_voix_ajoutees_plusieurs": "Microsofts rösttjänst har lagt till rösterna {noms}.",
         "liste_indisponible": 'Listan är inte tillgänglig: nätet svarade inte.',
         "maj_titre": 'Uppdatering tillgänglig',
         "maj_texte": 'Version {version} finns. Du använder {actuelle}.',
@@ -435,6 +467,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Utmapp',
     },
     "uk": {
+        "msg_voix_retirees_une": "Голос {noms} недоступний у голосовому сервісі Microsoft.",
+        "msg_voix_retirees_plusieurs": "Голоси {noms} недоступні у голосовому сервісі Microsoft.",
+        "msg_voix_ajoutees_une": "Голосовий сервіс Microsoft додав голос {noms}.",
+        "msg_voix_ajoutees_plusieurs": "Голосовий сервіс Microsoft додав голоси {noms}.",
         "liste_indisponible": 'Список недоступний: мережа не відповіла.',
         "maj_titre": 'Доступне оновлення',
         "maj_texte": 'Доступна версія {version}. Ви використовуєте {actuelle}.',
@@ -486,6 +522,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Папка виводу',
     },
     "cs": {
+        "msg_voix_retirees_une": "Hlas {noms} není v hlasové službě Microsoftu dostupný.",
+        "msg_voix_retirees_plusieurs": "Hlasy {noms} nejsou v hlasové službě Microsoftu dostupné.",
+        "msg_voix_ajoutees_une": "Hlasová služba Microsoftu přidala hlas {noms}.",
+        "msg_voix_ajoutees_plusieurs": "Hlasová služba Microsoftu přidala hlasy {noms}.",
         "liste_indisponible": 'Seznam není k dispozici: síť neodpověděla.',
         "maj_titre": 'Dostupné aktualizace',
         "maj_texte": 'Verze {version} je k dispozici. Používáte {actuelle}.',
@@ -537,6 +577,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Výstupní složka',
     },
     "da": {
+        "msg_voix_retirees_une": "Stemmen {noms} er ikke tilgængelig i Microsofts stemmetjeneste.",
+        "msg_voix_retirees_plusieurs": "Stemmerne {noms} er ikke tilgængelige i Microsofts stemmetjeneste.",
+        "msg_voix_ajoutees_une": "Microsofts stemmetjeneste har tilføjet stemmen {noms}.",
+        "msg_voix_ajoutees_plusieurs": "Microsofts stemmetjeneste har tilføjet stemmerne {noms}.",
         "liste_indisponible": 'Listen er ikke tilgængelig: netværket svarede ikke.',
         "maj_titre": 'Opdatering tilgængelig',
         "maj_texte": 'Version {version} er tilgængelig. Du bruger {actuelle}.',
@@ -588,6 +632,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": 'Outputmappe',
     },
     "ja": {
+        "msg_voix_retirees_une": "音声 {noms} は Microsoft の音声サービスで利用できません。",
+        "msg_voix_retirees_plusieurs": "音声 {noms} は Microsoft の音声サービスで利用できません。",
+        "msg_voix_ajoutees_une": "Microsoft の音声サービスが音声 {noms} を追加しました。",
+        "msg_voix_ajoutees_plusieurs": "Microsoft の音声サービスが音声 {noms} を追加しました。",
         "liste_indisponible": 'リストを取得できません。ネットワークが応答しませんでした。',
         "maj_titre": 'アップデートがあります',
         "maj_texte": 'バージョン {version} が利用できます。現在は {actuelle} です。',
@@ -639,6 +687,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": '出力フォルダー',
     },
     "cn": {
+        "msg_voix_retirees_une": "语音 {noms} 在 Microsoft 语音服务中不可用。",
+        "msg_voix_retirees_plusieurs": "语音 {noms} 在 Microsoft 语音服务中不可用。",
+        "msg_voix_ajoutees_une": "Microsoft 语音服务新增了语音 {noms}。",
+        "msg_voix_ajoutees_plusieurs": "Microsoft 语音服务新增了语音 {noms}。",
         "liste_indisponible": '列表不可用：网络没有响应。',
         "maj_titre": '有可用更新',
         "maj_texte": '版本 {version} 已发布，您正在使用 {actuelle}。',
@@ -690,6 +742,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": '输出文件夹',
     },
     "tw": {
+        "msg_voix_retirees_une": "語音 {noms} 在 Microsoft 語音服務中無法使用。",
+        "msg_voix_retirees_plusieurs": "語音 {noms} 在 Microsoft 語音服務中無法使用。",
+        "msg_voix_ajoutees_une": "Microsoft 語音服務新增了語音 {noms}。",
+        "msg_voix_ajoutees_plusieurs": "Microsoft 語音服務新增了語音 {noms}。",
         "liste_indisponible": '清單無法取得：網路沒有回應。',
         "maj_titre": '有可用更新',
         "maj_texte": '版本 {version} 已發布，您正在使用 {actuelle}。',
@@ -741,6 +797,10 @@ TEXTES: dict[str, dict[str, str]] = {
         "dossier_sortie": '輸出資料夾',
     },
     "hk": {
+        "msg_voix_retirees_une": "語音 {noms} 喺 Microsoft 語音服務度用唔到。",
+        "msg_voix_retirees_plusieurs": "語音 {noms} 喺 Microsoft 語音服務度用唔到。",
+        "msg_voix_ajoutees_une": "Microsoft 語音服務加咗語音 {noms}。",
+        "msg_voix_ajoutees_plusieurs": "Microsoft 語音服務加咗語音 {noms}。",
         "liste_indisponible": '攞唔到清單：網絡冇回應。',
         "maj_titre": '有可用更新',
         "maj_texte": '版本 {version} 已推出，你而家用緊 {actuelle}。',
@@ -1416,9 +1476,15 @@ LOT_NOMS = {'es': {'pb_accent': 'sin acentos',
 
 # ----- Voix : accents et genres, pour les libellés -----
 LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
+        'accent_argentin': 'Argentina',
+        'accent_autriche': 'Austria',
         'accent_belgique': 'Bélgica',
+        'accent_chili': 'Chile',
+        'accent_colombie': 'Colombia',
+        'accent_espagne': 'España',
         'accent_france': 'Francia',
         'accent_irlande': 'Irlanda',
+        'accent_mexique': 'México',
         'accent_quebec': 'Quebec',
         'accent_suisse': 'Suiza',
         'accent_uk': 'Reino Unido',
@@ -1427,9 +1493,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Mujer',
         'genre_h': 'Hombre'},
  'it': {'accent_allemagne': 'Germania',
+        'accent_argentin': 'Argentina',
+        'accent_autriche': 'Austria',
         'accent_belgique': 'Belgio',
+        'accent_chili': 'Cile',
+        'accent_colombie': 'Colombia',
+        'accent_espagne': 'Spagna',
         'accent_france': 'Francia',
         'accent_irlande': 'Irlanda',
+        'accent_mexique': 'Messico',
         'accent_quebec': 'Québec',
         'accent_suisse': 'Svizzera',
         'accent_uk': 'Regno Unito',
@@ -1438,9 +1510,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Donna',
         'genre_h': 'Uomo'},
  'pt': {'accent_allemagne': 'Alemanha',
+        'accent_argentin': 'Argentina',
+        'accent_autriche': 'Áustria',
         'accent_belgique': 'Bélgica',
+        'accent_chili': 'Chile',
+        'accent_colombie': 'Colômbia',
+        'accent_espagne': 'Espanha',
         'accent_france': 'França',
         'accent_irlande': 'Irlanda',
+        'accent_mexique': 'México',
         'accent_quebec': 'Quebec',
         'accent_suisse': 'Suíça',
         'accent_uk': 'Reino Unido',
@@ -1449,9 +1527,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Mulher',
         'genre_h': 'Homem'},
  'ru': {'accent_allemagne': 'Германия',
+        'accent_argentin': 'Аргентина',
+        'accent_autriche': 'Австрия',
         'accent_belgique': 'Бельгия',
+        'accent_chili': 'Чили',
+        'accent_colombie': 'Колумбия',
+        'accent_espagne': 'Испания',
         'accent_france': 'Франция',
         'accent_irlande': 'Ирландия',
+        'accent_mexique': 'Мексика',
         'accent_quebec': 'Квебек',
         'accent_suisse': 'Швейцария',
         'accent_uk': 'Великобритания',
@@ -1460,9 +1544,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Женщина',
         'genre_h': 'Мужчина'},
  'sv': {'accent_allemagne': 'Tyskland',
+        'accent_argentin': 'Argentina',
+        'accent_autriche': 'Österrike',
         'accent_belgique': 'Belgien',
+        'accent_chili': 'Chile',
+        'accent_colombie': 'Colombia',
+        'accent_espagne': 'Spanien',
         'accent_france': 'Frankrike',
         'accent_irlande': 'Irland',
+        'accent_mexique': 'Mexiko',
         'accent_quebec': 'Québec',
         'accent_suisse': 'Schweiz',
         'accent_uk': 'Storbritannien',
@@ -1471,9 +1561,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Kvinna',
         'genre_h': 'Man'},
  'uk': {'accent_allemagne': 'Німеччина',
+        'accent_argentin': 'Аргентина',
+        'accent_autriche': 'Австрія',
         'accent_belgique': 'Бельгія',
+        'accent_chili': 'Чилі',
+        'accent_colombie': 'Колумбія',
+        'accent_espagne': 'Іспанія',
         'accent_france': 'Франція',
         'accent_irlande': 'Ірландія',
+        'accent_mexique': 'Мексика',
         'accent_quebec': 'Квебек',
         'accent_suisse': 'Швейцарія',
         'accent_uk': 'Велика Британія',
@@ -1482,9 +1578,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Жінка',
         'genre_h': 'Чоловік'},
  'cs': {'accent_allemagne': 'Německo',
+        'accent_argentin': 'Argentina',
+        'accent_autriche': 'Rakousko',
         'accent_belgique': 'Belgie',
+        'accent_chili': 'Chile',
+        'accent_colombie': 'Kolumbie',
+        'accent_espagne': 'Španělsko',
         'accent_france': 'Francie',
         'accent_irlande': 'Irsko',
+        'accent_mexique': 'Mexiko',
         'accent_quebec': 'Québec',
         'accent_suisse': 'Švýcarsko',
         'accent_uk': 'Spojené království',
@@ -1493,9 +1595,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Žena',
         'genre_h': 'Muž'},
  'da': {'accent_allemagne': 'Tyskland',
+        'accent_argentin': 'Argentina',
+        'accent_autriche': 'Østrig',
         'accent_belgique': 'Belgien',
+        'accent_chili': 'Chile',
+        'accent_colombie': 'Colombia',
+        'accent_espagne': 'Spanien',
         'accent_france': 'Frankrig',
         'accent_irlande': 'Irland',
+        'accent_mexique': 'Mexico',
         'accent_quebec': 'Québec',
         'accent_suisse': 'Schweiz',
         'accent_uk': 'Storbritannien',
@@ -1504,9 +1612,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': 'Kvinde',
         'genre_h': 'Mand'},
  'ja': {'accent_allemagne': 'ドイツ',
+        'accent_argentin': 'アルゼンチン',
+        'accent_autriche': 'オーストリア',
         'accent_belgique': 'ベルギー',
+        'accent_chili': 'チリ',
+        'accent_colombie': 'コロンビア',
+        'accent_espagne': 'スペイン',
         'accent_france': 'フランス',
         'accent_irlande': 'アイルランド',
+        'accent_mexique': 'メキシコ',
         'accent_quebec': 'ケベック',
         'accent_suisse': 'スイス',
         'accent_uk': 'イギリス',
@@ -1515,9 +1629,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': '女性',
         'genre_h': '男性'},
  'cn': {'accent_allemagne': '德国',
+        'accent_argentin': '阿根廷',
+        'accent_autriche': '奥地利',
         'accent_belgique': '比利时',
+        'accent_chili': '智利',
+        'accent_colombie': '哥伦比亚',
+        'accent_espagne': '西班牙',
         'accent_france': '法国',
         'accent_irlande': '爱尔兰',
+        'accent_mexique': '墨西哥',
         'accent_quebec': '魁北克',
         'accent_suisse': '瑞士',
         'accent_uk': '英国',
@@ -1526,9 +1646,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': '女声',
         'genre_h': '男声'},
  'tw': {'accent_allemagne': '德國',
+        'accent_argentin': '阿根廷',
+        'accent_autriche': '奧地利',
         'accent_belgique': '比利時',
+        'accent_chili': '智利',
+        'accent_colombie': '哥倫比亞',
+        'accent_espagne': '西班牙',
         'accent_france': '法國',
         'accent_irlande': '愛爾蘭',
+        'accent_mexique': '墨西哥',
         'accent_quebec': '魁北克',
         'accent_suisse': '瑞士',
         'accent_uk': '英國',
@@ -1537,9 +1663,15 @@ LOT_VOIX = {'es': {'accent_allemagne': 'Alemania',
         'genre_f': '女聲',
         'genre_h': '男聲'},
  'hk': {'accent_allemagne': '德國',
+        'accent_argentin': '阿根廷',
+        'accent_autriche': '奧地利',
         'accent_belgique': '比利時',
+        'accent_chili': '智利',
+        'accent_colombie': '哥倫比亞',
+        'accent_espagne': '西班牙',
         'accent_france': '法國',
         'accent_irlande': '愛爾蘭',
+        'accent_mexique': '墨西哥',
         'accent_quebec': '魁北克',
         'accent_suisse': '瑞士',
         'accent_uk': '英國',
@@ -1631,15 +1763,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_reseau_coupe': 'Conexión a Internet interrumpida: la generación '
                             'se ha detenido. Comprueba la conexión y vuelve '
                             'a empezar.',
-        'msg_sauvegarde_echec': 'No se pudo guardar la lista.\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Otro programa puede estar usando este '
-                                'archivo (antivirus, OneDrive), o Windows '
-                                'protege la carpeta Documentos: en Seguridad '
-                                'de Windows → «Acceso controlado a '
-                                'carpetas», autoriza Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "No se pudo guardar la lista.\n\n{err}\n\nOtro programa puede estar usando este archivo (antivirus, copia de seguridad en línea). Si la carpeta Documentos está protegida, permite que Vox-Pack escriba en ella y vuelve a intentarlo.",
         'msg_sons_arrete': 'Generación detenida.\n'
                            '\n'
                            'Archivos creados: {n}\n'
@@ -1732,15 +1857,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_reseau_coupe': 'Connessione a Internet interrotta: la '
                             'generazione è stata fermata. Controlla la '
                             'connessione e riavvia.',
-        'msg_sauvegarde_echec': "Impossibile salvare l'elenco.\n"
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Un altro programma potrebbe usare questo '
-                                'file (antivirus, OneDrive), oppure Windows '
-                                'protegge la cartella Documenti: in '
-                                'Sicurezza di Windows → «Accesso controllato '
-                                'alle cartelle», autorizza Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "Impossibile salvare l'elenco.\n\n{err}\n\nForse un altro programma sta usando il file (antivirus, backup online). Se la cartella Documenti è protetta, consenti a Vox-Pack di scrivervi e riprova.",
         'msg_sons_arrete': 'Generazione fermata.\n'
                            '\n'
                            'File creati: {n}\n'
@@ -1832,15 +1950,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_reseau_coupe': 'Conexão com a Internet interrompida: a geração '
                             'foi parada. Verifique a conexão e comece de '
                             'novo.',
-        'msg_sauvegarde_echec': 'Não foi possível salvar a lista.\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Outro programa pode estar usando este '
-                                'arquivo (antivírus, OneDrive), ou o Windows '
-                                'protege a pasta Documentos: em Segurança do '
-                                'Windows → «Acesso controlado a pastas», '
-                                'autorize o Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "Não foi possível salvar a lista.\n\n{err}\n\nTalvez outro programa esteja a usar o ficheiro (antivírus, cópia de segurança online). Se a pasta Documentos estiver protegida, permite que o Vox-Pack escreva nela e tenta novamente.",
         'msg_sons_arrete': 'Geração parada.\n'
                            '\n'
                            'Arquivos criados: {n}\n'
@@ -1928,15 +2039,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_reseau_coupe': 'Подключение к Интернету прервано: генерация '
                             'остановлена. Проверьте соединение и запустите '
                             'снова.',
-        'msg_sauvegarde_echec': 'Не удалось сохранить список.\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Возможно, файл использует другая программа '
-                                '(антивирус, OneDrive), или Windows защищает '
-                                'папку «Документы»: в «Безопасность Windows» '
-                                '→ «Контролируемый доступ к папкам» '
-                                'разрешите Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "Не удалось сохранить список.\n\n{err}\n\nВозможно, файл использует другая программа (антивирус, онлайн-резервная копия). Если папка «Документы» защищена, разрешите Vox-Pack записывать в неё и повторите попытку.",
         'msg_sons_arrete': 'Генерация остановлена.\n'
                            '\n'
                            'Файлов создано: {n}\n'
@@ -2024,15 +2128,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_reseau_coupe': 'Internetanslutningen bröts: genereringen '
                             'stoppades. Kontrollera anslutningen och starta '
                             'igen.',
-        'msg_sauvegarde_echec': 'Listan kunde inte sparas.\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Ett annat program använder kanske filen '
-                                '(antivirus, OneDrive), eller så skyddar '
-                                'Windows mappen Dokument: i Windows-säkerhet '
-                                '→ ”Kontrollerad mappåtkomst”, tillåt '
-                                'Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "Listan kunde inte sparas.\n\n{err}\n\nEtt annat program använder kanske filen (antivirus, säkerhetskopiering online). Om mappen Dokument är skyddad, tillåt Vox-Pack att skriva i den och försök igen.",
         'msg_sons_arrete': 'Genereringen stoppad.\n'
                            '\n'
                            'Skapade filer: {n}\n'
@@ -2122,15 +2219,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_reseau_coupe': 'Підключення до Інтернету перервано: генерацію '
                             "зупинено. Перевірте з'єднання і запустіть "
                             'знову.',
-        'msg_sauvegarde_echec': 'Не вдалося зберегти список.\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Можливо, файл використовує інша програма '
-                                '(антивірус, OneDrive), або Windows захищає '
-                                'теку «Документи»: у «Безпека Windows» → '
-                                '«Контрольований доступ до тек» дозвольте '
-                                'Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "Не вдалося зберегти список.\n\n{err}\n\nМожливо, файл використовує інша програма (антивірус, онлайн-резервна копія). Якщо папка «Документи» захищена, дозвольте Vox-Pack записувати до неї та спробуйте ще раз.",
         'msg_sons_arrete': 'Генерацію зупинено.\n'
                            '\n'
                            'Файлів створено: {n}\n'
@@ -2217,15 +2307,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_reseau_coupe': 'Připojení k internetu bylo přerušeno: '
                             'generování bylo zastaveno. Zkontrolujte '
                             'připojení a spusťte znovu.',
-        'msg_sauvegarde_echec': 'Seznam se nepodařilo uložit.\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Soubor možná používá jiný program '
-                                '(antivirus, OneDrive), nebo Windows chrání '
-                                'složku Dokumenty: v Zabezpečení Windows → '
-                                '„Řízený přístup ke složkám“ povolte '
-                                'Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "Seznam se nepodařilo uložit.\n\n{err}\n\nSoubor možná používá jiný program (antivirus, online záloha). Pokud je složka Dokumenty chráněná, povolte Vox-Packu do ní zapisovat a zkuste to znovu.",
         'msg_sons_arrete': 'Generování zastaveno.\n'
                            '\n'
                            'Vytvořeno souborů: {n}\n'
@@ -2313,15 +2396,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_import_vide': 'Denne fil indeholder ingen linjer.',
         'msg_reseau_coupe': 'Internetforbindelsen blev afbrudt: genereringen '
                             'blev stoppet. Tjek forbindelsen, og start igen.',
-        'msg_sauvegarde_echec': 'Listen kunne ikke gemmes.\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                'Et andet program bruger måske filen '
-                                '(antivirus, OneDrive), eller Windows '
-                                'beskytter mappen Dokumenter: i '
-                                'Windows-sikkerhed → »Kontrolleret mappe '
-                                'adgang«, tillad Vox-Pack.',
+        "msg_sauvegarde_echec":
+            "Listen kunne ikke gemmes.\n\n{err}\n\nEt andet program bruger måske filen (antivirus, online-sikkerhedskopi). Hvis mappen Dokumenter er beskyttet, skal du give Vox-Pack lov til at skrive i den og prøve igen.",
         'msg_sons_arrete': 'Generering stoppet.\n'
                            '\n'
                            'Oprettede filer: {n}\n'
@@ -2390,13 +2466,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_import_oui': 'はい、置き換える',
         'msg_import_vide': 'このファイルには行がありません。',
         'msg_reseau_coupe': 'インターネット接続が切れたため、生成を停止しました。接続を確認して、もう一度開始してください。',
-        'msg_sauvegarde_echec': 'リストを保存できませんでした。\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                '別のプログラム（ウイルス対策、OneDrive）がこのファイルを使用しているか、Windows '
-                                'が「ドキュメント」フォルダーを保護しています。Windows セキュリティ → '
-                                '「フォルダー アクセスの制御」で Vox-Pack を許可してください。',
+        "msg_sauvegarde_echec":
+            "リストを保存できませんでした。\n\n{err}\n\n別のプログラムがファイルを使用している可能性があります（ウイルス対策、オンラインバックアップ）。「書類」フォルダが保護されている場合は、Vox-Pack に書き込みを許可してから、もう一度お試しください。",
         'msg_sons_arrete': '生成を停止しました。\n\n作成したファイル: {n}\n\n{dossier}',
         'msg_sons_bilan': '作成したシステム音: {total} 件中 {reussis} 件\n'
                           '\n'
@@ -2456,13 +2527,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_import_oui': '是，替换',
         'msg_import_vide': '此文件没有任何行。',
         'msg_reseau_coupe': '网络连接中断：生成已停止。请检查连接后重新开始。',
-        'msg_sauvegarde_echec': '无法保存列表。\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                '可能有其他程序（杀毒软件、OneDrive）正在使用此文件，或者 Windows '
-                                '保护了“文档”文件夹：请在 Windows 安全中心 →“受控文件夹访问”中允许 '
-                                'Vox-Pack。',
+        "msg_sauvegarde_echec":
+            "无法保存列表。\n\n{err}\n\n可能有另一个程序正在使用该文件（杀毒软件、在线备份）。如果“文稿”文件夹受保护，请允许 Vox-Pack 写入，然后重试。",
         'msg_sons_arrete': '生成已停止。\n\n已创建文件：{n}\n\n{dossier}',
         'msg_sons_bilan': '已创建系统文件：{reussis} / {total}\n'
                           '\n'
@@ -2518,13 +2584,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_import_oui': '是，取代',
         'msg_import_vide': '這個檔案沒有任何行。',
         'msg_reseau_coupe': '網路連線中斷：產生已停止。請檢查連線後重新開始。',
-        'msg_sauvegarde_echec': '無法儲存清單。\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                '可能有其他程式（防毒軟體、OneDrive）正在使用這個檔案，或 Windows '
-                                '保護了「文件」資料夾：請在 Windows 安全性 →「受控資料夾存取權」中允許 '
-                                'Vox-Pack。',
+        "msg_sauvegarde_echec":
+            "無法儲存清單。\n\n{err}\n\n可能有另一個程式正在使用該檔案（防毒軟體、線上備份）。如果「文件」資料夾受保護，請允許 Vox-Pack 寫入，然後再試一次。",
         'msg_sons_arrete': '產生已停止。\n\n已建立檔案：{n}\n\n{dossier}',
         'msg_sons_bilan': '已建立系統檔案：{reussis} / {total}\n'
                           '\n'
@@ -2579,13 +2640,8 @@ LOT_GENERATION = {'es': {'err_illisible': 'El servicio de voz devolvió una resp
         'msg_import_oui': '係，取代',
         'msg_import_vide': '呢個檔案冇任何行。',
         'msg_reseau_coupe': '網絡連線中斷：產生已停止。請檢查連線再重新開始。',
-        'msg_sauvegarde_echec': '儲存唔到清單。\n'
-                                '\n'
-                                '{err}\n'
-                                '\n'
-                                '可能有其他程式（防毒、OneDrive）用緊呢個檔案，或者 Windows '
-                                '保護咗「文件」資料夾：請喺 Windows 安全性 →「受控資料夾存取權」度允許 '
-                                'Vox-Pack。',
+        "msg_sauvegarde_echec":
+            "儲存唔到清單。\n\n{err}\n\n可能有另一個程式用緊呢個檔案（防毒軟件、網上備份）。如果「文件」資料夾受保護，請允許 Vox-Pack 寫入，然後再試一次。",
         'msg_sons_arrete': '產生已停止。\n\n已建立檔案：{n}\n\n{dossier}',
         'msg_sons_bilan': '已建立系統檔案：{reussis} / {total}\n'
                           '\n'

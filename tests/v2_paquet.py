@@ -119,6 +119,178 @@ def main() -> int:
     verifier("une ligne de données n'est pas un en-tête",
              not voxpack2.est_entete(["armed", "Motor armed"]))
 
+    print("Choix du fichier de mise à jour")
+    # Depuis la 2.0.0, deux .zip Mac coexistent. Se fier au « premier .zip »
+    # a envoyé la version Intel aux Mac Apple Silicon : on se fie au NOM du
+    # fichier, et l'ordre de la liste ne doit plus rien changer.
+    zip_mac = {"name": "Vox-Pack.zip"}
+    zip_intel = {"name": "Vox-Pack-Intel.zip"}
+    setup = {"name": "Vox-Pack-Setup.exe"}
+    portable = {"name": "Vox-Pack.exe"}
+    vrai_plateforme = voxpack2.sys.platform
+    vraie_machine = voxpack2.platform.machine
+
+    def choisir(plateforme, machine, assets):
+        voxpack2.sys.platform = plateforme
+        voxpack2.platform.machine = lambda: machine
+        try:
+            return voxpack2.choisir_asset(assets)
+        finally:
+            voxpack2.sys.platform = vrai_plateforme
+            voxpack2.platform.machine = vraie_machine
+
+    verifier("Mac Apple Silicon : le .zip sans « intel », même s'il est après",
+             choisir("darwin", "arm64", [zip_intel, zip_mac]) is zip_mac)
+    verifier("Mac Intel : le .zip « intel », même s'il est après",
+             choisir("darwin", "x86_64", [zip_mac, zip_intel]) is zip_intel)
+    verifier("Mac Apple Silicon, seul l'Intel : on le prend quand même",
+             choisir("darwin", "arm64", [zip_intel]) is zip_intel)
+    verifier("Windows : l'installateur, même si le portable est avant",
+             choisir("win32", "AMD64", [portable, setup]) is setup)
+    verifier("Windows, pas d'installateur : le portable",
+             choisir("win32", "AMD64", [portable]) is portable)
+    verifier("un autre système : aucun fichier",
+             choisir("linux", "x86_64", [zip_mac]) is None)
+
+    print("Voix : étoile, remplacements et règle d'ajout")
+    # Katja n'est plus proposée : l'étoile est sur Tanja, qui reprend son
+    # son. Si Katja revenait, l'étoile reviendrait sur elle, sans doubler.
+    vraie_voix = list(voxpack2.VOIX["de"])
+    verifier("Katja retirée : l'étoile est sur Tanja",
+             voxpack2.porte_etoile("de-DE-TanjaNeural"))
+    verifier("Katja retirée : pas de seconde étoile",
+             not voxpack2.porte_etoile("de-DE-ChristophNeural"))
+    try:
+        voxpack2.VOIX["de"].insert(
+            0, ("de-DE-KatjaNeural", "Katja", "f", "allemagne"))
+        verifier("Katja revenue : l'étoile revient à Katja",
+                 voxpack2.porte_etoile("de-DE-KatjaNeural")
+                 and not voxpack2.porte_etoile("de-DE-TanjaNeural"))
+    finally:
+        voxpack2.VOIX["de"] = vraie_voix
+
+    # Les quatre noms allemands retirés par Microsoft ont une remplaçante
+    # connue : sans elle, un utilisateur de Conrad retomberait sur Tanja.
+    verifier("les remplaçantes allemandes sont connues",
+             voxpack2.VOIX_REMPLACANTES.get("de-DE-ConradNeural")
+             == "de-DE-ChristophNeural"
+             and voxpack2.VOIX_REMPLACANTES.get("de-DE-KatjaNeural")
+             == "de-DE-TanjaNeural")
+
+    # Un utilisateur de Conrad (retiré) doit retrouver Christoph, le même
+    # son, et non Tanja, la première voix du menu.
+    class FauxApp:
+        langue = "de"
+        _reglages = {"voix": {"de": "de-DE-ConradNeural"}}
+
+        class combo_voice:
+            choix = ""
+
+            @classmethod
+            def configure(cls, **_options):
+                pass
+
+            @classmethod
+            def set(cls, valeur):
+                cls.choix = valeur
+
+        def _maj_marque_voix(self):
+            pass
+
+    essai = FauxApp()
+    voxpack2.VoxPackApp._remplir_voix(essai)
+    verifier("Conrad retiré : son choix suit Christoph",
+             "Christoph" in FauxApp.combo_voice.choix,
+             FauxApp.combo_voice.choix)
+
+    # Les mémoires des fenêtres doivent survivre à la relecture des
+    # réglages : sinon, l'alerte reviendrait à chaque démarrage.
+    gardes = voxpack2._reglages_surs(
+        {"voix_signalees": ["de-DE-KatjaNeural", 3, ""],
+         "voix_ajoutees": ["en-US-EmmaNeural"]})
+    verifier("la mémoire des voix signalées est relue",
+             gardes.get("voix_signalees") == ["de-DE-KatjaNeural"], gardes)
+    verifier("la mémoire des voix ajoutées est relue",
+             gardes.get("voix_ajoutees") == ["en-US-EmmaNeural"], gardes)
+
+    class FauxSignal:
+        def __init__(self):
+            self._reglages = {}
+            self.texte = ""
+
+        def _montrer_quand_visible(self, texte, essais):
+            self.texte = texte
+
+    # Un renommage ne s'annonce pas : les anciens noms ont une remplaçante,
+    # la fenêtre reste fermée.
+    faux = FauxSignal()
+    renommees = [("de-DE-KatjaNeural", "Katja", "f", "allemagne"),
+                 ("de-DE-ConradNeural", "Conrad", "h", "allemagne")]
+    voxpack2.VoxPackApp._signaler_voix_retirees(faux, renommees)
+    verifier("un renommage reste silencieux", faux.texte == "", faux.texte)
+
+    # Une vraie disparition parle, avec le nom de la voix.
+    faux = FauxSignal()
+    voxpack2.VoxPackApp._signaler_voix_retirees(
+        faux, [("fr-FR-DeniseNeural", "Denise", "f", "france")])
+    verifier("une voix perdue est annoncée", "Denise" in faux.texte,
+             faux.texte)
+    verifier("le texte français parle du service de voix de Microsoft",
+             "service de voix de Microsoft"
+             in voxpack2.TEXTES["fr"]["msg_voix_retirees_plusieurs"])
+
+    # Un ajout est annoncé, avec le nom de la voix.
+    faux = FauxSignal()
+    voxpack2.VoxPackApp._signaler_voix_ajoutees(
+        faux, [("en-US-EmmaNeural", "Emma", "f", "usa")])
+    verifier("une voix ajoutée est annoncée", "Emma" in faux.texte,
+             faux.texte)
+    verifier("le texte français parle du service de voix de Microsoft",
+             "ajoutée par le service de voix de Microsoft"
+             in voxpack2.TEXTES["fr"]["msg_voix_ajoutees_une"])
+
+    # La règle d'ajout ne lit aucun attribut de l'application : on peut
+    # l'appeler sans instance (None comme « self »).
+    dispo = {
+        "de-DE-TanjaNeural": ("de-DE", "Female"),      # déjà dans la table
+        "de-DE-NinaNeural": ("de-DE", "Female"),       # pays ouvert
+        "de-AT-MartaNeural": ("de-AT", "Female"),
+        "de-CH-EliasNeural": ("de-CH", "Male"),
+        "de-LI-LeaNeural": ("de-LI", "Female"),        # pays non ouvert
+        "de-DE-XMultilingualNeural": ("de-DE", "Female"),
+        "en-US-AriaNeural": ("en-US", "Female"),       # autre langue
+    }
+    ajoutees = voxpack2.VoxPackApp._voix_nouvelles(None, "de", dispo)
+    verifier("les voix d'un pays non ouvert restent dehors",
+             all(entree[0] != "de-LI-LeaNeural" for entree in ajoutees),
+             ajoutees)
+    verifier("les voix d'une autre langue restent dehors",
+             all(entree[0] != "en-US-AriaNeural" for entree in ajoutees))
+    verifier("les Multilingue restent dehors",
+             all("Multilingual" not in entree[0] for entree in ajoutees))
+    verifier("un pays ouvert entre, trié par pays puis prénom",
+             ajoutees == [
+                 ("de-AT-MartaNeural", "Marta", "f", "autriche"),
+                 ("de-CH-EliasNeural", "Elias", "h", "suisse"),
+                 ("de-DE-NinaNeural", "Nina", "f", "allemagne")],
+             ajoutees)
+
+    # Les trois entrées chinoises sont trois écritures : chacune ne reçoit
+    # que ses propres voix. Sans cela, « zh » mélangerait simplifié,
+    # traditionnel et cantonais dans les trois menus.
+    dispo_zh = {
+        "zh-CN-XiaoxiaoNeural": ("zh-CN", "Female"),   # déjà dans la table
+        "zh-CN-YunzeNeural": ("zh-CN", "Male"),        # même écriture
+        "zh-TW-HsiaoChenNeural": ("zh-TW", "Female"),  # autre écriture
+        "zh-HK-HiuGaaiNeural": ("zh-HK", "Female"),
+    }
+    cn = voxpack2.VoxPackApp._voix_nouvelles(None, "cn", dispo_zh)
+    verifier("le chinois simplifié ne prend que le simplifié",
+             [entree[0] for entree in cn] == ["zh-CN-YunzeNeural"], cn)
+    tw = voxpack2.VoxPackApp._voix_nouvelles(None, "tw", dispo_zh)
+    verifier("le chinois traditionnel ne prend que le traditionnel",
+             tw == [], tw)
+
     print("Démarrage sans carcasse")
     # Deux verrous plutôt qu'un : le chemin (trouver_ressource) ET l'ouverture
     # de l'image (Image.open). Sur un poste où le premier ne suffit pas, le

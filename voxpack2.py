@@ -11,6 +11,7 @@ import io
 import json
 import locale
 import os
+import platform
 import queue
 import re
 import shutil
@@ -1093,6 +1094,12 @@ TEXTES = {
         "accent_uk": "Royaume-Uni",
         "accent_irlande": "Irlande",
         "accent_allemagne": "Allemagne",
+        "accent_autriche": "Autriche",
+        "accent_argentin": "Argentine",
+        "accent_chili": "Chili",
+        "accent_colombie": "Colombie",
+        "accent_espagne": "Espagne",
+        "accent_mexique": "Mexique",
 
         # ----- Noms des langues -----
         "langue_fr": "Français",
@@ -1217,11 +1224,7 @@ TEXTES = {
             "Une génération est déjà en cours.\n\n"
             "Attendez qu'elle se termine.",
         "msg_sauvegarde_echec":
-            "La liste n'a pas pu être enregistrée.\n\n"
-            "{err}\n\n"
-            "Un autre programme utilise peut-être ce fichier (antivirus, "
-            "OneDrive), ou Windows protège le dossier Documents : dans "
-            "Sécurité Windows → « Contrôle des dossiers », autorise Vox-Pack.",
+            "La liste n'a pas pu être enregistrée.\n\n{err}\n\nUn autre programme utilise peut-être ce fichier (antivirus, sauvegarde en ligne). Si le dossier Documents est protégé, autorise Vox-Pack à écrire dedans, puis réessaie.",
         "msg_bilan_echecs":
             "{reussis} fichier{s1} créé{s1} sur {total}.\n\n"
             "{problemes} problème{s2} :\n{detail}",
@@ -1470,6 +1473,12 @@ TEXTES = {
         "accent_uk": "United Kingdom",
         "accent_irlande": "Ireland",
         "accent_allemagne": "Germany",
+        "accent_autriche": "Austria",
+        "accent_argentin": "Argentina",
+        "accent_chili": "Chile",
+        "accent_colombie": "Colombia",
+        "accent_espagne": "Spain",
+        "accent_mexique": "Mexico",
 
         # ----- Language names -----
         "langue_fr": "French",
@@ -1592,11 +1601,7 @@ TEXTES = {
             "A generation is already running.\n\n"
             "Wait for it to finish.",
         "msg_sauvegarde_echec":
-            "The list could not be saved.\n\n"
-            "{err}\n\n"
-            "Another program may be using this file (antivirus, OneDrive), "
-            "or Windows is protecting the Documents folder: in Windows "
-            "Security → \"Controlled folder access\", allow Vox-Pack.",
+            "The list could not be saved.\n\n{err}\n\nAnother program may be using this file (antivirus, online backup). If the Documents folder is protected, allow Vox-Pack to write to it, then try again.",
         "msg_bilan_echecs":
             "{reussis} file{s1} created out of {total}.\n\n"
             "{problemes} problem{s2}:\n{detail}",
@@ -1832,6 +1837,12 @@ TEXTES["de"] = {
         "accent_uk": "Großbritannien",
         "accent_irlande": "Irland",
         "accent_allemagne": "Deutschland",
+        "accent_autriche": "Österreich",
+        "accent_argentin": "Argentinien",
+        "accent_chili": "Chile",
+        "accent_colombie": "Kolumbien",
+        "accent_espagne": "Spanien",
+        "accent_mexique": "Mexiko",
         # ----- Titres du panneau (écran de la maquette) -----
         "langue": "Sprache",
         "voix": "Stimme",
@@ -1927,7 +1938,8 @@ TEXTES["de"] = {
         "msg_generer_rien": "Markieren Sie mindestens eine Zeile zum Erzeugen.",
         "msg_generer_aucune": "Keine gültige Zeile zum Erzeugen.\n\nJede Zeile braucht einen korrekten Dateinamen UND einen Ansage-Text.",
         "msg_genere_deja": "Es läuft bereits eine Erzeugung.\n\nWarten Sie, bis sie beendet ist.",
-        "msg_sauvegarde_echec": "Die Liste konnte nicht gespeichert werden.\n\n{err}\n\nEin anderes Programm verwendet die Datei vielleicht (Antivirus, OneDrive), oder Windows schützt den Ordner „Dokumente“: Erlauben Sie Vox-Pack unter Windows-Sicherheit → „Überwachter Ordnerzugriff“.",
+        "msg_sauvegarde_echec":
+            "Die Liste konnte nicht gespeichert werden.\n\n{err}\n\nEin anderes Programm verwendet die Datei vielleicht (Antivirus, Online-Sicherung). Wenn der Ordner „Dokumente“ geschützt ist, erlauben Sie Vox-Pack, darin zu schreiben, und versuchen Sie es erneut.",
         "msg_bilan_echecs": "{reussis} von {total} Datei(en) erstellt.\n\n{problemes} Problem(e):\n{detail}",
         "msg_autres": "• … und {n} weitere",
         "msg_succes": "Ihre Stimmen sind fertig.\n\n{dossier}",
@@ -2147,12 +2159,14 @@ VOIX = {
         ("en-US-AvaNeural", "Ava", "f", "usa"),
         ("en-US-AndrewNeural", "Andrew", "h", "usa"),
         ("en-US-EmmaMultilingualNeural", "Emma", "f", "usa"),
+        ("en-US-EmmaNeural", "Emma", "f", "usa"),
         ("en-US-BrianNeural", "Brian", "h", "usa"),
         ("en-US-RogerNeural", "Roger", "h", "usa"),
         ("en-US-SteffanNeural", "Steffan", "h", "usa"),
         ("en-US-AnaNeural", "Ana", "e", "usa"),
         # Irlande — la voix officielle d'EdgeTX pour l'anglais
         ("en-IE-EmilyNeural", "Emily", "f", "irlande"),
+        ("en-IE-ConnorNeural", "Connor", "h", "irlande"),
         # Royaume-Uni
         ("en-GB-SoniaNeural", "Sonia", "f", "uk"),
         ("en-GB-RyanNeural", "Ryan", "h", "uk"),
@@ -2161,11 +2175,21 @@ VOIX = {
         ("en-GB-ThomasNeural", "Thomas", "h", "uk"),
     ],
     "de": [
-        # Allemagne — Katja est la voix officielle d'EdgeTX pour l'allemand
-        ("de-DE-KatjaNeural", "Katja", "f", "allemagne"),
-        ("de-DE-ConradNeural", "Conrad", "h", "allemagne"),
-        ("de-DE-AmalaNeural", "Amala", "f", "allemagne"),
-        ("de-DE-KillianNeural", "Killian", "h", "allemagne"),
+        # Allemagne — Tanja et Christoph sont les voix proposées aujourd'hui.
+        # Microsoft a retiré Katja, Conrad, Amala et Killian en 2026 et
+        # redirige ces noms vers les deux autres (mesuré : même audio). Le
+        # remplacement est dans VOIX_REMPLACANTES : il déplace l'étoile et
+        # fait suivre le choix de l'utilisateur, sans fenêtre. Les anciens
+        # noms ne sont pas dans la table : s'ils revenaient, l'ajout
+        # automatique les reprendrait comme des voix nouvelles.
+        ("de-DE-TanjaNeural", "Tanja", "f", "allemagne"),
+        ("de-DE-ChristophNeural", "Christoph", "h", "allemagne"),
+        # Autriche — l'allemand autrichien est de l'allemand.
+        ("de-AT-IngridNeural", "Ingrid", "f", "autriche"),
+        ("de-AT-JonasNeural", "Jonas", "h", "autriche"),
+        # Suisse
+        ("de-CH-JanNeural", "Jan", "h", "suisse"),
+        ("de-CH-LeniNeural", "Leni", "f", "suisse"),
     ],
 }
 
@@ -2178,6 +2202,55 @@ VOIX_ORIGINE = {code: list(voix) for code, voix in VOIX.items()}
 # sons du constructeur.
 VOIX_OFFICIELLES = {"fr-FR-DeniseNeural", "en-IE-EmilyNeural",
                     "de-DE-KatjaNeural"}
+
+# Remplaçantes connues. Quand Microsoft retire un nom du service, il le
+# redirige vers une autre voix sans le dire (2026 : Katja et Amala rendent
+# Tanja, Conrad et Killian rendent Christoph). La table sert à deux choses :
+# l'étoile de la voix officielle, et le choix de l'utilisateur (il suit sa
+# remplaçante au lieu de retomber sur la première voix du menu). Un
+# renommage ne s'annonce pas : la fenêtre est réservée aux voix vraiment
+# perdues. Elle se remplit à la main, après mesure : Microsoft ne dit pas
+# qu'une voix en remplace une autre.
+VOIX_REMPLACANTES = {
+    "de-DE-KatjaNeural": "de-DE-TanjaNeural",
+    "de-DE-AmalaNeural": "de-DE-TanjaNeural",
+    "de-DE-ConradNeural": "de-DE-ChristophNeural",
+    "de-DE-KillianNeural": "de-DE-ChristophNeural",
+}
+
+# Le pays que l'on sait nommer, pour chaque voix du service : une voix
+# ajoutée automatiquement reçoit ce nom (« Suisse ») au lieu de son code
+# (« CH »). C'est aussi la liste des pays ouverts : un menu ne reçoit que
+# les voix des pays déjà présents dans sa liste écrite. Ouvrir un pays, c'est
+# écrire une de ses voix dans la liste (les autres suivent) et lui donner son
+# nom ici.
+ACCENTS_CONNUS = {
+    "fr-FR": "france", "fr-CA": "quebec", "fr-CH": "suisse",
+    "fr-BE": "belgique", "en-US": "usa", "en-GB": "uk",
+    "en-IE": "irlande", "de-DE": "allemagne", "de-AT": "autriche",
+    "de-CH": "suisse", "es-ES": "espagne", "es-MX": "mexique",
+    "es-CO": "colombie", "es-AR": "argentin", "es-CL": "chili",
+    "pt-BR": "pt-br", "pt-PT": "pt-pt", "it-IT": "it",
+    "ru-RU": "ru", "sv-SE": "sv", "uk-UA": "uk", "cs-CZ": "cs",
+    "da-DK": "da", "ja-JP": "ja", "zh-CN": "cn", "zh-TW": "tw",
+    "zh-HK": "hk",
+}
+
+
+def porte_etoile(identifiant):
+    """Cette voix doit-elle porter l'étoile de la voix officielle ?"""
+    if identifiant in VOIX_OFFICIELLES:
+        return True
+    for officielle, remplacante in VOIX_REMPLACANTES.items():
+        if identifiant == remplacante and officielle in VOIX_OFFICIELLES:
+            # L'étoile ne se dédouble pas : elle reste à l'officielle si elle
+            # est encore proposée dans le menu.
+            presente = any(entree[0] == officielle
+                           for voix in VOIX.values() for entree in voix)
+            return not presente
+    return False
+
+
 
 # Réglages officiels de vitesse : EdgeTX ne fait pas parler toutes ses voix à
 # la même allure. Emily, la voix anglaise officielle, parle 10 % plus vite.
@@ -2205,7 +2278,15 @@ _VOIX_EN_PLUS = {
     "cs": [("cs-CZ-AntoninNeural", "Antonin", "h")],
     "da": [("da-DK-JeppeNeural", "Jeppe", "h")],
     "es": [("es-ES-XimenaNeural", "Ximena", "f"),
-           ("es-ES-AlvaroNeural", "Alvaro", "h")],
+           ("es-ES-AlvaroNeural", "Alvaro", "h"),
+           ("es-MX-DaliaNeural", "Dalia", "f"),
+           ("es-MX-JorgeNeural", "Jorge", "h"),
+           ("es-CO-SalomeNeural", "Salome", "f"),
+           ("es-CO-GonzaloNeural", "Gonzalo", "h"),
+           ("es-AR-ElenaNeural", "Elena", "f"),
+           ("es-AR-TomasNeural", "Tomas", "h"),
+           ("es-CL-CatalinaNeural", "Catalina", "f"),
+           ("es-CL-LorenzoNeural", "Lorenzo", "h")],
     "it": [("it-IT-IsabellaNeural", "Isabella", "f"),
            ("it-IT-DiegoNeural", "Diego", "h")],
     "ja": [("ja-JP-KeitaNeural", "Keita", "h")],
@@ -2247,12 +2328,18 @@ if _LANGUES_TABLE:
         # devinent la langue de chaque mot et se trompent sur certains).
         if langue.code not in VOIX:
             genre = "h" if langue.code == "uk" else "f"
-            accent = "pt-br" if langue.code == "pt" else langue.dossier
+            locale_officielle = langue.voix.rsplit("-", 1)[0]
+            accent = ACCENTS_CONNUS.get(locale_officielle, langue.dossier)
             VOIX[langue.code] = [(langue.voix, langue.voix_nom, genre,
                                   accent)]
             for entree in _VOIX_EN_PLUS.get(langue.code, ()):
                 identifiant, prenom, genre_voix = entree[:3]
-                accent_voix = entree[3] if len(entree) > 3 else langue.dossier
+                if len(entree) > 3:
+                    accent_voix = entree[3]
+                else:
+                    locale_voix = identifiant.rsplit("-", 1)[0]
+                    accent_voix = ACCENTS_CONNUS.get(locale_voix,
+                                                    langue.dossier)
                 VOIX[langue.code].append(
                     (identifiant, prenom, genre_voix, accent_voix))
         if langue.vitesse != 1.0:
@@ -2571,7 +2658,7 @@ def libelle_voix(entree, langue_ui=None, avec_genre=False):
                    f"{origine})")
     else:
         libelle = f"{prenom} ({origine})"
-    if _identifiant in VOIX_OFFICIELLES:
+    if porte_etoile(_identifiant):
         libelle += "  ★"
     return libelle
 
@@ -2834,16 +2921,35 @@ def version_de_reference():
 
 
 def choisir_asset(assets):
-    """Choisit le fichier à télécharger pour ce système."""
-    if sys.platform == "darwin":
-        extension = ".zip"
-    elif sys.platform.startswith("win"):
-        extension = ".exe"
-    else:
-        return None
-    for asset in assets or []:
-        if str(asset.get("name", "")).lower().endswith(extension):
+    """Choisit le fichier à télécharger pour ce système.
+
+    On se fie au NOM du fichier, jamais à son ordre dans la liste : depuis
+    que deux versions Mac existent, « le premier .zip » a envoyé la version
+    Intel aux Mac Apple Silicon (2.0.0). L'ordre des fichiers d'une page de
+    version n'est garanti par personne.
+    """
+    noms = [(str(asset.get("name", "")).lower(), asset)
+            for asset in assets or []]
+
+    def prendre(fin, contient=None, exclut=None):
+        for nom, asset in noms:
+            if not nom.endswith(fin):
+                continue
+            if contient and contient not in nom:
+                continue
+            if exclut and exclut in nom:
+                continue
             return asset
+        return None
+
+    if sys.platform == "darwin":
+        if platform.machine() == "arm64":
+            return prendre(".zip", exclut="intel") or prendre(".zip")
+        return prendre(".zip", contient="intel") or prendre(".zip")
+    if sys.platform.startswith("win"):
+        # L'installateur d'abord : c'est ce qu'on attend d'un « mettre à
+        # jour » sur PC. Le portable reste le repli si l'installateur manque.
+        return prendre(".exe", contient="setup") or prendre(".exe")
     return None
 
 
@@ -3127,6 +3233,13 @@ def _reglages_surs(reglages):
     soutien = reglages.get("soutien_fermeture")
     if isinstance(soutien, bool):
         propres["soutien_fermeture"] = soutien
+    # Sans ces deux lignes, les fenêtres reviendraient à chaque démarrage :
+    # les listes étaient écrites, puis jetées à la relecture.
+    for cle in ("voix_signalees", "voix_ajoutees"):
+        valeurs = reglages.get(cle)
+        if isinstance(valeurs, list):
+            propres[cle] = [nom for nom in valeurs
+                            if isinstance(nom, str) and nom]
     return propres
 
 
@@ -4677,6 +4790,17 @@ class VoxPackApp(ctk.CTk):
         self.charger_liste()          # la liste de phrases de cette langue
         self._dire(t("etat_langue_voix", langue=t("langue_" + code),
                      n=len(VOIX.get(code, ()))))
+        # Une voix peut manquer ou être apparue dans la langue que l'on
+        # rejoint : c'est maintenant que l'information devient utile, pas au
+        # démarrage. Un renommage reste silencieux, comme au lancement.
+        perdues = getattr(self, "_voix_perdues", {}).get(code, [])
+        absentes = [entree for entree in perdues
+                    if entree[0] not in VOIX_REMPLACANTES]
+        nouvelles = getattr(self, "_voix_ajoutees", {}).get(code, [])
+        if absentes:
+            self._signaler_voix_retirees(absentes)
+        else:
+            self._signaler_voix_ajoutees(nouvelles)
 
     def _appliquer_langue(self):
         """Redonne leur texte à tous les éléments déjà affichés.
@@ -6714,6 +6838,14 @@ class VoxPackApp(ctk.CTk):
                 souvenue = converti
                 self._reglages.setdefault("voix", {})[self.langue] = converti
                 ecrire_reglages(self._reglages)
+        # Une voix retirée par Microsoft a souvent une remplaçante connue :
+        # on affiche la remplaçante, au lieu de retomber sur la première voix
+        # du menu (un utilisateur de Conrad tomberait sur Tanja, une femme).
+        if souvenue:
+            remplacante = VOIX_REMPLACANTES.get(souvenue)
+            if remplacante and any(i == remplacante
+                                   for _e, i in voix_de_la_langue(self.langue)):
+                souvenue = remplacante
         etiquette = libelles[0] if libelles else ""
         for propose, identifiant in voix_de_la_langue(self.langue):
             if identifiant == souvenue:
@@ -6742,7 +6874,10 @@ class VoxPackApp(ctk.CTk):
 
         def travail():
             try:
-                disponibles = {v["ShortName"]
+                # Nom -> (langue, genre) : le genre sert à étiqueter une voix
+                # que la table ne connaît pas encore.
+                disponibles = {v["ShortName"]: (v.get("Locale", ""),
+                                                v.get("Gender", ""))
                                for v in asyncio.run(edge_tts.list_voices())}
             except Exception:
                 resultat.put(None)          # pas de réseau : on garde la liste
@@ -6763,16 +6898,44 @@ class VoxPackApp(ctk.CTk):
             self._retirer_voix_absentes(disponibles)
 
     def _retirer_voix_absentes(self, disponibles):
-        """Retire du menu les voix que le service ne propose plus."""
-        retirees = []
-        for code, voix in VOIX.items():
-            gardees = [entree for entree in voix if entree[0] in disponibles]
-            if len(gardees) != len(voix):
-                retirees += [f"{e[1]} ({e[3]})" for e in voix
-                             if e[0] not in disponibles]
-                VOIX[code] = gardees
-        if not retirees:
+        """Aligne le menu sur ce que le service propose vraiment.
+
+        Deux mouvements, et ils vont ensemble : on retire les voix qui ont
+        disparu, et on ajoute celles qui sont apparues sans que la table le
+        sache. Sans le second, l'application saurait oublier mais pas
+        découvrir — une voix revenue sous un autre nom resterait invisible.
+
+        `disponibles` : nom -> (langue, genre), tel que le service le donne.
+        """
+        noms_dispo = set(disponibles)
+        # Réponse incomplète : Microsoft migre son service et renvoie parfois
+        # une liste tronquée. Sans ce garde-fou, on viderait la moitié des
+        # menus et on annoncerait soixante-dix voix disparues.
+        servies = sum(1 for voix in VOIX.values()
+                      if any(entree[0] in noms_dispo for entree in voix))
+        if servies * 2 < len(VOIX):
             return
+        perdues = {}
+        ajoutees = {}
+        for code, voix in VOIX.items():
+            gardees = [entree for entree in voix if entree[0] in noms_dispo]
+            if len(gardees) != len(voix):
+                perdues[code] = [entree for entree in voix
+                                 if entree[0] not in noms_dispo]
+                VOIX[code] = gardees
+            nouvelles = self._voix_nouvelles(code, disponibles)
+            if nouvelles:
+                VOIX[code] = VOIX[code] + nouvelles
+                ajoutees[code] = nouvelles
+        self._voix_perdues = perdues
+        self._voix_ajoutees = ajoutees
+        # Seules les voix de la langue en cours intéressent l'utilisateur :
+        # un francophone n'a que faire d'un avertissement sur l'allemand.
+        # Un renommage ne s'annonce pas : la voix a une remplaçante, l'étoile
+        # suit, et il n'y a rien à faire. Seule une vraie disparition parle.
+        absentes = [entree for entree in perdues.get(self.langue, [])
+                    if entree[0] not in VOIX_REMPLACANTES]
+        nouvelles = ajoutees.get(self.langue, [])
         # Une langue ne doit jamais se retrouver sans aucune voix : si le
         # service a retiré tout un lot (panne passagère ?), on remet la liste
         # d'origine plutôt que de laisser un menu vide.
@@ -6782,9 +6945,134 @@ class VoxPackApp(ctk.CTk):
         self._remplir_voix()
         if remises:
             self._dire(t("etat_voix_remises"))
+        elif absentes:
+            self._dire(t("etat_voix_retirees", n=len(absentes),
+                         s="s" if len(absentes) > 1 else ""))
+        if absentes:
+            self._signaler_voix_retirees(absentes)
         else:
-            self._dire(t("etat_voix_retirees", n=len(retirees),
-                         s="s" if len(retirees) > 1 else ""))
+            self._signaler_voix_ajoutees(nouvelles)
+
+    def _voix_nouvelles(self, code, disponibles):
+        """Voix du service que la table ne connaît pas encore.
+
+        Le menu d'une langue est une liste écrite : le français a la France,
+        le Canada, la Suisse et la Belgique ; l'espagnol a cinq pays. On ne
+        complète que DANS ces pays — une nouvelle voix américaine entre dans
+        le menu anglais, une voix mexicaine n'entre pas dans le menu
+        français. C'est ce qui garde un menu lisible, et c'est ainsi que le
+        français a été fait.
+
+        On compare le pays ENTIER (« zh-CN », « zh-TW », « zh-HK »), pas
+        seulement « zh » : les trois entrées chinoises sont trois écritures,
+        et leurs voix ne doivent pas se mélanger.
+
+        Les « Multilingue » restent dehors : elles devinent la langue de
+        chaque mot et se trompent parfois.
+        """
+        reference = VOIX_ORIGINE.get(code) or []
+        if not reference:
+            return []
+        pays = {entree[0].rsplit("-", 1)[0] for entree in reference}
+        connues = {entree[0] for entree in VOIX.get(code, ())}
+        nouvelles = []
+        for nom, infos in disponibles.items():
+            if nom in connues or "Multilingual" in nom:
+                continue
+            locale = str(infos[0] or "")
+            if locale not in pays:
+                continue
+            prenom = nom[len(locale) + 1:].replace("Neural", "")
+            if not prenom:
+                continue
+            genre = "h" if str(infos[1]).lower().startswith("m") else "f"
+            accent = ACCENTS_CONNUS.get(locale) or locale.split("-")[1].upper()
+            nouvelles.append((locale, (nom, prenom, genre, accent)))
+        # Menu propre : d'abord le pays, puis le prénom.
+        nouvelles.sort(key=lambda paire: (paire[0], paire[1][1]))
+        return [entree for _locale, entree in nouvelles]
+
+    def _signaler_voix_retirees(self, absentes):
+        """Prévient dans une fenêtre, une fois par changement.
+
+        La barre d'état passe trop vite pour être lue : en 2026, quatre voix
+        allemandes ont changé de nom et personne ne s'en est aperçu pendant
+        trois semaines. La fenêtre attend un clic, donc elle est vue.
+
+        `absentes` : les voix qui n'ont PAS de remplaçante. Un renommage ne
+        passe pas par ici : l'étoile suit la remplaçante, en silence, et il
+        n'y a rien à faire.
+
+        On retient les IDENTIFIANTS déjà signalés, pas une date : on ne
+        redérange pas l'utilisateur à chaque démarrage, mais une disparition
+        nouvelle provoque un avertissement une fois.
+        """
+        if not absentes:
+            return
+        # Une voix remplacée n'est pas perdue : elle change de nom, l'étoile
+        # suit, et la fenêtre reste fermée.
+        absentes = [entree for entree in absentes
+                    if entree[0] not in VOIX_REMPLACANTES]
+        if not absentes:
+            return
+        absentes = sorted(absentes, key=lambda entree: entree[1])
+        deja = self._reglages.get("voix_signalees") or []
+        if all(entree[0] in deja for entree in absentes):
+            return
+        self._reglages["voix_signalees"] = sorted(
+            set(deja) | {entree[0] for entree in absentes})
+        ecrire_reglages(self._reglages)
+        cle = ("msg_voix_retirees_une" if len(absentes) == 1
+               else "msg_voix_retirees_plusieurs")
+        texte = t(cle, n=len(absentes),
+                  noms=", ".join(entree[1] for entree in absentes))
+        # Après l'affichage de la fenêtre principale : une boîte ouverte trop
+        # tôt se retrouverait derrière elle.
+        self._montrer_quand_visible(texte, essais=6)
+
+    def _signaler_voix_ajoutees(self, ajoutees):
+        """Annonce les voix que le service vient d'ajouter, une fois.
+
+        Une voix ajoutée est recalculée à chaque démarrage : la table est
+        reconstruite à partir du code, et la voix reste « nouvelle » pour
+        l'application. Sans mémoire, la fenêtre reviendrait tous les jours.
+        On retient donc les IDENTIFIANTS déjà annoncés, comme pour les voix
+        disparues.
+
+        Beaucoup de langues n'auront jamais d'ajout : dans ce cas, la fenêtre
+        ne s'ouvre jamais. C'est voulu — une alerte pour un événement, pas
+        une décoration.
+        """
+        if not ajoutees:
+            return
+        ajoutees = sorted(ajoutees, key=lambda entree: entree[1])
+        deja = self._reglages.get("voix_ajoutees") or []
+        if all(entree[0] in deja for entree in ajoutees):
+            return
+        self._reglages["voix_ajoutees"] = sorted(
+            set(deja) | {entree[0] for entree in ajoutees})
+        ecrire_reglages(self._reglages)
+        cle = ("msg_voix_ajoutees_une" if len(ajoutees) == 1
+               else "msg_voix_ajoutees_plusieurs")
+        texte = t(cle, n=len(ajoutees),
+                  noms=", ".join(entree[1] for entree in ajoutees))
+        self._montrer_quand_visible(texte, essais=6)
+
+    def _montrer_quand_visible(self, texte, essais):
+        """Ouvre la fenêtre d'avertissement dès que la principale est à
+        l'écran, et pas avant.
+
+        Deux raisons : une boîte ouverte pendant le démarrage passe derrière
+        la fenêtre ; et pendant les essais, où la fenêtre est retirée, elle
+        volerait le clavier sans que personne ne la voie.
+        """
+        if not self.winfo_exists():
+            return
+        if self.winfo_viewable():
+            self._message(texte, icone="attention")
+        elif essais > 0:
+            self.after(400,
+                       lambda: self._montrer_quand_visible(texte, essais - 1))
 
     def _voix_changee(self, _valeur=None):
         """L'utilisateur a choisi une autre voix.
@@ -7056,6 +7344,22 @@ class VoxPackApp(ctk.CTk):
         self._sync_toutes_v2()
 
     def _on_change(self):
+        # La liste vient de changer par un autre chemin que la suppression
+        # (ajout, saisie validée, import) : la suppression mémorisée pour
+        # Cmd+Z ne la concerne plus. Sans cela, ajouter une ligne puis
+        # appuyer sur Cmd+Z ramenait des lignes supprimées bien avant (vu
+        # le 24 novembre au soir). Un appelant qui veut poser l'annulation
+        # APRÈS ce changement le fait après cet appel : c'est le cas de
+        # _supprimer_et_proposer, et c'est pourquoi la remise à zéro est ici.
+        self._annulation = None
+        alerte = getattr(self, "_alerte_annulation", None)
+        self._alerte_annulation = None
+        if alerte is not None:
+            try:
+                if alerte.winfo_exists():
+                    self._fermer_alerte(alerte)
+            except tk.TclError:
+                pass
         self._verifier_noms()
         self._ecrire_csv()
 

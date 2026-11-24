@@ -11,6 +11,27 @@ Fait parler ta radiocommande.
 Vox-Pack fabrique les fichiers de voix que ta radio EdgeTX prononce pendant le
 vol : « Moteur armé », « Train sorti », « Chrono démarré »…
 
+## Nouveautés de la 2.0.1
+
+- **L'espagnol passe à onze voix et cinq accents** — Espagne, Mexique,
+  Colombie, Argentine et Chili — comme le français. Chaque voix garde son
+  pays : « Elvira (Espagne) », « Dalia (Mexique) »…
+- **L'allemand retrouve ses voix.** Microsoft a retiré Katja, Conrad, Amala et
+  Killian ; Tanja et Christoph les remplacent, avec le même son. L'Autriche
+  (Ingrid, Jonas) et la Suisse (Jan, Leni) s'ajoutent, et l'étoile suit
+  Tanja.
+- **Une fenêtre prévient quand une voix disparaît ou apparaît**, une seule
+  fois, et dans la langue affichée : « Les voix X, Y ne sont pas disponibles
+  sur le service de voix de Microsoft. » Un simple changement de nom reste
+  silencieux : l'étoile suit la remplaçante, et ton choix est conservé.
+- **Le bon fichier de mise à jour.** Sur un Mac à puce Apple, la mise à jour
+  pouvait télécharger la version Intel. Le fichier est maintenant choisi
+  d'après son nom, plus d'après son ordre dans la page.
+- **Publication plus sûre** : une version dont le nom ne correspond pas au
+  numéro du programme n'est plus déposée sur la page d'une autre version.
+
+Tes listes et tes réglages sont conservés.
+
 ## Nouveautés de la 2.0.0
 
 - **Quinze langues.** Après le français, l'anglais et l'allemand, douze
@@ -196,6 +217,27 @@ Speak up your radio.
 
 Vox-Pack builds the voice files your EdgeTX radio speaks during flight:
 "Motor armed", "Gear down", "Timer started"…
+
+## What's new in 2.0.1
+
+- **Spanish now has eleven voices and five accents** — Spain, Mexico,
+  Colombia, Argentina and Chile — just like French. Each voice keeps its
+  country: "Elvira (Spain)", "Dalia (Mexico)"…
+- **German gets its voices back.** Microsoft retired Katja, Conrad, Amala and
+  Killian; Tanja and Christoph replace them with the same sound. Austria
+  (Ingrid, Jonas) and Switzerland (Jan, Leni) join, and the star follows
+  Tanja.
+- **A window warns when a voice disappears or appears**, once, in the
+  language on screen: "The voices X, Y are not available on Microsoft's
+  voice service." A simple rename stays silent: the star follows the
+  replacement, and your choice is kept.
+- **The right update file.** On an Apple Silicon Mac, the update could
+  download the Intel build. The file is now chosen by its name, not by its
+  order on the page.
+- **Safer publishing**: a version whose name does not match the program's
+  number is no longer dropped onto another version's page.
+
+Your lists and settings are kept.
 
 ## What's new in 2.0.0
 

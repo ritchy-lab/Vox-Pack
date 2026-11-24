@@ -38,13 +38,11 @@ droite ouvre cette aide.
 
 ## Comment ça marche
 
-1. **Choisis une voix.** Le menu propose les voix de la langue choisie :
-   11 en français (France, Suisse, Belgique, Québec), 19 en anglais
-   (États-Unis, Royaume-Uni, Irlande), 4 en allemand, et d'autres dans les
-   douze autres langues. Le menu indique l'accent — « Denise (France) »,
-   « Emily (Irlande) » — la voix en cours est cochée, et la **★** marque la
-   voix officielle d'EdgeTX (Denise en français, Emily en anglais, Katja en
-   allemand).
+1. **Choisis une voix.** Le menu propose les voix de la langue choisie, avec
+   leur accent : « Denise (France) », « Emily (Irlande) », « Ingrid
+   (Autriche) ». La voix en cours est cochée, et la **★** marque la voix
+   officielle d'EdgeTX (Denise en français, Emily en anglais, Tanja en
+   allemand — elle reprend le son de Katja, retirée par Microsoft).
 2. **Écris tes phrases.** La liste est pré-remplie avec 44 annonces courantes
    (moteur, volets, train, chrono, modes de vol…). Tu peux tout modifier,
    ajouter ou supprimer des lignes.
@@ -240,9 +238,12 @@ bas à droite.
 
 - Les voix sont celles du service **edge-tts**, qui s'appuie sur la synthèse
   vocale de Microsoft Edge. Vox-Pack ne fait que les mettre au bon format.
-- Au démarrage, l'application **vérifie que les voix proposées existent
-  toujours** chez Microsoft et retire celles qui ont disparu. Si la
-  vérification échoue (pas de connexion), la liste reste telle quelle.
+- Au démarrage, l'application **vérifie chez Microsoft les voix qu'elle
+  propose** : elle retire celles qui ont disparu, ajoute celles qui sont
+  apparues dans les pays déjà proposés, et une fenêtre prévient — une seule
+  fois — quand une voix disparaît ou apparaît. Un simple changement de nom
+  reste silencieux : l'étoile suit la remplaçante. Si la vérification
+  échoue (pas de connexion), la liste reste telle quelle.
 - Le service de Microsoft peut changer sans préavis : si la génération
   s'arrête d'un coup avec une erreur, c'est presque toujours que la
   bibliothèque `edge-tts` doit être mise à jour (`pip install --upgrade edge-tts`).
