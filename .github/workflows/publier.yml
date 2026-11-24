@@ -305,6 +305,24 @@ jobs:
           TEXTE: ${{ inputs.texte || 'false' }}
         run: |
           echo "Version visée : ${ETIQUETTE}"
+          # La version qu'annonce le code, et l'étiquette visée, ramenées à la
+          # même forme : « V1.4.2 », « v1.4.2 » et « 1.4.2 » désignent la même
+          # version. Avec tr et sed, et non ${VAR,,} : cette écriture n'existe
+          # qu'à partir de bash 4, et le Mac de Richard en est resté à 3.2.
+          locale="$(python3 -c 'import version; print(version.VERSION)' 2>/dev/null || echo "")"
+          visee="$(printf '%s' "${ETIQUETTE}" | tr 'A-Z' 'a-z' | sed 's/^v//')"
+          courante="$(printf '%s' "${locale}" | tr 'A-Z' 'a-z' | sed 's/^v//')"
+
+          # Garde-fou, AVANT tout envoi : ne jamais déposer les fichiers du
+          # jour sur la page d'une autre version. Un lancement à la main avec
+          # la mauvaise étiquette écraserait des fichiers déjà publiés (c'est
+          # le rôle de --clobber), et GitHub n'en garde aucune copie : c'est
+          # irréversible. Relancer la MÊME version reste permis.
+          if [ -n "${courante}" ] && [ "${visee}" != "${courante}" ]; then
+            echo "::error::Étiquette ${ETIQUETTE} contre version.py ${locale} : aucun fichier n'est envoyé."
+            exit 1
+          fi
+
           # Le fichier de notes est l'historique complet, dans les deux langues.
           # La page, elle, ne montre que la version du jour puis l'installation :
           # sinon un visiteur de la 1.4.2 y lisait les nouveautés de la 1.3.
@@ -317,13 +335,6 @@ jobs:
               "fichiers/Vox-Pack-Windows/Vox-Pack-Setup.exe" \
               "fichiers/Vox-Pack-Portable/Vox-Pack.exe" --clobber
             corps="$(gh release view "${ETIQUETTE}" --json body -q .body)"
-            locale="$(python3 -c 'import version; print(version.VERSION)' 2>/dev/null || echo "")"
-            # Comparaison sans la lettre de tête : « V1.4.2 », « v1.4.2 » et
-            # « 1.4.2 » désignent la même version. Avec tr et sed, et non
-            # ${VAR,,} : cette écriture n'existe qu'à partir de bash 4, et le
-            # Mac de Richard en est resté à bash 3.2.
-            visee="$(printf '%s' "${ETIQUETTE}" | tr 'A-Z' 'a-z' | sed 's/^v//')"
-            courante="$(printf '%s' "${locale}" | tr 'A-Z' 'a-z' | sed 's/^v//')"
             if [ -n "${locale}" ] && [ "${visee}" = "${courante}" ] \
                && { [ -z "${corps}" ] || [ "${TEXTE}" = "true" ]; }; then
               echo "Texte de la page : on y met les notes de cette version."
