@@ -178,15 +178,15 @@ Tes listes et tes réglages sont conservés.
 
 ## À télécharger
 
-- **macOS Apple Silicon** : `Vox-Pack.zip` — à décompresser, puis glisser
-  l'application dans ton dossier Applications.
+- **macOS Apple Silicon** : `Vox-Pack-Apple-Silicon.zip` — à décompresser, puis
+  glisser l'application dans ton dossier Applications.
 - **macOS Intel** : `Vox-Pack-Intel.zip` — même chose, pour les Mac à
   processeur Intel.
 - **Windows** : `Vox-Pack-Setup.exe` — l'installeur (recommandé). Il installe
   Vox-Pack pour ton utilisateur, sans mot de passe administrateur, avec un
   raccourci dans le menu Démarrer. La version portable `Vox-Pack.exe` reste
   disponible : elle se lance directement, sans rien installer. Ne prends pas
-  `Vox-Pack.zip` : c'est la version macOS.
+  `Vox-Pack-Apple-Silicon.zip` : c'est la version macOS.
 
 **Au tout premier lancement**, ton système affichera un avertissement
 (l'application n'a pas de certificat payant) : les deux clics à faire sont
@@ -376,14 +376,15 @@ Your lists and settings are kept.
 
 ### What to download
 
-- **macOS Apple Silicon**: `Vox-Pack.zip` — unzip it, then drag the app into
-  your Applications folder.
+- **macOS Apple Silicon**: `Vox-Pack-Apple-Silicon.zip` — unzip it, then drag
+  the app into your Applications folder.
 - **macOS Intel**: `Vox-Pack-Intel.zip` — same thing, for Macs with an Intel
   processor.
 - **Windows**: `Vox-Pack-Setup.exe` — the installer (recommended). It installs
   Vox-Pack for your user, without an administrator password, with a Start Menu
   shortcut. The portable `Vox-Pack.exe` is still available: run it directly,
-  nothing to install. Do not take `Vox-Pack.zip`: that one is for macOS.
+  nothing to install. Do not take `Vox-Pack-Apple-Silicon.zip`: that one is for
+  macOS.
 
 **The very first time**, your system will show a warning (the app has no paid
 certificate): the two clicks to make are explained in the

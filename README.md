@@ -143,8 +143,8 @@ active le bouton par défaut de la fenêtre de message.
 
 ### macOS
 
-1. Télécharge **`Vox-Pack.zip`** (Apple Silicon) ou **`Vox-Pack-Intel.zip`**
-   (Mac Intel) depuis la page
+1. Télécharge **`Vox-Pack-Apple-Silicon.zip`** (Mac à puce M) ou
+   **`Vox-Pack-Intel.zip`** (Mac Intel) depuis la page
    [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) et
    décompresse-le. Les deux contiennent la même application : prends celui
    qui correspond à ton Mac.

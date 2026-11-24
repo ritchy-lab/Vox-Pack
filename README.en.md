@@ -140,8 +140,8 @@ the message window.
 
 ### macOS
 
-1. Download **`Vox-Pack.zip`** (Apple Silicon) or **`Vox-Pack-Intel.zip`**
-   (Intel Mac) from the
+1. Download **`Vox-Pack-Apple-Silicon.zip`** (Apple Silicon Mac) or
+   **`Vox-Pack-Intel.zip`** (Intel Mac) from the
    [Releases](https://github.com/ritchy-lab/Vox-Pack/releases) page and unzip
    it. Both contain the same application: take the one that matches your Mac.
 2. Drag **Vox-Pack.app** into your **Applications** folder.

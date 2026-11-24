@@ -153,8 +153,8 @@ Die **Eingabetaste** löst die Standardschaltfläche des Meldungsfensters aus.
 
 ### macOS
 
-1. Laden Sie **`Vox-Pack.zip`** (Apple Silicon) oder **`Vox-Pack-Intel.zip`**
-   (Intel-Mac) von der
+1. Laden Sie **`Vox-Pack-Apple-Silicon.zip`** (Mac mit M-Chip) oder
+   **`Vox-Pack-Intel.zip`** (Intel-Mac) von der
    [Releases](https://github.com/ritchy-lab/Vox-Pack/releases)-Seite und
    entpacken Sie es. Beide enthalten dieselbe Anwendung: Nehmen Sie die, die
    zu Ihrem Mac passt.

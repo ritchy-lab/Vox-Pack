@@ -63,7 +63,7 @@ jobs:
         include:
           - runner: macos-latest        # Apple Silicon
             nom: Apple Silicon
-            fichier: Vox-Pack.zip
+            fichier: Vox-Pack-Apple-Silicon.zip
             artefact: Vox-Pack-macOS
           - runner: macos-15-intel      # Intel
             nom: Intel
@@ -330,7 +330,7 @@ jobs:
           if gh release view "${ETIQUETTE}" >/dev/null 2>&1; then
             echo "La page existe déjà : on y ajoute les fichiers."
             gh release upload "${ETIQUETTE}" \
-              "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
+              "fichiers/Vox-Pack-macOS/Vox-Pack-Apple-Silicon.zip" \
               "fichiers/Vox-Pack-macOS-Intel/Vox-Pack-Intel.zip" \
               "fichiers/Vox-Pack-Windows/Vox-Pack-Setup.exe" \
               "fichiers/Vox-Pack-Portable/Vox-Pack.exe" --clobber
@@ -346,7 +346,7 @@ jobs:
             gh release create "${ETIQUETTE}" \
               --title "Vox-Pack ${ETIQUETTE}" \
               --notes-file page.md \
-              "fichiers/Vox-Pack-macOS/Vox-Pack.zip" \
+              "fichiers/Vox-Pack-macOS/Vox-Pack-Apple-Silicon.zip" \
               "fichiers/Vox-Pack-macOS-Intel/Vox-Pack-Intel.zip" \
               "fichiers/Vox-Pack-Windows/Vox-Pack-Setup.exe" \
               "fichiers/Vox-Pack-Portable/Vox-Pack.exe"

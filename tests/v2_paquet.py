@@ -123,7 +123,7 @@ def main() -> int:
     # Depuis la 2.0.0, deux .zip Mac coexistent. Se fier au « premier .zip »
     # a envoyé la version Intel aux Mac Apple Silicon : on se fie au NOM du
     # fichier, et l'ordre de la liste ne doit plus rien changer.
-    zip_mac = {"name": "Vox-Pack.zip"}
+    zip_mac = {"name": "Vox-Pack-Apple-Silicon.zip"}
     zip_intel = {"name": "Vox-Pack-Intel.zip"}
     setup = {"name": "Vox-Pack-Setup.exe"}
     portable = {"name": "Vox-Pack.exe"}
@@ -141,6 +141,11 @@ def main() -> int:
 
     verifier("Mac Apple Silicon : le .zip sans « intel », même s'il est après",
              choisir("darwin", "arm64", [zip_intel, zip_mac]) is zip_mac)
+    # Les fichiers publiés s'appellent « Vox-Pack-Apple-Silicon.zip » et
+    # « Vox-Pack-Intel.zip » : c'est aussi l'ordre de la page, l'Apple avant
+    # l'Intel. Le nom, lui, ne doit rien devoir à cet ordre.
+    verifier("Mac Apple Silicon : le nom l'emporte sur l'ordre de la page",
+             choisir("darwin", "arm64", [zip_mac, zip_intel]) is zip_mac)
     verifier("Mac Intel : le .zip « intel », même s'il est après",
              choisir("darwin", "x86_64", [zip_mac, zip_intel]) is zip_intel)
     verifier("Mac Apple Silicon, seul l'Intel : on le prend quand même",
